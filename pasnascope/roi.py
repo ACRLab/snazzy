@@ -5,10 +5,10 @@ from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops, find_contours
 from skimage.morphology import opening, disk
 
-from animations.custom_animation import CentroidAnimation, ContourAnimation
+from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
 
 
-def get_roi(img):
+def get_single_roi(img):
     '''Calculates the ROI of a 2D grayscale image.'''
     slc = img.copy()
     thres = threshold_otsu(slc)
@@ -37,18 +37,28 @@ def get_roi(img):
     return largest_label
 
 
+def get_roi(img):
+    '''Returns an nparray with an individual ROI for each slice of the image.'''
+    rois = np.zeros(img.shape)
+
+    for i, slc in enumerate(img):
+        rois[i] = get_single_roi(slc)
+
+    return rois
+
+
 def global_roi(img):
     '''Creates a single ROI for all the slices in the image.
 
     It's faster than calculating one ROI for each slice, and can be used if
     the embryo does not move.'''
     avg_img = np.average(img, axis=0)
-    return get_roi(avg_img)
+    return get_single_roi(avg_img)
 
 
 def cache_rois(img):
     '''Saves ROI as a numpy file.'''
-    rois = [get_roi(slc) for slc in img[200:400]]
+    rois = get_roi(img)
     filename = img.split('/')[-1][:-4]
 
     with open(f'./results/cache/roi-{filename}.npy', 'wb') as f:
@@ -59,7 +69,7 @@ def cache_rois(img):
 
 def get_contours(img):
     '''Returns the contours of each image, base on their ROI.'''
-    rois = [get_roi(slc) for slc in img[200:400]]
+    rois = get_roi(img)
 
     contours = []
 
@@ -81,29 +91,23 @@ def plot_contours(img):
 
 
 def get_centroids(img):
-    '''Get the centroid of each slice of a ROI within an image.
-
-    `start` and `end` can be used to process only part of the image.'''
+    '''Get the centroid of each slice of a ROI within an image.'''
     centroids = []
-    rois = []
 
     for slc in img:
-        roi = get_roi(slc)
-        rois.append(roi)
-
-        # largest_label is currently a boolean mask, regionprops needs a binary image
+        roi = get_single_roi(slc)
+        # largest_label is a boolean mask, regionprops needs a binary image
         regions = regionprops(roi.astype(np.uint8))
         props = regions[0]
         y0, x0 = props.centroid
-
         centroids.append([y0, x0])
 
-    return centroids, rois
+    return centroids
 
 
 def plot_centroids(img):
-    centroids, rois = get_centroids(img)
-    ca = CentroidAnimation(rois, centroids, interval=150)
+    centroids = get_centroids(img)
+    ca = CentroidAnimation(img, centroids, interval=150)
     ca.display()
 
 

@@ -6,14 +6,23 @@ import matplotlib.pyplot as plt
 
 
 def measure_VNC(masks):
+    '''Returns the max feret diameters for a set of binary images.'''
     vnc_lengths = []
 
     for mask in masks:
         regions = regionprops(mask.astype(np.uint8))
+        # TODO: handle cases where no region is found
+        # this can happen because sometimes mask is None
+        if len(regions) == 0:
+            continue
         props = regions[0]
         vnc_lengths.append(props['feret_diameter_max'])
 
-    vnc_lengths = np.array(vnc_lengths)
+    return np.array(vnc_lengths)
+
+
+def plot_VNC_measures(masks):
+    vnc_lengths = measure_VNC(masks)
     median_filter(vnc_lengths, size=19, output=vnc_lengths)
 
     x = np.arange(len(vnc_lengths))
@@ -23,6 +32,7 @@ def measure_VNC(masks):
     fig, ax = plt.subplots()
     ax.plot(vnc_lengths)
     ax.plot(x, poly1d(x), '--k')
+    fig.suptitle('VNC length (feret diameter) over time')
     plt.show()
 
 
