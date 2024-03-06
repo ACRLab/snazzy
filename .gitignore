@@ -1,0 +1,21 @@
+# dir with input files
+data/
+
+# dir with output files
+results/
+
+# python stuff
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# results and intermediary formats
+*.npy
+*.mat
+*.hdf5
+*.mmap
+*.npz
+*.pkl
+*.tif
+*.mp4
