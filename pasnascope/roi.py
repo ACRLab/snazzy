@@ -39,7 +39,7 @@ def get_single_roi(img):
 
 def get_roi(img):
     '''Returns an nparray with an individual ROI for each slice of the image.'''
-    rois = np.zeros(img.shape)
+    rois = np.empty(img.shape, dtype=np.bool_)
 
     for i, slc in enumerate(img):
         rois[i] = get_single_roi(slc)
