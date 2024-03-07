@@ -58,7 +58,7 @@ def get_activity(img, struct, mask, mask_path=None):
     return activity, activity_struct
 
 
-def plot_activity(img, struct, mask, mask_path=None, plot_diff=False):
+def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False, filename=None):
     activity, activity_struct = get_activity(img, struct, mask, mask_path)
 
     fig, ax = plt.subplots()
@@ -69,5 +69,9 @@ def plot_activity(img, struct, mask, mask_path=None, plot_diff=False):
         ax.plot(activity_struct, label='structural')
         ax.plot(activity, label='active')
         ax.legend()
+
+    if save and filename:
+        fig.suptitle(filename)
+        plt.savefig(f'../results/activity/{filename}.png')
 
     plt.show()
