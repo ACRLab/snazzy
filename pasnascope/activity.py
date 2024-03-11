@@ -6,7 +6,9 @@ import matplotlib.pyplot as plt
 
 
 def measure_VNC(masks):
-    '''Returns the max feret diameters for a set of binary images.'''
+    '''Returns the max feret diameter for a set of binary images.
+
+    The VNC length is measured indirectly, based on the ROI mask length.'''
     vnc_lengths = []
 
     for mask in masks:
@@ -51,9 +53,7 @@ def get_activity(img, struct, mask, mask_path=None):
     struct[np.logical_not(mask)] = 0
 
     activity = np.average(img, axis=(1, 2))
-    # activity = activity/np.max(activity)
     activity_struct = np.average(struct, axis=(1, 2))
-    # activity_struct = activity_struct/np.max(activity_struct)
 
     return activity, activity_struct
 
