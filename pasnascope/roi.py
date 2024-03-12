@@ -3,20 +3,22 @@ from tifffile import imread
 
 from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops, find_contours
-from skimage.morphology import opening, disk
+from skimage.morphology import binary_opening, disk, square, octagon
 
 from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
 
 
 def get_single_roi(img):
-    '''Calculates the ROI of a 2D grayscale image.'''
+    '''Calculates the ROI of a 2D grayscale image.
+
+    Values *outside* the ROI are marked as True, values inside are False.'''
     slc = img.copy()
     thres = threshold_otsu(slc)
     binary_mask = slc > thres
 
     slc[...] = 0
     slc[binary_mask] = 1
-    opening(slc, footprint=disk(4), out=slc)
+    binary_opening(slc, footprint=octagon(3, 3), out=slc)
 
     labels, num_labels = label(slc, return_num=True, connectivity=2)
 
@@ -34,7 +36,7 @@ def get_single_roi(img):
     largest_label = labels == np.argmax(
         np.bincount(labels.flat)[1:])+1
 
-    return largest_label
+    return np.logical_not(largest_label)
 
 
 def get_roi(img):
@@ -56,15 +58,14 @@ def global_roi(img):
     return get_single_roi(avg_img)
 
 
-def cache_rois(img):
+def cache_rois(img, file_path):
     '''Saves ROI as a numpy file.'''
     rois = get_roi(img)
-    filename = img.split('/')[-1][:-4]
 
-    with open(f'./results/cache/roi-{filename}.npy', 'wb') as f:
+    with open(file_path, 'wb+') as f:
         np.save(f, rois)
 
-    print(f'Saved ROIs in `./results/cache/roi-{filename}.npy`.')
+    print(f'Saved ROIs in `{file_path}`.')
 
 
 def get_contours(img):
@@ -109,9 +110,3 @@ def plot_centroids(img):
     centroids = get_centroids(img)
     ca = CentroidAnimation(img, centroids, interval=150)
     ca.display()
-
-
-if __name__ == '__main__':
-    img_path = '/home/cdp58/Documents/repos/pasnascope_analysis/data/embryos/'
-    img = imread(img_path + 'emb12-ch2.tif')
-    plot_contours(img)
