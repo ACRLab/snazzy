@@ -10,16 +10,6 @@ __pycache__/
 *$py.class
 *.pyc
 
-# results and intermediary formats
-*.npy
-*.mat
-*.hdf5
-*.mmap
-*.npz
-*.pkl
-*.tif
-*.mp4
-
 # egg metadata
 *.egg-info
 
