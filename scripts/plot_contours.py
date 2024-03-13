@@ -8,12 +8,12 @@ from pasnascope import roi
 base_dir = "/home/cdp58/Documents/repos/pasnascope_analysis/data/embryos/"
 
 # All structural channel movies end with the suffix ch2
-active = [f for f in sorted(os.listdir(base_dir)) if f.endswith('ch1.tif')]
-struct = [f for f in sorted(os.listdir(base_dir)) if f.endswith('ch2.tif')]
+actives = [f for f in sorted(os.listdir(base_dir)) if f.endswith('ch1.tif')]
+structs = [f for f in sorted(os.listdir(base_dir)) if f.endswith('ch2.tif')]
 
 print('Select movie to display, based on index:')
 
-for i, file in enumerate(active):
+for i, file in enumerate(actives):
     file_name = file.split('-')[0]
     print(f'[{i}] {file_name}')
 
@@ -23,16 +23,24 @@ print('Select channel: 1 for active channel, 2 for structural channel.')
 
 ch = int(input())
 
-if ch == 1:
-    file_name = active[idx]
-elif ch == 2:
-    file_name = struct[idx]
-else:
-    exit(1)
+print('Select downsample amount to calculate the contours:')
 
-img = imread(base_dir + file_name, key=range(0, 1000))
+window = int(input())
+
+# if ch == 1:
+#     file_name = actives[idx]
+# elif ch == 2:
+#     file_name = structs[idx]
+# else:
+#     exit(1)
+
+struct = imread(base_dir + structs[idx], key=range(0, 1000))
+if ch == 1:
+    img = imread(base_dir + actives[idx], key=range(0, 1000))
+else:
+    img = struct
 # pa = custom_animation.PauseAnimation(img, interval=50)
 # pa.display()
-contours = roi.get_contours(img)
+contours = roi.get_contours(struct, window=window)
 ca = custom_animation.ContourAnimation(img, contours)
 ca.display()
