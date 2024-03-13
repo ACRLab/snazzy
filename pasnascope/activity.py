@@ -44,28 +44,38 @@ def plot_VNC_measures(masks):
     plt.show()
 
 
-def get_activity(img, struct, mask, mask_path=None):
-    '''Calculates the activity difference between the img and struct channels.
+def get_activity(img, mask, mask_path=None):
+    '''Returns the average of all pixels for each slice of the image.
 
-    `mask_path` will override the value passed in `mask`, and load it from the
-    path provided'''
+    Accepts a single 2D mask, that will be applied to every slice, or a 3D
+    mask, where each mask is applied for one slice of the image.
+    `mask_path` will override the value passed in `mask`, and load it from 
+    the path provided'''
     if mask_path:
         mask = np.load(mask_path)
     if mask.ndim == 2:
-        # TODO: handle ValueError when shape cannot be broadcasted to
-        mask = np.broadcast_to(mask, img.shape).astype(np.bool_)
+        try:
+            mask = np.broadcast_to(mask, img.shape).astype(np.bool_)
+        except ValueError:
+            print(
+                f"Mask of shape {mask.shape} cannot be applied to image of shape {img.shape}. The mask dimensions should match {img.shape[1:]}.")
+            raise
+        except Exception:
+            raise
+    if mask.shape != img.shape:
+        downsampling_factor = img.shape[0]//mask.shape[0]
+        mask = np.repeat(mask, downsampling_factor, axis=0)
 
     masked_img = ma.masked_array(img, mask)
-    masked_struct = ma.masked_array(struct, mask)
 
     activity = masked_img.mean(axis=(1, 2))
-    activity_struct = masked_struct.mean(axis=(1, 2))
 
-    return activity, activity_struct
+    return activity
 
 
 def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False, filename=None):
-    activity, activity_struct = get_activity(img, struct, mask, mask_path)
+    activity = get_activity(img, mask, mask_path)
+    activity_struct = get_activity(struct, mask, mask_path)
 
     fig, ax = plt.subplots()
     if plot_diff:
