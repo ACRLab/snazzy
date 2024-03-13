@@ -69,6 +69,7 @@ class ContourAnimation(PauseAnimation):
         super().__init__(image, interval)
         self.contours = contours
         self.paint_axes()
+        self.offset = image.shape[0]//len(contours)
 
     def paint_axes(self):
         x = self.contours[0][:, 0]
@@ -77,6 +78,8 @@ class ContourAnimation(PauseAnimation):
 
     def update(self, frame):
         self.img_plot.set_data(self.image[frame])
-        x, y = self.contours[frame][:, 0], self.contours[frame][:, 1]
-        self.contour_plot.set_data(y, x)
+        if frame % self.offset == 0:
+            i = frame // self.offset
+            x, y = self.contours[i][:, 0], self.contours[i][:, 1]
+            self.contour_plot.set_data(y, x)
         return self.img_plot
