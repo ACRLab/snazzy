@@ -3,12 +3,11 @@ from tifffile import imread
 
 from pasnascope.animations import custom_animation
 
-
-base_dir = "/home/cdp58/Documents/repos/pasnascope_analysis/data/embryos/"
+img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
 
 # All structural channel movies end with the suffix ch2
-active = [f for f in sorted(os.listdir(base_dir)) if f.endswith('ch1.tif')]
-struct = [f for f in sorted(os.listdir(base_dir)) if f.endswith('ch2.tif')]
+active = [f for f in sorted(os.listdir(img_dir)) if f.endswith('ch1.tif')]
+struct = [f for f in sorted(os.listdir(img_dir)) if f.endswith('ch2.tif')]
 
 print('Select movie to display, based on index:')
 
@@ -29,6 +28,6 @@ elif ch == 2:
 else:
     exit(1)
 
-img = imread(base_dir + file_name, key=range(0, 1000))
+img = imread(os.path.join(img_dir, file_name), key=range(0, 1000))
 pa = custom_animation.PauseAnimation(img, interval=50)
 pa.display()
