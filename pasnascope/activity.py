@@ -44,16 +44,38 @@ def plot_VNC_measures(masks):
     plt.show()
 
 
-def get_activity(img, mask, mask_path=None):
-    '''Returns the average of all pixels for each slice of the image.
+def reflect_edges(signal, window_size=160):
+    half = window_size//2
+    return np.concatenate((signal[:half], signal, signal[-half:]))
 
-    Accepts a single 2D mask, that will be applied to every slice, or a 3D
-    mask, where each mask is applied for one slice of the image.
-    `mask_path` will override the value passed in `mask`, and load it from 
-    the path provided'''
-    if mask_path:
-        mask = np.load(mask_path)
-    if mask.ndim == 2:
+
+def compute_baseline(signal, window_size=160, n_bins=20):
+    '''Reflects edges so we can fit windows of size window_size for the 
+    entire signal.'''
+    expanded_signal = reflect_edges(signal, window_size)
+
+    baseline = np.zeros_like(signal)
+    for i, _ in enumerate(signal):
+        window = expanded_signal[i:i+window_size]
+        counts, bins = np.histogram(window, bins=n_bins)
+        mode_bin_idx = np.argmax(counts)
+        mode_bin_mask = np.logical_and(
+            window > bins[mode_bin_idx], window <= bins[mode_bin_idx+1])
+        window_baseline = np.mean(window[mode_bin_mask])
+        baseline[i] = window_baseline
+    return baseline
+
+
+def get_dff(signal, baseline):
+    return (signal - baseline)/baseline
+
+
+def apply_mask(img, mask):
+    '''Returns a np masked array, representing the masked image.
+
+    Accepts a few combinations of dimensions: 2D img and 2D mask, 3D img and
+    2D mask, and 3D img and 3D mask.'''
+    if mask.ndim == 2 and img.ndim == 3:
         try:
             mask = np.broadcast_to(mask, img.shape).astype(np.bool_)
         except ValueError:
@@ -68,9 +90,15 @@ def get_activity(img, mask, mask_path=None):
 
     masked_img = ma.masked_array(img, mask)
 
-    activity = masked_img.mean(axis=(1, 2))
+    return masked_img
 
-    return activity
+
+def get_activity(masked_img):
+    return masked_img.mean(axis=(1, 2))
+
+
+def ratiometric_activity(active, structural):
+    return active / structural
 
 
 def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False, filename=None):
