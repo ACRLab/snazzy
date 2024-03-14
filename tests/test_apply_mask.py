@@ -10,17 +10,7 @@ def test_can_use_single_mask():
     mask = np.load(base_dir + 'mask-2d-embryo.npy')
 
     try:
-        activity.get_activity(img, mask)
-    except ValueError as e:
-        pytest.fail(f"Test failed with: {e}")
-
-
-def test_accepts_a_cached_mask():
-    img = np.load(base_dir + 'embryo.npy')
-
-    try:
-        activity.get_activity(
-            img, None, mask_path=base_dir + 'mask-2d-embryo.npy')
+        activity.apply_mask(img, mask)
     except ValueError as e:
         pytest.fail(f"Test failed with: {e}")
 
@@ -31,7 +21,7 @@ def test_cannot_use_mask_with_different_dims():
     mask = np.ones((img.shape[1], img.shape[2]-5), dtype=np.bool_)
 
     with pytest.raises(ValueError) as err:
-        activity.get_activity(img, mask)
+        activity.apply_mask(img, mask)
 
     assert err.type is ValueError
 
@@ -41,7 +31,7 @@ def test_can_use_3D_mask_with_same_dims():
     mask = np.load(base_dir + 'mask-3d-embryo.npy')
 
     try:
-        activity.get_activity(img, mask)
+        activity.apply_mask(img, mask)
     except Exception as e:
         pytest.fail(f"Test failed with: {e}")
 
@@ -51,6 +41,6 @@ def test_can_use_downsampled_3D_mask():
     mask = np.load(base_dir + 'mask-3d-downs-embryo.npy')
 
     try:
-        activity.get_activity(img, mask)
+        activity.apply_mask(img, mask)
     except Exception as e:
         pytest.fail(f"Test failed with: {e}")
