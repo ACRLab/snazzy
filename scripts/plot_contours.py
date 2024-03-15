@@ -27,10 +27,10 @@ print('Select downsample amount to calculate the contours:')
 
 window = int(input())
 
-struct = imread(img_dir + structs[idx], key=range(0, 1000))
+struct = imread(os.path.join(img_dir, structs[idx]), key=range(0, 1000))
 
 if ch == 1:
-    img = imread(img_dir + actives[idx], key=range(0, 1000))
+    img = imread(os.path.join(img_dir, actives[idx]), key=range(0, 1000))
 else:
     img = struct
 
