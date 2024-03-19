@@ -29,19 +29,12 @@ def measure_VNC(masks):
     return np.array(vnc_lengths)
 
 
-def plot_VNC_measures(masks):
-    vnc_lengths = measure_VNC(masks)
-    median_filter(vnc_lengths, size=19, output=vnc_lengths)
-
-    x = np.arange(vnc_lengths.size)
-    coef = np.polyfit(x, vnc_lengths, 1)
+def fit_regression(lengths):
+    x = np.arange(lengths.size)
+    coef = np.polyfit(x, lengths, deg=1)
     poly1d = np.poly1d(coef)
 
-    fig, ax = plt.subplots()
-    ax.plot(vnc_lengths)
-    ax.plot(x, poly1d(x), '--k')
-    fig.suptitle('VNC length (feret diameter) over time')
-    plt.show()
+    return poly1d
 
 
 def reflect_edges(signal, window_size=160):
