@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-from skimage.filters import threshold_otsu, threshold_multiotsu
+from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops, find_contours
 from skimage.morphology import binary_opening, octagon
 
@@ -13,11 +13,7 @@ def get_single_roi(img):
 
     Values *outside* the ROI are marked as True, values inside are False.'''
     slc = img.copy()
-    if np.unique(slc).size <= 2:
-        # use regular otsu threshold in case of a binary image
-        thres = threshold_otsu(slc)
-    else:
-        thres = threshold_multiotsu(slc, classes=3)[0]
+    thres = threshold_otsu(slc)
     binary_mask = slc > thres
 
     slc[...] = 0
