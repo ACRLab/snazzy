@@ -13,7 +13,7 @@ structs = [f for f in sorted(os.listdir(img_dir)) if f.endswith('ch2.tif')]
 
 print('Select movie to display, based on index:')
 
-for i, file in enumerate(actives):
+for i, file in enumerate(structs):
     file_name = file.split('-')[0]
     print(f'[{i}] {file_name}')
 
@@ -27,10 +27,10 @@ print('Select downsample amount to calculate the contours:')
 
 window = int(input())
 
-struct = imread(os.path.join(img_dir, structs[idx]), key=range(0, 1000))
+struct = imread(os.path.join(img_dir, structs[idx]))
 
 if ch == 1:
-    img = imread(os.path.join(img_dir, actives[idx]), key=range(0, 1000))
+    img = imread(os.path.join(img_dir, actives[idx]))
 else:
     img = struct
 
