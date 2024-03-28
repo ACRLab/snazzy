@@ -3,7 +3,7 @@ import math
 
 from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops, find_contours
-from skimage.morphology import binary_opening, octagon
+from skimage.morphology import binary_opening, binary_erosion, remove_small_holes, disk
 
 from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
 
@@ -18,7 +18,9 @@ def get_single_roi(img):
 
     slc[...] = 0
     slc[binary_mask] = 1
-    binary_opening(slc, footprint=octagon(3, 3), out=slc)
+    slc = slc.astype(np.bool_)
+    remove_small_holes(slc, 200, out=slc)
+    binary_opening(slc, footprint=disk(3), out=slc)
 
     labels, num_labels = label(slc, return_num=True, connectivity=2)
 
@@ -39,7 +41,7 @@ def get_single_roi(img):
     return np.logical_not(largest_label)
 
 
-def get_roi(img, window=10):
+def get_roi(img, window=10, mask=None):
     '''The ROI for an image, after downsampling the slices by `window`.'''
     num_slices = img.shape[0]
     rois_length = math.ceil(num_slices/window)
@@ -50,6 +52,8 @@ def get_roi(img, window=10):
         if i % window == 0:
             j = i // window
             avg_slc = np.average(img[j*window:(j+1)*window], axis=0)
+            if mask is not None:
+                avg_slc[mask] = 0
             rois[j] = get_single_roi(avg_slc)
 
     return rois
@@ -74,9 +78,19 @@ def cache_rois(img, file_path):
     print(f'Saved ROIs in `{file_path}`.')
 
 
-def get_contours(img, window=10):
+def get_initial_mask(img, n):
+    '''Create a mask based on the first n frames of the movies.
+
+    The mask is eroded to give space to account for the embryo flickering.'''
+    init = np.average(img[:n], axis=0)
+    first_mask = get_single_roi(init)
+    binary_erosion(first_mask, footprint=disk(15), out=first_mask)
+    return first_mask
+
+
+def get_contours(img, window=10, mask=None):
     '''Returns the contours of each image, base on their ROI.'''
-    rois = get_roi(img, window=window)
+    rois = get_roi(img, window=window, mask=mask)
 
     contours = []
 
