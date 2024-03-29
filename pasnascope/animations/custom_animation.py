@@ -99,8 +99,8 @@ class BoundedContourAnimation(PauseAnimation):
         self.offset = image.shape[0]//len(contours)
 
     def paint_axes(self):
-        xs = self.second_contour[0][:, 0]
-        ys = self.second_contour[0][:, 1]
+        xs = self.second_contour[:, 0]
+        ys = self.second_contour[:, 1]
         self.ax.plot(ys, xs, color='orange')[0]
 
         x = self.contours[0][:, 0]
