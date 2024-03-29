@@ -83,3 +83,57 @@ class ContourAnimation(PauseAnimation):
             x, y = self.contours[i][:, 0], self.contours[i][:, 1]
             self.contour_plot.set_data(y, x)
         return self.img_plot
+
+
+class BoundedContourAnimation(PauseAnimation):
+    '''Overlays ROI contour on top of a masked movie.
+
+    The animation will present the original movie and the contours
+    of the bounding mask.'''
+
+    def __init__(self, image, contours, bounding_contour, interval=50):
+        super().__init__(image, interval)
+        self.contours = contours
+        self.second_contour = bounding_contour
+        self.paint_axes()
+        self.offset = image.shape[0]//len(contours)
+
+    def paint_axes(self):
+        xs = self.second_contour[:, 0]
+        ys = self.second_contour[:, 1]
+        self.ax.plot(ys, xs, color='orange')[0]
+
+        x = self.contours[0][:, 0]
+        y = self.contours[0][:, 1]
+        self.contour_plot = self.ax.plot(y, x, color='red')[0]
+
+    def update(self, frame):
+        self.img_plot.set_data(self.image[frame])
+        if frame % self.offset == 0:
+            i = frame // self.offset
+            x, y = self.contours[i][:, 0], self.contours[i][:, 1]
+            self.contour_plot.set_data(y, x)
+        return self.img_plot
+
+
+class FeretAnimation(PauseAnimation):
+    '''Overlays Feret diameter measuments on top of a movie.'''
+
+    def __init__(self, image, feret_coordinates, interval=50):
+        super().__init__(image, interval)
+        self.feret_coordinates = feret_coordinates
+        self.paint_axes()
+
+    def paint_axes(self):
+        x1, y1 = self.feret_coordinates[0][0]
+        x2, y2 = self.feret_coordinates[0][1]
+        self.points = self.ax.plot(
+            (int(y1), int(y2)), (int(x1), int(x2)), marker='o', color='r')[0]
+
+    def update(self, frame):
+        x1, y1 = self.feret_coordinates[frame][0]
+        x2, y2 = self.feret_coordinates[frame][1]
+        self.points.set_data(
+            (int(y1), int(y2)), (int(x1), int(x2)))
+        self.img_plot.set_data(self.image[frame])
+        return self.img_plot
