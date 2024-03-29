@@ -34,8 +34,8 @@ if ch == 1:
 else:
     img = struct
 
-initial_mask = roi.get_initial_mask(img, 200)
-bounding_contour = roi.get_contours(img[:200], window=1)
+initial_mask = roi.get_initial_mask(img, 100)
+bounding_contour = roi.get_contour(initial_mask)
 contours = roi.get_contours(struct, window=window, mask=initial_mask)
 
 ca = custom_animation.BoundedContourAnimation(img, contours, bounding_contour)
