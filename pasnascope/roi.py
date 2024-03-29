@@ -1,19 +1,22 @@
 import numpy as np
 import math
 
-from skimage.filters import threshold_otsu
+from skimage.filters import threshold_otsu, threshold_multiotsu
 from skimage.measure import label, regionprops, find_contours
 from skimage.morphology import binary_opening, binary_erosion, remove_small_holes, disk
 
 from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
 
 
-def get_single_roi(img):
+def get_single_roi(img, multi=False):
     '''Calculates the ROI of a 2D grayscale image.
 
     Values *outside* the ROI are marked as True, values inside are False.'''
     slc = img.copy()
-    thres = threshold_otsu(slc)
+    if multi:
+        thres = threshold_multiotsu(slc)[1]
+    else:
+        thres = threshold_otsu(slc)
     binary_mask = slc > thres
 
     slc[...] = 0
@@ -82,14 +85,14 @@ def get_initial_mask(img, n):
     '''Create a mask based on the first n frames of the movies.
 
     The mask is eroded to give space to account for the embryo flickering.'''
-    init = np.average(img[:n], axis=0)
-    first_mask = get_single_roi(init)
+    init = np.max(img[:n], axis=0)
+    first_mask = get_single_roi(init, multi=True)
     binary_erosion(first_mask, footprint=disk(15), out=first_mask)
     return first_mask
 
 
 def get_contours(img, window=10, mask=None):
-    '''Returns the contours of each image, base on their ROI.'''
+    '''Returns the contours of each image, based on their ROI.'''
     rois = get_roi(img, window=window, mask=mask)
 
     contours = []
@@ -102,6 +105,11 @@ def get_contours(img, window=10, mask=None):
         if len(contour) > 0:
             contours.append(contour)
     return contours
+
+
+def get_contour(img):
+    '''Returns the contour for a single image.'''
+    return find_contours(img)[0]
 
 
 def plot_contours(img):
