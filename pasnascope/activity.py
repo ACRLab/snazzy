@@ -1,40 +1,6 @@
 import numpy as np
 import numpy.ma as ma
 import matplotlib.pyplot as plt
-from skimage.measure import regionprops
-from scipy.ndimage import median_filter
-
-
-def measure_VNC(masks):
-    '''Returns the max feret diameter for a grou of binary images.
-
-    The VNC length is measured indirectly, based on the ROI mask length.
-
-    Args:
-        masks (nparray): a mask of a group of images, as a 3D nparray
-    '''
-    vnc_lengths = []
-
-    for mask in masks:
-        # Values that should be ignored in the mask are masked as True
-        # So, we need to flip the values to use here:
-        regions = regionprops(np.logical_not(mask).astype(np.uint8))
-        # TODO: handle cases where no region is found
-        # this can happen because sometimes mask is None
-        if len(regions) == 0:
-            continue
-        props = regions[0]
-        vnc_lengths.append(props['feret_diameter_max'])
-
-    return np.array(vnc_lengths)
-
-
-def fit_regression(lengths):
-    x = np.arange(lengths.size)
-    coef = np.polyfit(x, lengths, deg=1)
-    poly1d = np.poly1d(coef)
-
-    return poly1d
 
 
 def reflect_edges(signal, window_size=160):
