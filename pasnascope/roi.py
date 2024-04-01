@@ -44,11 +44,18 @@ def get_single_roi(img, multi=False):
     return np.logical_not(largest_label)
 
 
-def get_roi(img, window=10, mask=None):
+def get_roi(img, window=10, mask=None, orientation='v'):
     '''The ROI for an image, after downsampling the slices by `window`.'''
     num_slices = img.shape[0]
     rois_length = math.ceil(num_slices/window)
     rois = np.empty((rois_length, *img.shape[1:]), dtype=np.bool_)
+
+    if orientation == 'v':
+        use_multi_thres = False
+    elif orientation == 'l':
+        use_multi_thres = True
+    else:
+        raise ValueError('Orientation should be `v` or `l`.')
 
     for i in range(num_slices):
         # calculates a new ROI in steps of `window`:
@@ -57,7 +64,7 @@ def get_roi(img, window=10, mask=None):
             avg_slc = np.average(img[j*window:(j+1)*window], axis=0)
             if mask is not None:
                 avg_slc[mask] = 0
-            rois[j] = get_single_roi(avg_slc)
+            rois[j] = get_single_roi(avg_slc, multi=use_multi_thres)
 
     return rois
 
