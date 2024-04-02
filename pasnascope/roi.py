@@ -8,13 +8,17 @@ from skimage.morphology import binary_opening, binary_erosion, remove_small_hole
 from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
 
 
-def get_single_roi(img, multi=False):
+def get_single_roi(img, multi=False, high=False):
     '''Calculates the ROI of a 2D grayscale image.
 
     Values *outside* the ROI are marked as True, values inside are False.'''
     slc = img.copy()
     if multi:
-        thres = threshold_multiotsu(slc)[1]
+        motsu = threshold_multiotsu(slc)
+        if high:
+            thres = motsu[1]
+        else:
+            thres = motsu[0]
     else:
         thres = threshold_otsu(slc)
     binary_mask = slc > thres
@@ -92,15 +96,15 @@ def get_initial_mask(img, n):
     '''Create a mask based on the first n frames of the movies.
 
     The mask is eroded to give space to account for the embryo flickering.'''
-    init = np.max(img[:n], axis=0)
-    first_mask = get_single_roi(init, multi=True)
-    binary_erosion(first_mask, footprint=disk(15), out=first_mask)
+    init = np.average(img[:n], axis=0)
+    first_mask = get_single_roi(init, multi=True, high=True)
+    binary_erosion(first_mask, footprint=disk(10), out=first_mask)
     return first_mask
 
 
-def get_contours(img, window=10, mask=None):
+def get_contours(img, window=10, mask=None, orientation='v'):
     '''Returns the contours of each image, based on their ROI.'''
-    rois = get_roi(img, window=window, mask=mask)
+    rois = get_roi(img, window=window, mask=mask, orientation=orientation)
 
     contours = []
 
