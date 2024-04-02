@@ -2,7 +2,7 @@ import os
 from tifffile import imread
 
 from pasnascope.animations import custom_animation
-from pasnascope import roi
+from pasnascope import roi, iellipsis
 
 
 img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
@@ -19,6 +19,10 @@ for i, file in enumerate(structs):
 
 idx = int(input())
 
+print('Select embryo orientation [v or l]:')
+
+orientation = input()
+
 print('Select channel: 1 for active channel, 2 for structural channel.')
 
 ch = int(input())
@@ -34,9 +38,14 @@ if ch == 1:
 else:
     img = struct
 
-initial_mask = roi.get_initial_mask(img, 100)
+if orientation == 'l':
+    ell = iellipsis.fit_ellipsis(img)
+    initial_mask = iellipsis.create_mask_from_ellipse(ell, img[0].shape)
+elif orientation == 'v':
+    initial_mask = roi.get_initial_mask(img, 100)
 bounding_contour = roi.get_contour(initial_mask)
-contours = roi.get_contours(struct, window=window, mask=initial_mask)
+contours = roi.get_contours(struct, window=window,
+                            mask=initial_mask, orientation=orientation)
 
 ca = custom_animation.BoundedContourAnimation(img, contours, bounding_contour)
 ca.display()
