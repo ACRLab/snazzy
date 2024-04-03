@@ -29,7 +29,7 @@ def get_single_roi(img, multi=False, high=False):
     remove_small_holes(slc, 200, out=slc)
     binary_opening(slc, footprint=disk(3), out=slc)
 
-    labels, num_labels = label(slc, return_num=True, connectivity=2)
+    labels, num_labels = label(slc, return_num=True, connectivity=1)
 
     # skip frames where no region is found
     if num_labels == 0:
