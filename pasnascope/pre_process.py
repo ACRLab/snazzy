@@ -8,6 +8,8 @@ from pasnascope.animations import custom_animation
 
 def pre_process(img, downscale_factors):
     '''Remove edges to avoid padding the image with zeros.'''
+    if img.ndim != 3:
+        raise ValueError('img must have 3 dimensions.')
     nr, nc = get_matching_size(img.shape[1:], downscale_factors)
 
     trim_img = img[:, :nr, :nc]
@@ -27,7 +29,7 @@ def get_matching_size(shape, factors):
 
 
 def downsample_all(save=True):
-    '''Reduces individual movies to lower resolution, to be classified.'''
+    '''Reduces movies to lower resolution, to be classified.'''
     img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
     output_dir = os.path.join(os.getcwd(), 'data', 'downsampled')
     file_names = [f for f in os.listdir(img_dir) if f.endswith('ch2.tif')]
