@@ -1,4 +1,6 @@
 from pasnascope import pre_process
+import numpy as np
+import pytest
 
 
 def test_calculate_rows_to_trim_no_trim():
@@ -23,3 +25,10 @@ def test_calculate_rows_to_trim_with_trim():
     factors = (3, 3)
     expected_size = (9, 6)
     assert pre_process.get_matching_size(shape, factors) == expected_size
+
+
+def test_raises_value_error_if_not_3D():
+    with pytest.raises(ValueError) as exc:
+        img = np.ones((20, 20))
+        pre_process.pre_process(img, (1, 2, 2))
+    assert str(exc.value) == 'img must have 3 dimensions.'
