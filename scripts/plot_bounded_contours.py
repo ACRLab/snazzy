@@ -2,7 +2,7 @@ import os
 from tifffile import imread
 
 from pasnascope.animations import custom_animation
-from pasnascope import roi, iellipsis
+from pasnascope import roi, initial_mask
 
 
 img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
@@ -39,8 +39,8 @@ else:
     img = struct
 
 if orientation == 'l':
-    ell = iellipsis.fit_ellipsis(img)
-    initial_mask = iellipsis.create_mask_from_ellipse(ell, img[0].shape)
+    ell = initial_mask.fit_ellipse(img)
+    initial_mask = initial_mask.create_mask_from_ellipse(ell, img[0].shape)
 elif orientation == 'v':
     initial_mask = roi.get_initial_mask(img, 100)
 bounding_contour = roi.get_contour(initial_mask)
