@@ -8,13 +8,17 @@ from skimage.morphology import binary_opening, binary_erosion, remove_small_hole
 from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
 
 
-def get_single_roi(img, multi=False):
+def get_single_roi(img, multi=False, high=False):
     '''Calculates the ROI of a 2D grayscale image.
 
     Values *outside* the ROI are marked as True, values inside are False.'''
     slc = img.copy()
     if multi:
-        thres = threshold_multiotsu(slc)[1]
+        motsu = threshold_multiotsu(slc)
+        if high:
+            thres = motsu[1]
+        else:
+            thres = motsu[0]
     else:
         thres = threshold_otsu(slc)
     binary_mask = slc > thres
@@ -25,7 +29,7 @@ def get_single_roi(img, multi=False):
     remove_small_holes(slc, 200, out=slc)
     binary_opening(slc, footprint=disk(3), out=slc)
 
-    labels, num_labels = label(slc, return_num=True, connectivity=2)
+    labels, num_labels = label(slc, return_num=True, connectivity=1)
 
     # skip frames where no region is found
     if num_labels == 0:
@@ -44,11 +48,18 @@ def get_single_roi(img, multi=False):
     return np.logical_not(largest_label)
 
 
-def get_roi(img, window=10, mask=None):
+def get_roi(img, window=10, mask=None, orientation='v'):
     '''The ROI for an image, after downsampling the slices by `window`.'''
     num_slices = img.shape[0]
     rois_length = math.ceil(num_slices/window)
     rois = np.empty((rois_length, *img.shape[1:]), dtype=np.bool_)
+
+    if orientation == 'v':
+        use_multi_thres = False
+    elif orientation == 'l':
+        use_multi_thres = True
+    else:
+        raise ValueError('Orientation should be `v` or `l`.')
 
     for i in range(num_slices):
         # calculates a new ROI in steps of `window`:
@@ -57,7 +68,7 @@ def get_roi(img, window=10, mask=None):
             avg_slc = np.average(img[j*window:(j+1)*window], axis=0)
             if mask is not None:
                 avg_slc[mask] = 0
-            rois[j] = get_single_roi(avg_slc)
+            rois[j] = get_single_roi(avg_slc, multi=use_multi_thres)
 
     return rois
 
@@ -85,15 +96,15 @@ def get_initial_mask(img, n):
     '''Create a mask based on the first n frames of the movies.
 
     The mask is eroded to give space to account for the embryo flickering.'''
-    init = np.max(img[:n], axis=0)
-    first_mask = get_single_roi(init, multi=True)
-    binary_erosion(first_mask, footprint=disk(15), out=first_mask)
+    init = np.average(img[:n], axis=0)
+    first_mask = get_single_roi(init, multi=True, high=True)
+    binary_erosion(first_mask, footprint=disk(10), out=first_mask)
     return first_mask
 
 
-def get_contours(img, window=10, mask=None):
+def get_contours(img, window=10, mask=None, orientation='v'):
     '''Returns the contours of each image, based on their ROI.'''
-    rois = get_roi(img, window=window, mask=mask)
+    rois = get_roi(img, window=window, mask=mask, orientation=orientation)
 
     contours = []
 
