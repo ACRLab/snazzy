@@ -1,4 +1,7 @@
+import os
+import matplotlib.pyplot as plt
 import numpy as np
+from tifffile import imread
 from skimage.draw import ellipse
 from skimage.filters import threshold_otsu
 from scipy.optimize import minimize
@@ -72,3 +75,16 @@ def create_mask_from_ellipse(coords, shape):
     x, y = ellipse(*coords[:-1], shape=shape, rotation=coords[-1])
     mask[x, y] = 0
     return mask.astype(np.bool_)
+
+
+def inspect_ellipse(img):
+    '''Helper to visualize ellipse overlay.
+
+    Args:
+        img: 3D ndarray representing the image.'''
+    ell = fit_ellipse(img)
+    mask = create_mask_from_ellipse(ell, img.shape[1:])
+    fig, ax = plt.subplots()
+    ax.imshow(img[0])
+    ax.imshow(~mask, alpha=0.2)
+    plt.show()
