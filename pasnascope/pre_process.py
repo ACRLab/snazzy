@@ -28,10 +28,10 @@ def get_matching_size(shape, factors):
     return (r-trim_rows, c-trim_cols)
 
 
-def downsample_all(save=True):
+def downsample_all(data_path, save=True):
     '''Reduces movies to lower resolution, to be classified.'''
-    img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
-    output_dir = os.path.join(os.getcwd(), 'data', 'downsampled')
+    img_dir = os.path.join(data_path, 'embryos')
+    output_dir = os.path.join(data_path, 'downsampled')
     file_names = [f for f in os.listdir(img_dir) if f.endswith('ch2.tif')]
 
     for file_name in file_names:
@@ -46,10 +46,9 @@ def downsample_all(save=True):
             print(f"Downsampled file {file_path}.")
 
 
-def display(file_name):
+def display(file_path):
     '''Helper to visualize downsampled movies.'''
-    img_dir = os.path.join(os.getcwd(), 'data', 'downsampled')
-    img = np.load(os.path.join(img_dir, file_name))
+    img = np.load(os.path.join(file_path))
     pa = custom_animation.PauseAnimation(img, interval=25)
     pa.display()
 
@@ -58,4 +57,4 @@ if __name__ == '__main__':
     output_dir = os.path.join(os.getcwd(), 'data', 'downsampled')
     file_names = [f for f in os.listdir(output_dir)]
     print(file_names)
-    display(file_names[2])
+    display(os.path.join(output_dir, file_names[1]))
