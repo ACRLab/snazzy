@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from skimage.measure import label, regionprops
 from skimage.filters import threshold_multiotsu
 import numpy as np
@@ -33,30 +34,29 @@ def extract_features(img):
     return features
 
 
-def extract(file_name, n_slices=300):
+def extract(file_path, n_slices, save=False):
     '''Extracts features from the first n_slices of an image.
 
     Image is downsampled and represented as a numpy array.'''
-    img_dir = os.path.join(os.getcwd(), 'data', 'downsampled')
-    output_dir = os.path.join(img_dir, 'features')
-    img = np.load(os.path.join(img_dir, file_name))
+    p = Path(file_path)
+    output_dir = os.path.join(p.parent, 'features')
+    img = np.load(file_path)
 
     features = []
     for i, slc in enumerate(img[:n_slices]):
-        if i % 100 == 0:
-            print('.' * (i//100))
         features.append(extract_features(slc))
 
-    new_file_name = f"feat-{file_name.split('-')[1]}"
-    np.save(os.path.join(output_dir, new_file_name), features)
-    print(f"Saved features for {new_file_name}")
+    new_file_name = f"feat-{p.stem.split('-')[1]}"
+    if save:
+        np.save(os.path.join(output_dir, new_file_name), features)
+    print(f"Saved features as {new_file_name}.")
 
 
-def extract_all(path):
+def extract_all(path, save=False, n_slices=300):
     '''Extracts features of all downsampled files in a given directory.
 
-    Relies on the fact that downsampled files start with `ds`.'''
+    Assumes that downsampled files start with `ds`.'''
     filenames = [f for f in os.listdir(path) if f.startswith('ds')]
 
     for filename in filenames:
-        extract(filename, n_slices=300)
+        extract(os.path.join(path, filename), n_slices, save=save)

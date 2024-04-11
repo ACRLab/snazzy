@@ -1,6 +1,6 @@
 import numpy as np
-from time import time
 import os
+from pathlib import Path
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.pipeline import make_pipeline
@@ -22,7 +22,7 @@ exp_data = {
 }
 
 
-def get_training_samples(orientation, n=500):
+def get_training_samples(orientation, samples_dir, n=500):
     '''Returns annotated data, based on a given orientation.
 
     Picks an equal amount of images from each sample.
@@ -30,7 +30,6 @@ def get_training_samples(orientation, n=500):
         orientation: `v` (ventral) or `l` (lateral). Embryo orientation.
         n: int. Amount of samples.
     '''
-    img_dir = os.path.join(os.getcwd(), 'data', 'downsampled', 'features')
     num_samples = len(exp_data[orientation])
     # number of images per sample
     f = n//num_samples
@@ -39,33 +38,38 @@ def get_training_samples(orientation, n=500):
     i = 0
     for sample in exp_data[orientation]:
         file_name = f"feat-{sample}.npy"
-        curr = np.load(os.path.join(img_dir, file_name))
+        curr = np.load(os.path.join(samples_dir, file_name))
         X[i:i+f] = curr[:f]
         i += f
     return X
 
 
-def get_features_from_tiff(file_name):
+def pre_process_tiff(file_path):
+    img = imread(file_path, key=range(10))
+    # The downscale_factors should match the ones used to fit the model
+    downsampled = pre_process.pre_process(img, (1, 2, 2))
+    downsampled = np.average(downsampled, axis=0)
+    return downsampled
+
+
+def get_features_from_tiff(file_path):
     '''Extracts features from a tiff file.
 
     Gets first 10 slices and uses them to calculate features.
 
     Args:
-        file_name: file_name, expected to be in the directory
-        `pasnascope/data/embryos`.
+        file_path: absolute path to the tif file. 
     '''
-    img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
-    img = imread(os.path.join(img_dir, file_name), key=range(10))
-    # The downscale_factors should match the ones used to fit the model
-    downsampled = pre_process.pre_process(img, (1, 2, 2))
-    downsampled = np.average(downsampled, axis=0)
+    downsampled = pre_process_tiff(file_path)
     feats = feature_extraction.extract_features(downsampled)
     return feats
 
 
-def classify_image(file_name):
-    img_features = get_features_from_tiff(file_name)
-    model_path = os.path.join(os.getcwd(), 'results', 'models', 'SVC')
+def classify_image(file_path):
+    '''Classify image based on a previously fitted model.'''
+    p = Path(file_path)
+    img_features = get_features_from_tiff(file_path)
+    model_path = os.path.join(p.parent.parent, 'models', 'SVC')
     try:
         with open(model_path, 'rb') as f:
             model = pickle.load(f)
@@ -76,7 +80,7 @@ def classify_image(file_name):
     return 'l' if orientation == 1 else 'v'
 
 
-def fit_SVC(n=600, save=False, features=None):
+def fit_SVC(n, samples_dir, save=False, output_dir=None, features=None):
     '''Calculates the SVC model.
 
     Args:
@@ -89,16 +93,20 @@ def fit_SVC(n=600, save=False, features=None):
     # Gets half of the training samples from each orientation
     # `v` is marked as class 0 and `l` is marked as class 1
     X = np.concatenate(
-        (get_training_samples('v', n//2), get_training_samples('l', n//2)))
+        (get_training_samples('v', samples_dir, n//2),
+         get_training_samples('l', samples_dir, n//2)))
     Y = np.zeros(n)
     Y[n//2:] = 1
 
+    # TODO: error check this
+    if features is not None:
+        X = X[:, features]
+
     pipe = make_pipeline(StandardScaler(), SVC(kernel="rbf"))
 
-    if save:
+    if save and output_dir:
         pipe.fit(X, Y)
-        model_path = os.path.join(os.getcwd(), 'results', 'models')
-        with open(os.path.join(model_path, "SVC"), 'wb+') as f:
+        with open(os.path.join(output_dir, "SVC"), 'wb+') as f:
             pickle.dump(pipe, f)
     else:
         scores = cross_val_score(pipe, X, Y, cv=5)
