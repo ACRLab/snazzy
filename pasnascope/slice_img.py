@@ -1,16 +1,16 @@
 import os
 import numpy as np
-from tifffile import imwrite
-import tifffile
+from tifffile import imwrite, TiffFile
 from skimage.filters import threshold_triangle
 from skimage.morphology import octagon, binary_closing
+from skimage.exposure import equalize_hist
 
 from pasnascope import utils
 
 
 def get_metadata(img_path):
     '''Returns image metadata, used to open it as a memory map.'''
-    with tifffile.TiffFile(img_path) as tif:
+    with TiffFile(img_path) as tif:
         series = tif.series[0]
         shape = series.shape
         offset = series.dataoffset
@@ -109,7 +109,7 @@ def cut_movies(extremes, img_path, dest, pad=20):
     each element of `extremes`.
 
     Args:
-        extremes: list of [min_r, max_r, min_c, max_c] points.
+        extremes: list of `[min_r, max_r, min_c, max_c]` points.
         img_path: path to the raw image that will be cut.
         dest: directory where the movies will be saved.'''
     offset, dtype, shape = get_metadata(img_path)
@@ -127,11 +127,17 @@ def cut_movies(extremes, img_path, dest, pad=20):
         imwrite(os.path.join(dest, f'emb{i}-ch2.tif'), cut_ch2)
 
 
-def add_padding(points, pad):
+def add_padding(points, pad=20):
     '''Adds padding to the list of boundary points, pad//2 on each side.'''
     p = pad//2
     x0, x1, y0, y1 = points
     return [x0-p, x1+p, y0-p, y1+p]
+
+
+def boundary_to_rect_coords(boundary):
+    '''Converts from `(x0, x1, y0, y1)` to `(x, y, w, h)`.'''
+    [x0, x1, y0, y1] = add_padding(boundary)
+    return [x0, y0, y1-y0, x1-x0]
 
 
 def calculate_slice_coordinates(img_path, n_cols=3):
@@ -142,13 +148,38 @@ def calculate_slice_coordinates(img_path, n_cols=3):
         n_cols: number of columns in the FOV grid, used to enforce the naming
         convention of the extracted embryos.
     '''
+    binary_img = get_initial_binary_image(img_path)
+
+    extremes = get_bbox_boundaries(binary_img, s=25, n_cols=n_cols)
+    return extremes
+
+
+def get_initial_frames_from_mmap(img_path, n=10):
+    '''Returns the first n frames from the file at `img_path`.'''
     offset, dtype, shape = get_metadata(img_path)
     # Change first dimension to load just the 10 first images
-    shape = (10, *shape[1:])
-    img1 = np.memmap(img_path, dtype=dtype, mode='r',
-                     shape=shape, offset=offset)
+    shape = (n, *shape[1:])
+    img = np.memmap(img_path, dtype=dtype, mode='r',
+                    shape=shape, offset=offset)
+    return img
 
-    frame = img1[:, 1, :, :].copy()
+
+def get_first_image_from_mmap(img_path):
+    '''Returns the first image from a mmap file, for plotting.
+
+    The image is the average of the first 10 slices.
+    It is also equalized, since this method is supposed to be used for 
+    displaying the image.'''
+    img = get_initial_frames_from_mmap(img_path, n=10)
+    first_frame = np.average(img[:, 1, :, :], axis=0)
+    return equalize_hist(first_frame)
+
+
+def get_initial_binary_image(img_path, n=10):
+    '''Binarizes the first `n` slices of the img, which is read as a mmap.'''
+    img = get_initial_frames_from_mmap(img_path, n=n)
+
+    frame = img[:, 1, :, :].copy()
     frame = np.max(frame, axis=0)
 
     thres = get_threshold(frame)
@@ -156,6 +187,4 @@ def calculate_slice_coordinates(img_path, n_cols=3):
     frame[frame >= thres] = 1
     opened = np.zeros_like(frame, dtype=np.uint8)
     binary_closing(frame, footprint=octagon(5, 5), out=opened)
-
-    extremes = get_bbox_boundaries(opened, s=25, n_cols=n_cols)
-    return extremes
+    return opened
