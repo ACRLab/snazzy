@@ -7,7 +7,10 @@ from pasnascope.animations import custom_animation
 
 
 def pre_process(img, downscale_factors):
-    '''Remove edges to avoid padding the image with zeros.'''
+    '''Downsamples images that will be used by the classifier.
+
+    Trims some columns and rows, so that when downscaling the factors perfectly
+    match the image.'''
     if img.ndim != 3:
         raise ValueError('img must have 3 dimensions.')
     nr, nc = get_matching_size(img.shape[1:], downscale_factors)
@@ -28,10 +31,8 @@ def get_matching_size(shape, factors):
     return (r-trim_rows, c-trim_cols)
 
 
-def downsample_all(data_path, save=True):
+def downsample_all(img_dir, output_dir, save=True):
     '''Reduces movies to lower resolution, to be classified.'''
-    img_dir = os.path.join(data_path, 'embryos')
-    output_dir = os.path.join(data_path, 'downsampled')
     file_names = [f for f in os.listdir(img_dir) if f.endswith('ch2.tif')]
 
     for file_name in file_names:
@@ -43,7 +44,7 @@ def downsample_all(data_path, save=True):
         if save:
             output_name = f"ds-{file_name[:-4]}.npy"
             np.save(os.path.join(output_dir, output_name), downsampled)
-            print(f"Downsampled file {file_path}.")
+            print(f"Downsampled file {output_name}.")
 
 
 def display(file_path):
