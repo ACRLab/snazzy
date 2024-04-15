@@ -16,9 +16,9 @@ from pasnascope import pre_process, feature_extraction
 # Metadata about the experiment
 # Will be moved to another place soon
 exp_data = {
-    'number_of_features': 5,
-    'l': ['emb31', 'emb33', 'emb43', 'emb51'],
-    'v': ['emb11', 'emb12', 'emb13', 'emb52', 'emb63']
+    'number_of_features': 4,
+    'l': ['emb1', 'emb3', 'emb14', 'emb15'],
+    'v': ['emb0', 'emb2', 'emb4', 'emb9', 'emb12', 'emb16']
 }
 
 
@@ -65,11 +65,12 @@ def get_features_from_tiff(file_path):
     return feats
 
 
-def classify_image(file_path):
+def classify_image(file_path, model_path, features=None):
     '''Classify image based on a previously fitted model.'''
     p = Path(file_path)
     img_features = get_features_from_tiff(file_path)
-    model_path = os.path.join(p.parent.parent, 'models', 'SVC')
+    if features is not None:
+        img_features = img_features[features]
     try:
         with open(model_path, 'rb') as f:
             model = pickle.load(f)
