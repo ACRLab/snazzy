@@ -19,9 +19,9 @@ def get_metadata(img_path):
     return offset, dtype, shape
 
 
-def get_threshold(img):
+def get_threshold(img, thres_adjust=0):
     '''Returns image threshold using the triangle method.'''
-    return threshold_triangle(img)
+    return threshold_triangle(img) + thres_adjust
 
 
 def within_boundaries(i, j, r, c):
@@ -140,7 +140,7 @@ def boundary_to_rect_coords(boundary):
     return [x0, y0, y1-y0, x1-x0]
 
 
-def calculate_slice_coordinates(img_path, n_cols=3):
+def calculate_slice_coordinates(img_path, n_cols=3, thres_adjust=0):
     '''Returns boundary points for all images in `img_path`.
 
     Args:
@@ -148,7 +148,7 @@ def calculate_slice_coordinates(img_path, n_cols=3):
         n_cols: number of columns in the FOV grid, used to enforce the naming
         convention of the extracted embryos.
     '''
-    binary_img = get_initial_binary_image(img_path)
+    binary_img = get_initial_binary_image(img_path, thres_adjust=thres_adjust)
 
     extremes = get_bbox_boundaries(binary_img, s=25, n_cols=n_cols)
     return extremes
@@ -175,14 +175,14 @@ def get_first_image_from_mmap(img_path):
     return equalize_hist(first_frame)
 
 
-def get_initial_binary_image(img_path, n=10):
+def get_initial_binary_image(img_path, n=10, thres_adjust=0):
     '''Binarizes the first `n` slices of the img, which is read as a mmap.'''
     img = get_initial_frames_from_mmap(img_path, n=n)
 
     frame = img[:, 1, :, :].copy()
     frame = np.max(frame, axis=0)
 
-    thres = get_threshold(frame)
+    thres = get_threshold(frame, thres_adjust=thres_adjust)
     frame[frame < thres] = 0
     frame[frame >= thres] = 1
     opened = np.zeros_like(frame, dtype=np.uint8)
