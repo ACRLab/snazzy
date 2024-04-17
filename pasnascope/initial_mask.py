@@ -1,7 +1,5 @@
-import os
 import matplotlib.pyplot as plt
 import numpy as np
-from tifffile import imread
 from skimage.draw import ellipse
 from skimage.filters import threshold_otsu
 from scipy.optimize import minimize
@@ -54,16 +52,18 @@ def fit_ellipse(img):
     # initial guesses:
     regions = regionprops(largest_label, img)
     rr, cc = regions[0]['centroid']
+    ax_maj = regions[0]['axis_major_length']
+    ax_min = regions[0]['axis_minor_length']
     rr = int(rr)
     cc = int(cc)
-    # TODO: maybe use the guesses from regionprops
-    initial_maj_axis = 60
-    initial_min_axis = 15
+
+    initial_maj_axis = int(ax_maj/2)
+    initial_min_axis = int(ax_min/2)
     angle = 0
 
     # fit:
     x0 = [rr, cc, initial_min_axis, initial_maj_axis, angle]
-    bounds = [(30, 120), (30, 120), (10, 25), (20, 80), (-0.5, 0.5)]
+    bounds = [(30, 120), (60, 240), (10, 50), (20, 80), (-0.5, 0.5)]
     res = minimize(ellipse_count_cost, x0=x0, args=(img,),
                    method="Powell", bounds=bounds)
     return res.x[:5]
