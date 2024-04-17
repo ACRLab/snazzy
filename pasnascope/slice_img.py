@@ -124,7 +124,7 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
     offset, dtype, shape = get_metadata(img_path)
     img = np.memmap(img_path, dtype=dtype, mode='r',
                     shape=shape, offset=offset)
-    for i, extreme in enumerate(extremes):
+    for i, extreme in enumerate(extremes, 1):
         file_name = f"emb{i}-ch1.tif"
         if file_name in os.listdir(dest):
             print(
