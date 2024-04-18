@@ -17,30 +17,47 @@ from pasnascope import pre_process, feature_extraction
 # Will be moved to another place soon
 exp_data = {
     'number_of_features': 4,
-    'l': ['emb1', 'emb3', 'emb14', 'emb15'],
-    'v': ['emb0', 'emb2', 'emb4', 'emb9', 'emb12', 'emb16']
+    'l': {'emb0': [(0, 200)], 'emb1': [(0, 200)], 'emb19': [(0, 150)], 'emb20': [(0, 100)], 'emb26': [(0, 100)]},
+    'v': {'emb14': [(0, 40), (90, 160)], 'emb21': [(0, 299)], 'emb5': [(20, 100), (110, 200), (250, 299)]}
 }
 
 
 def get_training_samples(orientation, samples_dir, n=500):
     '''Returns annotated data, based on a given orientation.
 
-    Picks an equal amount of images from each sample.
+    Picks a proporcional amount of images from each sample.
     Args:
         orientation: `v` (ventral) or `l` (lateral). Embryo orientation.
+        samples_dir: path where the feature files are saved.
         n: int. Amount of samples.
     '''
-    num_samples = len(exp_data[orientation])
-    # number of images per sample
-    f = n//num_samples
-    # preallocate X and add slices of size f from each sample:
-    X = np.ones((n, exp_data['number_of_features']))
+    lengths = {}
+    for name, intervals in exp_data[orientation].items():
+        lengths[name] = sum(end-start for start, end in intervals)
+
+    total_length = sum(lengths.values())
+
+    sample_sizes = {name: int((l/total_length)*n)
+                    for name, l in lengths.items()}
+
+    X = np.zeros((n, exp_data['number_of_features']))
     i = 0
-    for sample in exp_data[orientation]:
+    for sample, intervals in exp_data[orientation].items():
         file_name = f"feat-{sample}.npy"
         curr = np.load(os.path.join(samples_dir, file_name))
-        X[i:i+f] = curr[:f]
-        i += f
+        size = sample_sizes[sample]
+        for start, end in intervals:
+            if size == 0:
+                break
+            l = end - start
+            if l < size:
+                X[i:i+l] = curr[start:end]
+                size -= l
+            else:
+                end = start + size
+                X[i:i+size] = curr[start:end]
+                size = 0
+            i += end - start
     return X
 
 
@@ -81,7 +98,7 @@ def classify_image(file_path, model_path, features=None):
     return 'l' if orientation == 1 else 'v'
 
 
-def fit_SVC(n, samples_dir, save=False, output_dir=None, features=None):
+def fit_SVC(n, samples_dir, save=False, output_dir=None, name=None, features=None):
     '''Calculates the SVC model.
 
     Args:
@@ -93,11 +110,13 @@ def fit_SVC(n, samples_dir, save=False, output_dir=None, features=None):
     '''
     # Gets half of the training samples from each orientation
     # `v` is marked as class 0 and `l` is marked as class 1
-    X = np.concatenate(
-        (get_training_samples('v', samples_dir, n//2),
-         get_training_samples('l', samples_dir, n//2)))
-    Y = np.zeros(n)
-    Y[n//2:] = 1
+    v_samples = get_training_samples('v', samples_dir, n//2)
+    l_samples = get_training_samples('l', samples_dir, n//2)
+    X = np.concatenate((v_samples, l_samples))
+    Y = np.zeros(X.shape[0])
+    # masks second half of features as `l` orientation
+    v = v_samples.shape[0]
+    Y[v:] = 1
 
     # TODO: error check this
     if features is not None:
@@ -105,9 +124,9 @@ def fit_SVC(n, samples_dir, save=False, output_dir=None, features=None):
 
     pipe = make_pipeline(StandardScaler(), SVC(kernel="rbf"))
 
-    if save and output_dir:
+    if save and output_dir and name:
         pipe.fit(X, Y)
-        with open(os.path.join(output_dir, "SVC"), 'wb+') as f:
+        with open(os.path.join(output_dir, name), 'wb+') as f:
             pickle.dump(pipe, f)
     else:
         scores = cross_val_score(pipe, X, Y, cv=5)
@@ -115,7 +134,7 @@ def fit_SVC(n, samples_dir, save=False, output_dir=None, features=None):
         print(f"Standard deviation of {scores.std()}")
 
 
-def plot_svc(n=600, features=[0, 1]):
+def plot_svc(samples_dir, n=600, features=[0, 1]):
     '''Creates a Decision Boundary plot, with an SVC that only takes two
     features
 
@@ -132,12 +151,14 @@ def plot_svc(n=600, features=[0, 1]):
             f"Provide valid indices for the features array. Should be within range 0 <= x < {exp_data['number_of_features']}")
     cm_bright = ListedColormap(["#FF0000", "#0000FF"])
 
-    X = np.concatenate(
-        (get_training_samples('v', n//2), get_training_samples('l', n//2)))
-    Y = np.zeros(n)
-    Y[n//2:] = 1
-    # Extracts only the two selected features
+    v_samples = get_training_samples('v', samples_dir, n//2)
+    l_samples = get_training_samples('l', samples_dir, n//2)
+    X = np.concatenate((v_samples, l_samples))
     X = X[:, features]
+    Y = np.zeros(X.shape[0])
+    # masks second half of features as `l` orientation
+    v = v_samples.shape[0]
+    Y[v:] = 1
 
     X_train, X_test, Y_train, Y_test = train_test_split(
         X, Y, test_size=0.05, random_state=17)
