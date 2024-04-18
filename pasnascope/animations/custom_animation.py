@@ -21,11 +21,14 @@ class PauseAnimation:
         self.ani = animation.FuncAnimation(
             fig=fig, func=self.update, frames=len(self.image), interval=self.interval, repeat=False
         )
+
+        self.frame_num = ax.text(0, 5, str(0), color='w')
         fig.canvas.mpl_connect('key_press_event', self.toggle_pause)
         return fig, ax
 
     def update(self, frame):
         self.img_plot.set_data(self.image[frame])
+        self.frame_num.set_text(str(frame))
         return self.img_plot
 
     def toggle_pause(self, *args):
