@@ -14,9 +14,9 @@ def measure_VNC(masks):
     Args:
         masks (nparray): a mask of a group of images, as a 3D nparray
     '''
-    vnc_lengths = []
+    vnc_lengths = np.zeros(masks.shape[0])
 
-    for mask in masks:
+    for i, mask in enumerate(masks):
         # Values that should be ignored in the mask are masked as True
         # So, we need to flip the values to use here:
         regions = regionprops(np.logical_not(mask).astype(np.uint8))
@@ -25,9 +25,9 @@ def measure_VNC(masks):
         if len(regions) == 0:
             continue
         props = regions[0]
-        vnc_lengths.append(props['feret_diameter_max'])
+        vnc_lengths[i] = props['feret_diameter_max']
 
-    return np.array(vnc_lengths)
+    return vnc_lengths
 
 
 def fit_regression(lengths):

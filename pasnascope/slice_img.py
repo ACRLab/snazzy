@@ -19,9 +19,9 @@ def get_metadata(img_path):
     return offset, dtype, shape
 
 
-def get_threshold(img):
+def get_threshold(img, thres_adjust=0):
     '''Returns image threshold using the triangle method.'''
-    return threshold_triangle(img)
+    return threshold_triangle(img) + thres_adjust
 
 
 def within_boundaries(i, j, r, c):
@@ -104,7 +104,7 @@ def sort_by_grid_pos(extremes, n_cols):
     return [extremes[i] for i in indices]
 
 
-def cut_movies(extremes, img_path, dest, pad=20):
+def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
     '''Extracts movies from ch1 and ch2, based on the boundaries passed for
     each element of `extremes`.
 
@@ -112,11 +112,25 @@ def cut_movies(extremes, img_path, dest, pad=20):
         extremes: list of `[min_r, max_r, min_c, max_c]` points.
         img_path: path to the raw image that will be cut.
         dest: directory where the movies will be saved.'''
+    if type(embryos) == int:
+        extremes = extremes[:embryos]
+    try:
+        if type(embryos) == list:
+            extremes = [extremes[i] for i in embryos]
+    except IndexError:
+        print('Provide valid indices to the extremes list.')
+        return
+
     offset, dtype, shape = get_metadata(img_path)
     img = np.memmap(img_path, dtype=dtype, mode='r',
                     shape=shape, offset=offset)
-    for i, extreme in enumerate(extremes):
-        x0, x1, y0, y1 = add_padding(extreme, pad)
+    for i, extreme in enumerate(extremes, 1):
+        file_name = f"emb{i}-ch1.tif"
+        if file_name in os.listdir(dest):
+            print(
+                f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
+            continue
+        x0, x1, y0, y1 = add_padding(extreme, shape[2:], pad)
 
         cut_ch1 = img[:, 0, x0:x1, y0:y1]
         cut_ch2 = img[:, 1, x0:x1, y0:y1]
@@ -127,20 +141,21 @@ def cut_movies(extremes, img_path, dest, pad=20):
         imwrite(os.path.join(dest, f'emb{i}-ch2.tif'), cut_ch2)
 
 
-def add_padding(points, pad=20):
+def add_padding(points, shape, pad=20):
     '''Adds padding to the list of boundary points, pad//2 on each side.'''
     p = pad//2
+    r, c = shape
     x0, x1, y0, y1 = points
-    return [x0-p, x1+p, y0-p, y1+p]
+    return [max(x0-p, 0), min(x1+p, r), max(y0-p, 0), min(y1+p, c)]
 
 
-def boundary_to_rect_coords(boundary):
+def boundary_to_rect_coords(boundary, shape):
     '''Converts from `(x0, x1, y0, y1)` to `(x, y, w, h)`.'''
-    [x0, x1, y0, y1] = add_padding(boundary)
+    [x0, x1, y0, y1] = add_padding(boundary, shape)
     return [x0, y0, y1-y0, x1-x0]
 
 
-def calculate_slice_coordinates(img_path, n_cols=3):
+def calculate_slice_coordinates(img_path, n_cols=3, thres_adjust=0):
     '''Returns boundary points for all images in `img_path`.
 
     Args:
@@ -148,7 +163,7 @@ def calculate_slice_coordinates(img_path, n_cols=3):
         n_cols: number of columns in the FOV grid, used to enforce the naming
         convention of the extracted embryos.
     '''
-    binary_img = get_initial_binary_image(img_path)
+    binary_img = get_initial_binary_image(img_path, thres_adjust=thres_adjust)
 
     extremes = get_bbox_boundaries(binary_img, s=25, n_cols=n_cols)
     return extremes
@@ -175,14 +190,14 @@ def get_first_image_from_mmap(img_path):
     return equalize_hist(first_frame)
 
 
-def get_initial_binary_image(img_path, n=10):
+def get_initial_binary_image(img_path, n=10, thres_adjust=0):
     '''Binarizes the first `n` slices of the img, which is read as a mmap.'''
     img = get_initial_frames_from_mmap(img_path, n=n)
 
     frame = img[:, 1, :, :].copy()
     frame = np.max(frame, axis=0)
 
-    thres = get_threshold(frame)
+    thres = get_threshold(frame, thres_adjust=thres_adjust)
     frame[frame < thres] = 0
     frame[frame >= thres] = 1
     opened = np.zeros_like(frame, dtype=np.uint8)
