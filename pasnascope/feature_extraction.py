@@ -1,11 +1,15 @@
 import os
 from pathlib import Path
 from skimage.measure import label, regionprops
+from skimage.morphology import remove_small_holes
 from skimage.filters import threshold_multiotsu
 import numpy as np
 
 
 def get_largest_label(img):
+    '''Returns the largest connected binary image.
+
+    Uses a lower threshold, to enforce shape format.'''
     slc = img.copy()
     thres = threshold_multiotsu(slc)
     binary_mask = slc > thres[0]
@@ -13,10 +17,13 @@ def get_largest_label(img):
     slc[...] = 0
     slc[binary_mask] = 1
 
-    labels = label(slc, connectivity=1)
-    largest_label = labels == np.argmax(
-        np.bincount(labels.flat)[1:])+1
-    return largest_label*255
+    slc = slc.astype(np.bool_)
+    remove_small_holes(slc, 200, out=slc)
+
+    labels = label(slc, connectivity=2)
+    largest_label = labels == np.argmax(np.bincount(labels.flat)[1:])+1
+
+    return largest_label.astype(np.uint16)*255
 
 
 def extract_features(img):
@@ -38,18 +45,20 @@ def extract(file_path, n_slices, save=False, output=None):
 
     Image is downsampled and represented as a numpy array.'''
     p = Path(file_path)
-    img = np.load(file_path)
+    img = np.load(file_path)[:n_slices]
 
     features = []
-    for slc in img[:n_slices]:
+    for slc in img:
         features.append(extract_features(slc))
 
     new_file_name = f"feat-{p.stem.split('-')[1]}"
     if save and output:
         np.save(os.path.join(output, new_file_name), features)
-    if output is None:
+        print(f"Saved features as {new_file_name}.")
+    elif output is None:
         print("Files were not saved. An output path is required.")
-    print(f"Saved features as {new_file_name}.")
+    else:
+        return features
 
 
 def extract_all(path, n_slices=300, save=False, output=None):
@@ -59,5 +68,5 @@ def extract_all(path, n_slices=300, save=False, output=None):
     filenames = [f for f in os.listdir(path) if f.startswith('ds')]
 
     for filename in filenames:
-        extract(os.path.join(path, filename),
-                n_slices, save=save, output=output)
+        filepath = os.path.join(path, filename)
+        extract(filepath, n_slices, save=save, output=output)
