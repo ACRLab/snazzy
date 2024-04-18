@@ -31,13 +31,16 @@ def get_matching_size(shape, factors):
     return (r-trim_rows, c-trim_cols)
 
 
-def downsample_all(img_dir, output_dir, save=True):
-    '''Reduces movies to lower resolution, to be classified.'''
+def downsample_all(img_dir, output_dir, limit=300, save=True):
+    '''Reduces movies to lower resolution, to be classified.
+
+    Since the aim is to classify images in the beginning of the movies, we
+    set the limit to default to 300.'''
     file_names = [f for f in os.listdir(img_dir) if f.endswith('ch2.tif')]
 
     for file_name in file_names:
         file_path = os.path.join(img_dir, file_name)
-        img = imread(file_path)
+        img = imread(file_path, key=range(limit))
 
         downsampled = pre_process(img, (1, 2, 2))
 
@@ -47,15 +50,8 @@ def downsample_all(img_dir, output_dir, save=True):
             print(f"Downsampled file {output_name}.")
 
 
-def display(file_path):
+def display_downsampled(file_path):
     '''Helper to visualize downsampled movies.'''
     img = np.load(os.path.join(file_path))
     pa = custom_animation.PauseAnimation(img, interval=25)
     pa.display()
-
-
-if __name__ == '__main__':
-    output_dir = os.path.join(os.getcwd(), 'data', 'downsampled')
-    file_names = [f for f in os.listdir(output_dir)]
-    print(file_names)
-    display(os.path.join(output_dir, file_names[1]))
