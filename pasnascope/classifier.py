@@ -13,22 +13,15 @@ import pickle
 
 from pasnascope import pre_process, feature_extraction
 
-# Metadata about the experiment
-# Will be moved to another place soon
-exp_data = {
-    'number_of_features': 4,
-    'l': {'emb0': [(0, 200)], 'emb1': [(0, 200)], 'emb19': [(0, 150)], 'emb20': [(0, 100)], 'emb26': [(0, 100)]},
-    'v': {'emb14': [(0, 40), (90, 160)], 'emb21': [(0, 299)], 'emb5': [(20, 100), (110, 200), (250, 299)]}
-}
 
-
-def get_training_samples(orientation, samples_dir, n=500):
+def get_training_samples(orientation, samples_dir, exp_data, n=500):
     '''Returns annotated data, based on a given orientation.
 
     Picks a proporcional amount of images from each sample.
     Args:
         orientation: `v` (ventral) or `l` (lateral). Embryo orientation.
         samples_dir: path where the feature files are saved.
+        exp_data: annotated data. See `fit_SVC` for details.
         n: int. Amount of samples.
     '''
     lengths = {}
@@ -98,20 +91,27 @@ def classify_image(file_path, model_path, features=None):
     return 'l' if orientation == 1 else 'v'
 
 
-def fit_SVC(n, samples_dir, save=False, output_dir=None, name=None, features=None):
+def fit_SVC(n, samples_dir, exp_data, save=False, output_dir=None, name=None, features=None):
     '''Calculates the SVC model.
 
     Args:
         n: number of training samples.
+        samples_dir: path to the samples.
+        exp_data: annotated data, as a dict. Must have the following structure:
+        `{number_of_features: n, 
+        l: {sample:[start,end],...},
+        v: {sample:[start,end],...}}`
         save: boolean to determine if the model should be saved or not.
+        output_dir: path where the model will be saved
+        name: name for the model file
         features: list with the indices of selected features. All features
     are used by default, but `features` allows to fit the model with only part
     of the features.
     '''
     # Gets half of the training samples from each orientation
     # `v` is marked as class 0 and `l` is marked as class 1
-    v_samples = get_training_samples('v', samples_dir, n//2)
-    l_samples = get_training_samples('l', samples_dir, n//2)
+    v_samples = get_training_samples('v', samples_dir, exp_data, n//2)
+    l_samples = get_training_samples('l', samples_dir, exp_data, n//2)
     X = np.concatenate((v_samples, l_samples))
     Y = np.zeros(X.shape[0])
     # masks second half of features as `l` orientation
@@ -134,7 +134,7 @@ def fit_SVC(n, samples_dir, save=False, output_dir=None, name=None, features=Non
         print(f"Standard deviation of {scores.std()}")
 
 
-def plot_svc(samples_dir, n=600, features=[0, 1]):
+def plot_svc(samples_dir, exp_data, n=600, features=[0, 1]):
     '''Creates a Decision Boundary plot, with an SVC that only takes two
     features
 
