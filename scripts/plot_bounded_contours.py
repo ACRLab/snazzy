@@ -1,11 +1,21 @@
 import os
+from pathlib import Path
 from tifffile import imread
 
 from pasnascope.animations import custom_animation
 from pasnascope import roi, initial_mask
 
+data_dir = Path('./data')
+experiments = [f.stem for f in data_dir.iterdir() if f.is_dir()]
 
-img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
+print('Enter experiment name, based on index:')
+for i, file in enumerate(experiments):
+    print(f'[{i}] {file}')
+
+e = int(input())
+experiment = experiments[e]
+
+img_dir = os.path.join(os.getcwd(), 'data', experiment, 'embs')
 
 # All structural channel movies end with the suffix ch2
 actives = [f for f in sorted(os.listdir(img_dir)) if f.endswith('ch1.tif')]
@@ -42,10 +52,9 @@ if orientation == 'l':
     ell = initial_mask.fit_ellipse(img)
     initial_mask = initial_mask.create_mask_from_ellipse(ell, img[0].shape)
 elif orientation == 'v':
-    initial_mask = roi.get_initial_mask(img, 100)
+    initial_mask = None
 bounding_contour = roi.get_contour(initial_mask)
-contours = roi.get_contours(struct, window=window,
-                            mask=initial_mask, orientation=orientation)
+contours = roi.get_contours(struct, window=window, mask=initial_mask)
 
 ca = custom_animation.BoundedContourAnimation(img, contours, bounding_contour)
 ca.display()
