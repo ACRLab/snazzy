@@ -87,7 +87,7 @@ def get_initial_mask(img, n):
 
     The mask is eroded to give space to account for the embryo flickering.'''
     init = np.average(img[:n], axis=0)
-    first_mask = get_single_roi(init, multi=True, high=True)
+    first_mask = get_single_roi(init)
     binary_erosion(first_mask, footprint=disk(10), out=first_mask)
     return first_mask
 
