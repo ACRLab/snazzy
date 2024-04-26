@@ -3,7 +3,7 @@ import numpy as np
 from skimage.measure import find_contours, regionprops
 from scipy.spatial.distance import pdist
 
-from pasnascope import roi
+from pasnascope import roi, centerline
 
 
 def measure_VNC(masks):
@@ -26,6 +26,21 @@ def measure_VNC(masks):
             continue
         props = regions[0]
         vnc_lengths[i] = props['feret_diameter_max']
+
+    return vnc_lengths
+
+
+def measure_VNC_centerline(image):
+    '''Calculates the centerline distance for a 3D image.'''
+    vnc_lengths = np.zeros(image.shape[0])
+    for i, img in enumerate(image):
+        # print(i)
+        dist = centerline.centerline_dist(img)
+        if dist:
+            vnc_lengths[i] = dist
+        else:
+            # TODO: find a better solution when prediction fails
+            vnc_lengths[i] = vnc_lengths[i-1]
 
     return vnc_lengths
 
