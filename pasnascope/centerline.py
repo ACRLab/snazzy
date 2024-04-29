@@ -9,7 +9,7 @@ from skimage.feature import peak_local_max
 from sklearn import linear_model
 
 
-def centerline_dist(image):
+def centerline_dist(image, verbose=False):
     '''Returns the centerline length estimation based on EDT maxima points.'''
     # binarize image:
     thr = threshold_multiotsu(image)
@@ -29,9 +29,11 @@ def centerline_dist(image):
     coords = peak_local_max(distance, footprint=np.ones((3, 3)), labels=image)
 
     if coords.size <= 2:
-        print(f"Found a single point of maxima, cannot apply RANSAC.")
+        if verbose:
+            print(f"Found a single point of maxima, cannot apply RANSAC.")
         return None
-    print(f"Found {coords.size} points of maxima.")
+    if verbose:
+        print(f"Found {coords.size} points of maxima.")
 
     y = coords.T[0]
     x = coords.T[1].reshape(-1, 1)
@@ -49,7 +51,8 @@ def centerline_dist(image):
     y1, y2 = [int(y) for y in ransac.predict([[x1], [x2]])]
 
     if y1 < 0 or y1 >= image.shape[0] or y2 < 0 or y2 >= image.shape[0]:
-        print(f"Prediction is out of bounds for rows {y1} and {y2}")
+        if verbose:
+            print(f"Prediction is out of bounds for rows {y1} and {y2}")
         return
 
     rr, cc = line(y1, x1, y2, x2)
