@@ -3,7 +3,7 @@ import numpy as np
 from skimage.measure import find_contours, regionprops
 from scipy.spatial.distance import pdist
 
-from pasnascope import roi
+from pasnascope import roi, centerline
 
 
 def measure_VNC(masks):
@@ -28,6 +28,34 @@ def measure_VNC(masks):
         vnc_lengths[i] = props['feret_diameter_max']
 
     return vnc_lengths
+
+
+def measure_VNC_centerline(image):
+    '''Calculates the centerline distance for a 3D image.'''
+    vnc_lengths = np.zeros(image.shape[0])
+    for i, img in enumerate(image):
+        # print(i)
+        dist = centerline.centerline_dist(img)
+        if dist:
+            vnc_lengths[i] = dist
+        else:
+            # TODO: find a better solution when prediction fails
+            vnc_lengths[i] = vnc_lengths[i-1]
+
+    return vnc_lengths
+
+
+def get_length_from_csv(file_path, end=None, pixel_width=1.62):
+    '''Reads csv data as a nparray.
+
+    The csv data contains the manual measurements extracted with ImageJ.'''
+    data = np.genfromtxt(
+        file_path, delimiter=',', skip_header=1, usecols=(6))
+    lengths = data*pixel_width
+    if end is None:
+        return lengths
+    else:
+        return lengths[:end]
 
 
 def fit_regression(lengths):
