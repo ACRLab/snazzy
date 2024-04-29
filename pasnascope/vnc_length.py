@@ -45,6 +45,19 @@ def measure_VNC_centerline(image):
     return vnc_lengths
 
 
+def get_length_from_csv(file_path, end=None, pixel_width=1.62):
+    '''Reads csv data as a nparray.
+
+    The csv data contains the manual measurements extracted with ImageJ.'''
+    data = np.genfromtxt(
+        file_path, delimiter=',', skip_header=1, usecols=(6))
+    lengths = data*pixel_width
+    if end is None:
+        return lengths
+    else:
+        return lengths[:end]
+
+
 def fit_regression(lengths):
     x = np.arange(lengths.size)
     coef = np.polyfit(x, lengths, deg=1)
