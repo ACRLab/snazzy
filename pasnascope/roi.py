@@ -23,7 +23,7 @@ def get_single_roi(img):
     slc[binary_mask] = 1
     slc = slc.astype(np.bool_)
     remove_small_holes(slc, 200, out=slc)
-    binary_opening(slc, footprint=disk(3), out=slc)
+    binary_opening(slc, footprint=disk(5), out=slc)
 
     labels, num_labels = label(slc, return_num=True, connectivity=1)
 
