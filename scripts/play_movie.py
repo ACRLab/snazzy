@@ -1,19 +1,31 @@
-import os
+from pathlib import Path
+
 from tifffile import imread
 
+from pasnascope import utils
 from pasnascope.animations import custom_animation
 
-img_dir = os.path.join(os.getcwd(), 'data', 'embryos')
+
+data_dir = Path('./data')
+experiments = [f.stem for f in data_dir.iterdir() if f.is_dir()]
+
+print('Enter experiment name, based on index:')
+for i, file in enumerate(experiments):
+    print(f'[{i}] {file}')
+
+e = int(input())
+experiment = experiments[e]
+
+img_dir = data_dir.joinpath(experiment, 'embs')
 
 # All structural channel movies end with the suffix ch2
-active = [f for f in sorted(os.listdir(img_dir)) if f.endswith('ch1.tif')]
-struct = [f for f in sorted(os.listdir(img_dir)) if f.endswith('ch2.tif')]
+structs = sorted(img_dir.glob('*ch2.tif'), key=utils.sort_by_emb_name)
+active = sorted(img_dir.glob('*ch1.tif'), key=utils.sort_by_emb_name)
 
 print('Select movie to display, based on index:')
 
 for i, file in enumerate(active):
-    file_name = file.split('-')[0]
-    print(f'[{i}] {file_name}')
+    print(f'[{i}] {file.stem}')
 
 idx = int(input())
 
@@ -21,13 +33,9 @@ print('Select channel: 1 for active channel, 2 for structural channel.')
 
 ch = int(input())
 
-if ch == 1:
-    file_name = active[idx]
-elif ch == 2:
-    file_name = struct[idx]
-else:
+if ch != 1 and ch != 2:
     exit(1)
 
-img = imread(os.path.join(img_dir, file_name), key=range(0, 1000))
-pa = custom_animation.PauseAnimation(img, interval=50)
+img = imread(structs[i]) if ch == 2 else imread(active[i])
+pa = custom_animation.PauseAnimation(img, interval=25)
 pa.display()
