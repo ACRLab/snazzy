@@ -50,11 +50,11 @@ def get_roi(img, window=10, mask=None):
         raise ValueError('img should be a 3D array.')
 
     num_slices = img.shape[0]
-    rois_length = math.ceil(num_slices/window)
+    rois_length = math.floor(num_slices/window)
     rois = np.empty((rois_length, *img.shape[1:]), dtype=np.bool_)
 
     # calculates a new ROI in steps of `window`:
-    for i in range(0, num_slices, window):
+    for i in range(0, num_slices-window, window):
         avg_slc = np.average(img[i:i+window], axis=0)
         if mask is not None:
             avg_slc[mask] = 0
