@@ -62,6 +62,7 @@ class CentroidAnimation(PauseAnimation):
         self.img_plot.set_data(self.image[frame])
         y, x = self.centroids[frame]
         self.centroid_plot.set_data(x, y)
+        self.frame_num.set_text(str(frame))
         return self.img_plot
 
 
@@ -72,7 +73,10 @@ class ContourAnimation(PauseAnimation):
         super().__init__(image, interval)
         self.contours = contours
         self.paint_axes()
+        print(image.shape)
+        print(len(contours))
         self.offset = image.shape[0]//len(contours)
+        print(f"Offset: {self.offset}")
 
     def paint_axes(self):
         x = self.contours[0][:, 0]
@@ -85,6 +89,7 @@ class ContourAnimation(PauseAnimation):
             i = frame // self.offset
             x, y = self.contours[i][:, 0], self.contours[i][:, 1]
             self.contour_plot.set_data(y, x)
+            self.frame_num.set_text(str(frame))
         return self.img_plot
 
 
@@ -116,6 +121,7 @@ class BoundedContourAnimation(PauseAnimation):
             i = frame // self.offset
             x, y = self.contours[i][:, 0], self.contours[i][:, 1]
             self.contour_plot.set_data(y, x)
+            self.frame_num.set_text(str(frame))
         return self.img_plot
 
 
@@ -139,4 +145,5 @@ class FeretAnimation(PauseAnimation):
         self.points.set_data(
             (int(y1), int(y2)), (int(x1), int(x2)))
         self.img_plot.set_data(self.image[frame])
+        self.frame_num.set_text(str(frame))
         return self.img_plot

@@ -1,9 +1,10 @@
-import os
+from pathlib import Path
+
 import numpy as np
-from tifffile import imwrite, TiffFile
 from skimage.filters import threshold_triangle
-from skimage.morphology import octagon, binary_closing
+from skimage.morphology import binary_closing, octagon
 from skimage.exposure import equalize_hist
+from tifffile import imwrite, TiffFile
 
 from pasnascope import utils
 
@@ -121,12 +122,13 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
         print('Provide valid indices to the extremes list.')
         return
 
+    dest_path = Path(dest)
     offset, dtype, shape = get_metadata(img_path)
     img = np.memmap(img_path, dtype=dtype, mode='r',
                     shape=shape, offset=offset)
     for i, extreme in enumerate(extremes, 1):
         file_name = f"emb{i}-ch1.tif"
-        if file_name in os.listdir(dest):
+        if file_name in dest_path.iterdir():
             print(
                 f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
             continue
@@ -136,9 +138,9 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
         cut_ch2 = img[:, 1, x0:x1, y0:y1]
 
         print(f"Processing emb{i}-ch1...")
-        imwrite(os.path.join(dest, f'emb{i}-ch1.tif'), cut_ch1)
+        imwrite(dest_path.joinpath(f'emb{i}-ch1.tif'), cut_ch1)
         print(f"Processing emb{i}-ch2...")
-        imwrite(os.path.join(dest, f'emb{i}-ch2.tif'), cut_ch2)
+        imwrite(dest_path.joinpath(f'emb{i}-ch2.tif'), cut_ch2)
 
 
 def add_padding(points, shape, pad=20):
@@ -182,7 +184,7 @@ def get_initial_frames_from_mmap(img_path, n=10):
 def get_first_image_from_mmap(img_path):
     '''Returns the first image from a mmap file, for plotting.
 
-    The image is the average of the first 10 slices.
+    The image is the average of the first 10 slices for channel 2.
     It is also equalized, since this method is supposed to be used for 
     displaying the image.'''
     img = get_initial_frames_from_mmap(img_path, n=10)
