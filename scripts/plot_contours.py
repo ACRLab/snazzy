@@ -1,9 +1,9 @@
-import os
-from tifffile import imread
 from pathlib import Path
 
+from tifffile import imread
+
 from pasnascope.animations import custom_animation
-from pasnascope import roi
+from pasnascope import roi, utils
 
 data_dir = Path('./data')
 experiments = [f.stem for f in data_dir.iterdir() if f.is_dir()]
@@ -15,26 +15,36 @@ for i, file in enumerate(experiments):
 e = int(input())
 experiment = experiments[e]
 
-img_dir = os.path.join(os.getcwd(), 'data', experiment, 'embs')
+img_dir = data_dir.joinpath(experiment, 'embs')
 
 # All structural channel movies end with the suffix ch2
-structs = [f for f in sorted(os.listdir(img_dir)) if f.endswith('ch2.tif')]
+structs = sorted(img_dir.glob('*ch2.tif'), key=utils.sort_by_emb_name)
+active = sorted(img_dir.glob('*ch1.tif'), key=utils.sort_by_emb_name)
 
 print('Select movie to display, based on index:')
 
 for i, file in enumerate(structs):
-    file_name = file.split('-')[0]
-    print(f'[{i}] {file_name}')
+    print(f'[{i}] {file.stem}')
 
 idx = int(input())
+
+print('Select channel, based on index:')
+
+print('[1]: Active channel')
+print('[2]: Structural channel')
+
+ch = int(input())
+
+if ch != 1 and ch != 2:
+    exit(1)
 
 print('Select downsample amount to calculate the contours:')
 
 window = int(input())
 
-img = imread(os.path.join(img_dir, structs[idx]))
-
+img = imread(structs[i]) if ch == 2 else imread(active[i])
 contours = roi.get_contours(img, window=window, mask=None)
+print(f"Contours within plot_contours: {len(contours)}")
 
-ca = custom_animation.ContourAnimation(img, contours)
+ca = custom_animation.ContourAnimation(img, contours, 20)
 ca.display()
