@@ -3,7 +3,7 @@ import math
 
 from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops, find_contours
-from skimage.morphology import binary_opening, binary_erosion, remove_small_holes, disk
+from skimage.morphology import binary_erosion, disk, remove_small_objects
 
 from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
 
@@ -17,15 +17,12 @@ def get_single_roi(img):
 
     slc = img.copy()
     thres = threshold_otsu(slc)
-    binary_mask = slc > thres
+    binary_mask_compl = slc < thres
+    # this is a bit more efficient than to call `remove_small_holes`
+    remove_small_objects(binary_mask_compl, 200, out=binary_mask_compl)
+    removed = np.logical_not(binary_mask_compl)
 
-    slc[...] = 0
-    slc[binary_mask] = 1
-    slc = slc.astype(np.bool_)
-    remove_small_holes(slc, 200, out=slc)
-    binary_opening(slc, footprint=disk(5), out=slc)
-
-    labels, num_labels = label(slc, return_num=True, connectivity=1)
+    labels, num_labels = label(removed, return_num=True, connectivity=1)
 
     # skip frames if no region was found
     if num_labels == 0:
