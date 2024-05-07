@@ -118,4 +118,5 @@ def view_centerline_dist(image):
     ax.scatter(x[outliers], y[outliers], color='fuchsia')
     ax.imshow(orig_image)
     ax.imshow(inner, alpha=0.3)
+    fig.canvas.header_visible = False
     plt.show()
