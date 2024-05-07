@@ -16,8 +16,8 @@ Activate the environment:
 ### Organization
  
 * `pasnascope`: contains the core code used in all analysis
-* `scripts`: contains Python code that combine the different modules in `pasnascope` to perform an analysis
-* `tests`: contains tests for the code code
+* `scripts`: Python code that combine the different modules in `pasnascope`, primarily for visualizing movies
+* `tests`: contains tests for the code
 * `data`: contains the data for the analysis. This folder is kept out of github, and should be populated in your local copy
 * `results`: contains the results of the analyses. It is also kept out of github and will be populated by performing the analyses
 * `notebooks`: contains examples and the front-end for using the `pasnascope` main module
@@ -26,16 +26,22 @@ Activate the environment:
 ### Analyses
  
 The analyses can be executed using the provided jupyter notebooks, or running the files in the `scripts` directory.
-The recommended order to analyze your data is to go through the notebooks in the following order: `process-raw-data.ipynb`, `vnc-lengh.ipynb`, `activity.ipynb`.
+The recommended way to analyze your data is to go through the notebooks in the following order:
+
+1. `process-raw-data.ipynb`
+2. `vnc-lengh.ipynb`
+3. `activity.ipynb`
+
 There are details on how to use the code in each one of the notebooks.
  
-### Adding data sources
+### Adding data
  
-Sample data can be downloaded from (...).
+Each experiment should have one corresponding folder inside `./data/`.
 By running the code in `process-raw-data.ipynb`, the raw data will be parsed and saved inside `./data/experiment_name/embs`.
-To add annotated data, create a new directory within the current experiment directory and save each file as `f"{file_name}.csv"`, where `file_name` matches the file name in `./data/experiment_name/embs`.
-As a suggestion, each experiment should be named after the date it was performed.
-Within each experiment folder, there is an expected folder structure, which goes as follows:
+To compare the calculated VNC length against manual measurements, add an `annotated` folder inside the experiment directory.
+The measurements should be saved as a csv file.
+
+Given the description about, the file structure inside the `data` folder should look like:
  
 ```
 |-- project_folder
@@ -47,5 +53,3 @@ Within each experiment folder, there is an expected folder structure, which goes
 |           -- embs
 |           -- annotated
 ```
-
-If you are adding your own parsed files, be aware that in some places the code relies on a naming convention: movies should be saved in splitted channels and named as `embXX-ch1` and `embXX-ch2`, where `XX` is a number identifier.
