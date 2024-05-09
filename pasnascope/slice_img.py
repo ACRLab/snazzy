@@ -127,20 +127,28 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
     img = np.memmap(img_path, dtype=dtype, mode='r',
                     shape=shape, offset=offset)
     for i, extreme in enumerate(extremes, 1):
-        file_name = f"emb{i}-ch1.tif"
-        if file_name in dest_path.iterdir():
-            print(
-                f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
-            continue
         x0, x1, y0, y1 = add_padding(extreme, shape[2:], pad)
 
-        cut_ch1 = img[:, 0, x0:x1, y0:y1]
-        cut_ch2 = img[:, 1, x0:x1, y0:y1]
+        file_name = f"emb{i}-ch1.tif"
+        if Path(dest).joinpath(file_name).exists() and not overwrite:
+            print(
+                f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
+        else:
+            cut_ch1 = img[:, 0, x0:x1, y0:y1]
+            save_movie(cut_ch1, 1, dest_path)
 
-        print(f"Processing emb{i}-ch1...")
-        imwrite(dest_path.joinpath(f'emb{i}-ch1.tif'), cut_ch1)
-        print(f"Processing emb{i}-ch2...")
-        imwrite(dest_path.joinpath(f'emb{i}-ch2.tif'), cut_ch2)
+        file_name = f"emb{i}-ch2.tif"
+        if Path(dest).joinpath(file_name).exists() and not overwrite:
+            print(
+                f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
+        else:
+            cut_ch2 = img[:, 1, x0:x1, y0:y1]
+            save_movie(cut_ch2, 2, dest_path)
+
+
+def save_movie(img, ch, dest_path):
+    print(f"Processing emb{ch}-ch1...")
+    imwrite(dest_path.joinpath(f'emb{ch}-ch1.tif'), img)
 
 
 def add_padding(points, shape, pad=20):
