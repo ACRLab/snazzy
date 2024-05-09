@@ -34,8 +34,8 @@ def measure_VNC_centerline(image):
     '''Calculates the centerline distance for a 3D image.'''
     vnc_lengths = np.zeros(image.shape[0])
     for i, img in enumerate(image):
-        # print(i)
-        dist = centerline.centerline_dist(img)
+        bin_img = centerline.binarize(img)
+        dist = centerline.centerline_dist(bin_img)
         if dist:
             vnc_lengths[i] = dist
         else:

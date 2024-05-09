@@ -45,7 +45,6 @@ def apply_ransac(coords):
 
 def centerline_dist(image, verbose=False):
     '''Returns the centerline length estimation based on EDT maxima points.'''
-    image = binarize(image)
     coords = get_DT_maxima(image)
 
     if coords.shape[0] <= 2:
@@ -114,8 +113,8 @@ def view_centerline_dist(image):
     nonzeros = np.sort(nonzeros, axis=0)
 
     fig, ax = plt.subplots()
-    ax.scatter(x[inliers], y[inliers], color='firebrick')
-    ax.scatter(x[outliers], y[outliers], color='fuchsia')
+    ax.scatter(x[inliers], y[inliers], color='green')
+    ax.scatter(x[outliers], y[outliers], color='red')
     ax.imshow(orig_image)
     ax.imshow(inner, alpha=0.3)
     fig.canvas.header_visible = False
