@@ -47,7 +47,7 @@ def apply_ransac(coords):
     return ransac.fit(x, y)
 
 
-def centerline_dist(image, verbose=False):
+def centerline_dist(image, verbose=False, pixel_width=1.62):
     '''Returns the centerline length estimation based on EDT maxima points.'''
     coords = get_DT_maxima(image)
 
@@ -79,27 +79,7 @@ def centerline_dist(image, verbose=False):
     vnc_end = nonzeros[-1]
     distance = np.sqrt(np.sum((vnc_end-vnc_start)**2))
 
-    return distance
-
-
-def evaluate_centerline(img_path, pixel_width=1.62, interval=20, hp=None, measurements=None):
-    '''Evaluates the centerline performance.
-
-    Assumes that a value is wrong if the calculated length changes more than
-    15% between two consecutive points.'''
-    if hp is None:
-        hp = find_hatching.find_hatching_point(img_path)
-    img = imread(img_path, key=range(0, hp, interval))
-
-    if measurements is None:
-        measurements = centerline_dist(img)*pixel_width
-
-    outliers = 0
-    for i, m in enumerate(measurements):
-        ratio = m/measurements[i-1]
-        if ratio < 0.85:
-            outliers += 1
-    return outliers, len(measurements)
+    return distance*pixel_width
 
 
 def view_centerline_dist(image):
