@@ -27,10 +27,10 @@ def binarize(image):
     return largest_label
 
 
-def get_DT_maxima(image):
+def get_DT_maxima(image, thres_rel=0.6, min_dist=5):
     '''Calculates a distance transform and returns local maxima points.'''
     distance = ndi.distance_transform_cdt(image, metric='chessboard')
-    return peak_local_max(distance, footprint=np.ones((5, 5)), threshold_rel=0.6, min_distance=5)
+    return peak_local_max(distance, footprint=np.ones((5, 5)), threshold_rel=thres_rel, min_distance=min_dist)
 
 
 def apply_ransac(coords):
@@ -47,9 +47,9 @@ def apply_ransac(coords):
     return ransac.fit(x, y)
 
 
-def centerline_dist(image, verbose=False, pixel_width=1.62):
+def centerline_dist(image, verbose=False, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     '''Returns the centerline length estimation based on EDT maxima points.'''
-    coords = get_DT_maxima(image)
+    coords = get_DT_maxima(image, thres_rel, min_dist)
 
     if coords.shape[0] <= 2:
         if verbose:
