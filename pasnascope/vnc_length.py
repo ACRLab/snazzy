@@ -30,12 +30,13 @@ def measure_VNC(masks):
     return vnc_lengths
 
 
-def measure_VNC_centerline(image):
+def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     '''Calculates the centerline distance for a 3D image.'''
     vnc_lengths = np.zeros(image.shape[0])
     for i, img in enumerate(image):
         bin_img = centerline.binarize(img)
-        dist = centerline.centerline_dist(bin_img)
+        dist = centerline.centerline_dist(
+            bin_img, pixel_width=pixel_width, thres_rel=thres_rel, min_dist=min_dist)
         if dist:
             vnc_lengths[i] = dist
         else:
@@ -45,12 +46,12 @@ def measure_VNC_centerline(image):
     return vnc_lengths
 
 
-def get_length_from_csv(file_path, end=None, pixel_width=1.62):
+def get_length_from_csv(file_path, columns=6, end=None, pixel_width=1.62):
     '''Reads csv data as a nparray.
 
     The csv data contains the manual measurements extracted with ImageJ.'''
     data = np.genfromtxt(
-        file_path, delimiter=',', skip_header=1, usecols=(6))
+        file_path, delimiter=',', skip_header=1, usecols=columns)
     lengths = data*pixel_width
     if end is None:
         return lengths

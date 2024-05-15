@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy import ndimage as ndi
 from skimage.filters import threshold_multiotsu
 from skimage.measure import label
@@ -7,6 +7,9 @@ from skimage.morphology import remove_small_holes, binary_opening, disk
 from skimage.draw import line
 from skimage.feature import peak_local_max
 from sklearn import linear_model
+from tifffile import imread
+
+from pasnascope import find_hatching
 
 
 def binarize(image):
@@ -14,20 +17,20 @@ def binarize(image):
     thr = threshold_multiotsu(image)
     bin_img = image > thr[0]
 
+    remove_small_holes(bin_img, 200, out=bin_img)
+    binary_opening(bin_img, footprint=disk(5), out=bin_img)
+
     labels = label(bin_img, connectivity=1)
     largest_label = labels == np.argmax(
         np.bincount(labels.flat)[1:])+1
 
-    remove_small_holes(largest_label, 200, out=bin_img)
-    binary_opening(bin_img, footprint=disk(5), out=bin_img)
-
-    return bin_img
+    return largest_label
 
 
-def get_DT_maxima(image):
+def get_DT_maxima(image, thres_rel=0.6, min_dist=5):
     '''Calculates a distance transform and returns local maxima points.'''
     distance = ndi.distance_transform_cdt(image, metric='chessboard')
-    return peak_local_max(distance, footprint=np.ones((5, 5)), labels=image)
+    return peak_local_max(distance, footprint=np.ones((5, 5)), threshold_rel=thres_rel, min_distance=min_dist)
 
 
 def apply_ransac(coords):
@@ -35,17 +38,18 @@ def apply_ransac(coords):
     y = coords.T[0]
     x = coords.T[1].reshape(-1, 1)
 
-    thres = np.median(np.abs(x - np.median(x)))
-    thres = min(thres, 10)
+    # NOTE: evaluate best threshold
+    # thres = np.median(np.abs(x - np.median(x)))
+    thres = 15
     ransac = linear_model.RANSACRegressor(
         estimator=linear_model.LinearRegression(),
-        residual_threshold=thres, max_trials=1000, min_samples=2)
+        residual_threshold=thres, max_trials=1000, stop_score=0.999, min_samples=3)
     return ransac.fit(x, y)
 
 
-def centerline_dist(image, verbose=False):
+def centerline_dist(image, verbose=False, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     '''Returns the centerline length estimation based on EDT maxima points.'''
-    coords = get_DT_maxima(image)
+    coords = get_DT_maxima(image, thres_rel, min_dist)
 
     if coords.shape[0] <= 2:
         if verbose:
@@ -75,7 +79,7 @@ def centerline_dist(image, verbose=False):
     vnc_end = nonzeros[-1]
     distance = np.sqrt(np.sum((vnc_end-vnc_start)**2))
 
-    return distance
+    return distance*pixel_width
 
 
 def view_centerline_dist(image):
