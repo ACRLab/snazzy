@@ -43,10 +43,16 @@ def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
             # TODO: find a better solution when prediction fails
             vnc_lengths[i] = vnc_lengths[i-1]
 
+    for i, curr in enumerate(vnc_lengths[1:], 1):
+        prev = vnc_lengths[i-1]
+        diff = abs((curr-prev)/prev)
+        if diff > 0.1:
+            vnc_lengths[i] = prev
+
     return vnc_lengths
 
 
-def get_length_from_csv(file_path, columns=6, end=None, pixel_width=1.62):
+def get_length_from_csv(file_path, columns=(6,), end=None, pixel_width=1.62):
     '''Reads csv data as a nparray.
 
     The csv data contains the manual measurements extracted with ImageJ.'''
