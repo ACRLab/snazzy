@@ -65,8 +65,8 @@ def evaluate_centerline_estimation(emb_files, annotated_dir, interval=20, thres_
         annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"))
         errors[k] = compare_against_annotated(v, annotated)
 
-    for k, v in errors.items():
+    # adjust each point to the frame number, based on the interval
+    for v in errors.values():
         v[2] = v[2]*interval
-        print(f"{k}: {v}")
 
     return errors
