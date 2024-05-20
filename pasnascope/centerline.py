@@ -1,3 +1,5 @@
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage as ndi
@@ -7,9 +9,6 @@ from skimage.morphology import remove_small_holes, binary_opening, disk
 from skimage.draw import line
 from skimage.feature import peak_local_max
 from sklearn import linear_model
-from tifffile import imread
-
-from pasnascope import find_hatching
 
 
 def binarize(image):
@@ -41,10 +40,15 @@ def apply_ransac(coords):
     # NOTE: evaluate best threshold
     # thres = np.median(np.abs(x - np.median(x)))
     thres = 15
-    ransac = linear_model.RANSACRegressor(
-        estimator=linear_model.LinearRegression(),
-        residual_threshold=thres, max_trials=1000, stop_score=0.999, min_samples=3)
-    return ransac.fit(x, y)
+    # if the number of inliers for a given trial is <= 1,
+    # `_regression.r2_score` will raise a warning. This is expected to happen
+    # depending on the dataset, so we just ignore the warning
+    with warnings.catch_warnings(action='ignore'):
+        ransac = linear_model.RANSACRegressor(
+            estimator=linear_model.LinearRegression(),
+            residual_threshold=thres, max_trials=1000, stop_score=0.999, min_samples=3)
+        regressor = ransac.fit(x, y)
+    return regressor
 
 
 def centerline_dist(image, verbose=False, pixel_width=1.62, thres_rel=0.6, min_dist=5):
@@ -82,11 +86,11 @@ def centerline_dist(image, verbose=False, pixel_width=1.62, thres_rel=0.6, min_d
     return distance*pixel_width
 
 
-def view_centerline_dist(image):
+def view_centerline_dist(image, thres_rel=0.6, min_dist=5):
     '''Returns the centerline length estimation based on EDT maxima points.'''
     orig_image = image.copy()
     image = binarize(image)
-    coords = get_DT_maxima(image)
+    coords = get_DT_maxima(image, thres_rel=thres_rel, min_dist=min_dist)
 
     y = coords.T[0]
     x = coords.T[1].reshape(-1, 1)
