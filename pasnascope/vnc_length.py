@@ -30,6 +30,15 @@ def measure_VNC(masks):
     return vnc_lengths
 
 
+def predict_next(previous):
+    '''Estimates the next point by linear regression.'''
+    y = np.array(previous)
+    x = np.arange(y.shape[0])
+    A = np.vstack([x, np.ones(len(x))]).T
+    m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    return m*len(x) + c
+
+
 def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     '''Calculates the centerline distance for a 3D image.'''
     vnc_lengths = np.zeros(image.shape[0])
@@ -40,13 +49,18 @@ def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
         if dist:
             vnc_lengths[i] = dist
         else:
-            # TODO: find a better solution when prediction fails
-            vnc_lengths[i] = vnc_lengths[i-1]
+            # Leave the dist as 0 and predict it once all values are calculated
+            pass
+    for i, curr in enumerate(vnc_lengths[10:], 10):
+        prev = vnc_lengths[i-1]
+        diff = abs((curr-prev)/prev)
+        if diff > 0.09:
+            vnc_lengths[i] = predict_next(vnc_lengths[i-10:i-1])
 
     return vnc_lengths
 
 
-def get_length_from_csv(file_path, columns=6, end=None, pixel_width=1.62):
+def get_length_from_csv(file_path, columns=(6,), end=None, pixel_width=1.62):
     '''Reads csv data as a nparray.
 
     The csv data contains the manual measurements extracted with ImageJ.'''
