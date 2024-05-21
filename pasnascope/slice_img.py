@@ -135,7 +135,8 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
                 f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
         else:
             cut_ch1 = img[:, 0, x0:x1, y0:y1]
-            save_movie(cut_ch1, 1, dest_path)
+            output_file = dest_path.joinpath(file_name)
+            save_movie(cut_ch1, output_file)
 
         file_name = f"emb{i}-ch2.tif"
         if Path(dest).joinpath(file_name).exists() and not overwrite:
@@ -143,12 +144,13 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
                 f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
         else:
             cut_ch2 = img[:, 1, x0:x1, y0:y1]
-            save_movie(cut_ch2, 2, dest_path)
+            output_file = dest_path.joinpath(file_name)
+            save_movie(cut_ch2, output_file)
 
 
-def save_movie(img, ch, dest_path):
-    print(f"Processing emb{ch}-ch1...")
-    imwrite(dest_path.joinpath(f'emb{ch}-ch1.tif'), img)
+def save_movie(img, file_path):
+    print(f"Processing {file_path.stem}...")
+    imwrite(file_path, img)
 
 
 def add_padding(points, shape, pad=20):
