@@ -7,11 +7,15 @@ Image processing pipeline for pasnascope imaging.
 Make a copy of this repo (e.g. with `git clone`), then `cd` into the root folder of the repo.
 Recreate the conda environment:
  
-`conda env create --name pasnascope --file=environment.yml`
+`conda env create --name pscope --file=environment.yml`
  
 Activate the environment:
  
-`conda activate pasnascope`
+`conda activate pscope`
+
+Install the pasnascope package with `pip`:
+
+`pip install -e .`
  
 ### Organization
  
