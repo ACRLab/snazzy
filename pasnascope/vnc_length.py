@@ -1,9 +1,11 @@
+import csv
+
 import numpy as np
 
 from skimage.measure import find_contours, regionprops
 from scipy.spatial.distance import pdist
 
-from pasnascope import roi, centerline
+from pasnascope import centerline, roi, utils
 
 
 def measure_VNC(masks):
@@ -71,6 +73,35 @@ def get_length_from_csv(file_path, columns=(6,), end=None, pixel_width=1.62):
         return lengths
     else:
         return lengths[:end]
+
+
+def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
+    '''Generates a csv file with VNC Length data.
+
+    Parameters:
+        embryos: list of embryo names
+        vnc_lengts: list of lists, where each nested list represents VNC lengths for a single embryo. Must have same length as the `embryos`.
+        output: path to the output csv file.
+        downsampling: interval used to calculate VNC lengths.
+        frame_interval: time (seconds) between two image captures.
+    '''
+    header = ['Time[h:m:s]', 'Embryo_Name', 'ROI ID', 'VNC_Length']
+    if output.exists():
+        print(
+            f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
+        return
+    with open(output, 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for id, (embryo, lengths) in enumerate(zip(embryos, vnc_lengths), 1):
+            for t, length in enumerate(lengths):
+                writer.writerow(format_csv_row(t, downsampling,
+                                frame_interval, embryo.stem, id, length))
+
+
+def format_csv_row(t, downsampling, frame_interval, embryo, id, length):
+    '''Columns in the csv file: [Time(HH:mm:ss), emb_name, id, length].'''
+    return [utils.format_seconds((t*downsampling)*frame_interval), embryo, id, f"{length:.2f}"]
 
 
 def fit_regression(lengths):

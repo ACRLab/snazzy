@@ -6,6 +6,8 @@ import numpy as np
 import numpy.ma as ma
 import matplotlib.pyplot as plt
 
+from pasnascope import utils
+
 
 def reflect_edges(signal, window_size=160):
     half = window_size//2
@@ -91,17 +93,7 @@ def export_csv(embryos, output, frame_interval=6):
 
 def format_csv_row(frame, interval, id, act, strct):
     '''Expected output for the csv file is: [Time(HH:mm:ss), id, sig1, sig2]'''
-    return [format_seconds(frame*interval), id, f"{act:.2f}", f"{strct:.2f}"]
-
-
-def format_seconds(seconds):
-    '''Returns HH:mm:ss, given an amount of seconds.'''
-    hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    formatted_time = '{:02}:{:02}:{:02}'.format(
-        int(hours), int(minutes), int(seconds))
-    return formatted_time
+    return [utils.format_seconds(frame*interval), id, f"{act:.2f}", f"{strct:.2f}"]
 
 
 def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False, filename=None):
