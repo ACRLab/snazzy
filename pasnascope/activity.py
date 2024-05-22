@@ -1,3 +1,7 @@
+import csv
+import random
+from pathlib import Path
+
 import numpy as np
 import numpy.ma as ma
 import matplotlib.pyplot as plt
@@ -60,6 +64,46 @@ def ratiometric_activity(active, structural):
     return active / structural
 
 
+def export_csv(embryos, output, frame_interval=6):
+    '''Generates a csv file to be use by the `pasna_fly` package.
+
+    Parameters:
+        embryos: list of embryos, where each embryo is represented by a list
+        [active, structural]. Active and structural are lists with the 
+        measurements of the activity for each frame.
+        output: path to the output csv file.
+        frame_interval: time (seconds) between two image captures.
+    '''
+    header = ['Time [h:m:s]', 'ROI ID', 'Intensity(GFP)', 'Intensity(TRITC)']
+    if output.exists():
+        print(
+            f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
+        return
+    with open(output, 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for emb_id, embryo in enumerate(embryos, 1):
+            for frame, (act, strct) in enumerate(zip(*embryo)):
+                row = format_csv_row(
+                    frame, frame_interval, emb_id, act, strct)
+                writer.writerow(row)
+
+
+def format_csv_row(frame, interval, id, act, strct):
+    '''Expected output for the csv file is: [Time(HH:mm:ss), id, sig1, sig2]'''
+    return [format_seconds(frame*interval), id, f"{act:.2f}", f"{strct:.2f}"]
+
+
+def format_seconds(seconds):
+    '''Returns HH:mm:ss, given an amount of seconds.'''
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    formatted_time = '{:02}:{:02}:{:02}'.format(
+        int(hours), int(minutes), int(seconds))
+    return formatted_time
+
+
 def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False, filename=None):
     activity = get_activity(img, mask, mask_path)
     activity_struct = get_activity(struct, mask, mask_path)
@@ -78,3 +122,14 @@ def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False
         plt.savefig(f'../results/activity/{filename}.png')
 
     plt.show()
+
+
+if __name__ == '__main__':
+    act = np.array([random.randint(0, 100) for _ in range(100)])
+    struct = np.array([random.randint(0, 100) for _ in range(100)])
+    act2 = np.array([random.randint(0, 100) for _ in range(100)])
+    struct2 = np.array([random.randint(0, 100) for _ in range(100)])
+    embryos = [[act, struct], [act2, struct2]]
+
+    file_path = Path.cwd().joinpath('results', 'preview.csv')
+    export_csv(embryos, file_path)
