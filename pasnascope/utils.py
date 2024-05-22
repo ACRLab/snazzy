@@ -35,3 +35,13 @@ def sort_by_emb_name(emb_path: Path) -> str:
     if not isinstance(emb_path, Path):
         raise TypeError(f'Expected a Path object, but got {type(emb_path)}.')
     return int(emb_path.stem.split('-')[0][3:])
+
+
+def format_seconds(seconds):
+    '''Returns HH:mm:ss, given an amount of seconds.'''
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    formatted_time = '{:02}:{:02}:{:02}'.format(
+        int(hours), int(minutes), int(seconds))
+    return formatted_time
