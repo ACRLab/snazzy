@@ -1,4 +1,5 @@
 import csv
+import math
 import random
 from pathlib import Path
 
@@ -50,8 +51,10 @@ def apply_mask(img, mask):
         except Exception:
             raise
     if mask.shape != img.shape:
-        downsampling_factor = img.shape[0]//mask.shape[0]
+        # match the mask shape to the image shape
+        downsampling_factor = math.ceil(img.shape[0]/mask.shape[0])
         mask = np.repeat(mask, downsampling_factor, axis=0)
+        mask = mask[:img.shape[0]]
 
     masked_img = ma.masked_array(img, mask)
 
@@ -80,7 +83,7 @@ def export_csv(embryos, output, frame_interval=6):
     if output.exists():
         print(
             f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
-        return
+        return False
     with open(output, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
@@ -89,6 +92,7 @@ def export_csv(embryos, output, frame_interval=6):
                 row = format_csv_row(
                     frame, frame_interval, emb_id, act, strct)
                 writer.writerow(row)
+    return True
 
 
 def format_csv_row(frame, interval, id, act, strct):

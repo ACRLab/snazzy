@@ -89,7 +89,7 @@ def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
     if output.exists():
         print(
             f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
-        return
+        return False
     with open(output, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
@@ -97,6 +97,7 @@ def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
             for t, length in enumerate(lengths):
                 writer.writerow(format_csv_row(t, downsampling,
                                 frame_interval, embryo.stem, id, length))
+    return True
 
 
 def format_csv_row(t, downsampling, frame_interval, embryo, id, length):
