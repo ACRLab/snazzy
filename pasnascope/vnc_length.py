@@ -77,6 +77,19 @@ def get_length_from_csv(file_path, columns=(6,), end=None, in_pixels=False, pixe
         return lengths[:end]
 
 
+def match_names(annotated, name_LUT):
+    '''Gets the corresponding movie name for a list of annotated data, based 
+    on the mapping passed in `name_LUT`.'''
+    embs = []
+    for a in annotated:
+        a_idx = int(a.stem.split('-')[0][3:])
+        e_idx = name_LUT.get(a_idx, None)
+        if not e_idx:
+            continue
+        embs.append(f"emb{e_idx}-ch2.tif")
+    return embs
+
+
 def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
     '''Generates a csv file with VNC Length data.
 
