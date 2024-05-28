@@ -1,3 +1,4 @@
+import csv
 import math
 
 import matplotlib.pyplot as plt
@@ -47,6 +48,27 @@ def measure(img_path, start=0, end=100):
     img = equalize_hist(img)
     bin_img = binarize(img)
     return length_from_regions_props(bin_img)
+
+
+def export_csv(lengths, ids,  output):
+    '''Generates a csv file with embryo full length data.
+
+    Parameters:
+        embryos: list of embryo names
+        vnc_lengts: list of lists, where each nested list represents VNC lengths for a single embryo. Must have same length as the `embryos`.
+        output: path to the output csv file.
+    '''
+    header = ['ROI ID', 'Full_length']
+    if output.exists():
+        print(
+            f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
+        return False
+    with open(output, 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for id, length in zip(ids, lengths):
+            writer.writerow((id, length))
+    return True
 
 
 def view_full_embryo_length(img, original_img):
