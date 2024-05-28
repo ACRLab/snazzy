@@ -28,7 +28,7 @@ class CounterDeque(deque):
             self.extremes[3] = j
 
 
-def sort_by_emb_name(emb_path: Path) -> str:
+def emb_number(emb_path: Path) -> str:
     '''Assumes that embryos are always named as embXX-chY.
 
     Sorts by the embryo number (XX in the examble above).'''

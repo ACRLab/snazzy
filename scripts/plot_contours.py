@@ -18,8 +18,8 @@ experiment = experiments[e]
 img_dir = data_dir.joinpath(experiment, 'embs')
 
 # All structural channel movies end with the suffix ch2
-structs = sorted(img_dir.glob('*ch2.tif'), key=utils.sort_by_emb_name)
-active = sorted(img_dir.glob('*ch1.tif'), key=utils.sort_by_emb_name)
+structs = sorted(img_dir.glob('*ch2.tif'), key=utils.emb_number)
+active = sorted(img_dir.glob('*ch1.tif'), key=utils.emb_number)
 
 print('Select movie to display, based on index:')
 
