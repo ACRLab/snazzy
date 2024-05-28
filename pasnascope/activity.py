@@ -69,7 +69,7 @@ def ratiometric_activity(active, structural):
     return active / structural
 
 
-def export_csv(embryos, output, frame_interval=6):
+def export_csv(ids, embryos, output, frame_interval=6):
     '''Generates a csv file to be use by the `pasna_fly` package.
 
     Parameters:
@@ -87,10 +87,10 @@ def export_csv(embryos, output, frame_interval=6):
     with open(output, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        for emb_id, embryo in enumerate(embryos, 1):
+        for id, embryo in zip(ids, embryos):
             for frame, (act, strct) in enumerate(zip(*embryo)):
                 row = format_csv_row(
-                    frame, frame_interval, emb_id, act, strct)
+                    frame, frame_interval, id, act, strct)
                 writer.writerow(row)
     return True
 
