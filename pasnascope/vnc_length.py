@@ -62,13 +62,15 @@ def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     return vnc_lengths
 
 
-def get_length_from_csv(file_path, columns=(6,), end=None, pixel_width=1.62):
-    '''Reads csv data as a nparray.
+def get_length_from_csv(file_path, columns=(6,), end=None, in_pixels=False, pixel_width=1.62):
+    '''Reads CSV data as a nparray.
 
-    The csv data contains the manual measurements extracted with ImageJ.'''
+    Expects the lengths to be in actual metric units, instead of pixels.'''
     data = np.genfromtxt(
         file_path, delimiter=',', skip_header=1, usecols=columns)
-    lengths = data*pixel_width
+    lengths = data
+    if in_pixels:
+        lengths *= pixel_width
     if end is None:
         return lengths
     else:
