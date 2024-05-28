@@ -62,17 +62,32 @@ def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     return vnc_lengths
 
 
-def get_length_from_csv(file_path, columns=(6,), end=None, pixel_width=1.62):
-    '''Reads csv data as a nparray.
+def get_length_from_csv(file_path, columns=(6,), end=None, in_pixels=False, pixel_width=1.62):
+    '''Reads CSV data as a nparray.
 
-    The csv data contains the manual measurements extracted with ImageJ.'''
+    Expects the lengths to be in actual metric units, instead of pixels.'''
     data = np.genfromtxt(
         file_path, delimiter=',', skip_header=1, usecols=columns)
-    lengths = data*pixel_width
+    lengths = data
+    if in_pixels:
+        lengths *= pixel_width
     if end is None:
         return lengths
     else:
         return lengths[:end]
+
+
+def match_names(annotated, name_LUT):
+    '''Gets the corresponding movie name for a list of annotated data, based 
+    on the mapping passed in `name_LUT`.'''
+    embs = []
+    for a in annotated:
+        a_idx = int(a.stem.split('-')[0][3:])
+        e_idx = name_LUT.get(a_idx, None)
+        if not e_idx:
+            continue
+        embs.append(f"emb{e_idx}-ch2.tif")
+    return embs
 
 
 def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
