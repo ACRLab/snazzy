@@ -69,7 +69,7 @@ def ratiometric_activity(active, structural):
     return active / structural
 
 
-def export_csv(ids, embryos, output, frame_interval=6):
+def export_csv(ids, embryos, output_dir, frame_interval=6):
     '''Generates a csv file to be use by the `pasna_fly` package.
 
     Parameters:
@@ -79,25 +79,21 @@ def export_csv(ids, embryos, output, frame_interval=6):
         output: path to the output csv file.
         frame_interval: time (seconds) between two image captures.
     '''
-    header = ['Time [h:m:s]', 'ROI ID', 'Intensity(GFP)', 'Intensity(TRITC)']
-    if output.exists():
-        print(
-            f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
-        return False
-    with open(output, 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        for id, embryo in zip(ids, embryos):
+    header = ['time', 'gcamp', 'tomato']
+    for id, embryo in zip(ids, embryos):
+        with open(output_dir.joinpath(f"emb{id}.csv"), 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
             for frame, (act, strct) in enumerate(zip(*embryo)):
                 row = format_csv_row(
-                    frame, frame_interval, id, act, strct)
+                    frame, frame_interval, act, strct)
                 writer.writerow(row)
     return True
 
 
-def format_csv_row(frame, interval, id, act, strct):
+def format_csv_row(frame, interval, act, strct):
     '''Expected output for the csv file is: [Time(HH:mm:ss), id, sig1, sig2]'''
-    return [utils.format_seconds(frame*interval), id, f"{act:.2f}", f"{strct:.2f}"]
+    return [frame*interval, f"{act:.2f}", f"{strct:.2f}"]
 
 
 def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False, filename=None):
