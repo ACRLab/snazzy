@@ -28,13 +28,13 @@ class CounterDeque(deque):
             self.extremes[3] = j
 
 
-def emb_number(emb_path: Path) -> str:
+def emb_number(emb_path: Path | str) -> str:
     '''Assumes that embryos are always named as embXX-chY.
 
     Sorts by the embryo number (XX in the examble above).'''
-    if not isinstance(emb_path, Path):
-        raise TypeError(f'Expected a Path object, but got {type(emb_path)}.')
-    return int(emb_path.stem.split('-')[0][3:])
+    if isinstance(emb_path, Path):
+        emb_path = emb_path.stem
+    return int(emb_path.split('-')[0][3:])
 
 
 def format_seconds(seconds):

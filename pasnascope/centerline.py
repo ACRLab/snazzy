@@ -86,7 +86,7 @@ def centerline_dist(image, verbose=False, pixel_width=1.62, thres_rel=0.6, min_d
     return distance*pixel_width
 
 
-def view_centerline_dist(image, thres_rel=0.6, min_dist=5):
+def view_centerline_dist(image, img_title='', thres_rel=0.6, min_dist=5):
     '''Returns the centerline length estimation based on EDT maxima points.'''
     orig_image = image.copy()
     image = binarize(image)
@@ -125,5 +125,6 @@ def view_centerline_dist(image, thres_rel=0.6, min_dist=5):
     ax.scatter(x[outliers], y[outliers], color='red')
     ax.imshow(orig_image)
     ax.imshow(inner, alpha=0.3)
+    ax.set_title(img_title)
     fig.canvas.header_visible = False
     plt.show()
