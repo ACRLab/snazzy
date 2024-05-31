@@ -62,7 +62,7 @@ def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5, o
     return vnc_lengths
 
 
-def get_length_from_csv(file_path, columns=(6,), end=None, in_pixels=False, pixel_width=1.62):
+def get_length_from_csv(file_path, columns=(1,), end=None, in_pixels=False, pixel_width=1.62):
     '''Reads CSV data as a nparray.
 
     Expects the lengths to be in actual metric units, instead of pixels.'''
@@ -75,19 +75,6 @@ def get_length_from_csv(file_path, columns=(6,), end=None, in_pixels=False, pixe
         return lengths
     else:
         return lengths[:end]
-
-
-def match_names(annotated, name_LUT):
-    '''Gets the corresponding movie name for a list of annotated data, based 
-    on the mapping passed in `name_LUT`.'''
-    embs = []
-    for a in annotated:
-        a_idx = int(a.stem.split('-')[0][3:])
-        e_idx = name_LUT.get(a_idx, None)
-        if not e_idx:
-            continue
-        embs.append(f"emb{e_idx}-ch2.tif")
-    return embs
 
 
 def export_csv(ids, vnc_lengths, output, downsampling, frame_interval=6):
