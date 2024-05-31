@@ -41,7 +41,7 @@ def predict_next(previous):
     return m*len(x) + c
 
 
-def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
+def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5, outlier_thres=0.09):
     '''Calculates the centerline distance for a 3D image.'''
     vnc_lengths = np.zeros(image.shape[0])
     for i, img in enumerate(image):
@@ -56,7 +56,7 @@ def measure_VNC_centerline(image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     for i, curr in enumerate(vnc_lengths[10:], 10):
         prev = vnc_lengths[i-1]
         diff = abs((curr-prev)/prev)
-        if diff > 0.09:
+        if diff > outlier_thres:
             vnc_lengths[i] = predict_next(vnc_lengths[i-10:i-1])
 
     return vnc_lengths
