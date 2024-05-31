@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tifffile import imread
 
-from pasnascope import find_hatching, vnc_length
+from pasnascope import find_hatching, utils, vnc_length
 
 
 def get_random_files(path, n=5):
@@ -45,11 +45,11 @@ def compare_against_annotated(measured, annotated):
     return [*errors,  num_valleys]
 
 
-def read_annotated(annotated_path):
-    return vnc_length.get_length_from_csv(annotated_path)
+def read_annotated(annotated_path, cols):
+    return vnc_length.get_length_from_csv(annotated_path, columns=cols)
 
 
-def evaluate_centerline_estimation(emb_files, annotated_dir, interval=20, thres_rel=0.6, min_dist=5):
+def evaluate_CLE(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
     measured = {k.stem: [] for k in emb_files}
     errors = {k.stem: [] for k in emb_files}
 
@@ -62,7 +62,7 @@ def evaluate_centerline_estimation(emb_files, annotated_dir, interval=20, thres_
             img, thres_rel=thres_rel, min_dist=min_dist)
 
     for k, v in measured.items():
-        annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"))
+        annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
         errors[k] = compare_against_annotated(v, annotated)
 
     # adjust each point to the frame number, based on the interval
@@ -70,3 +70,25 @@ def evaluate_centerline_estimation(emb_files, annotated_dir, interval=20, thres_
         v[2] = v[2]*interval
 
     return errors
+
+
+def load_files(emb_dir, annotated_dir):
+    '''Selects the matching files from both the emb dir and the annotated data dir.'''
+    annotated = sorted(list(annotated_dir.glob('*.csv')), key=utils.emb_number)
+    selected = [e.stem for e in annotated]
+    embs = [emb for emb in emb_dir.glob('*.csv') if emb.stem in selected]
+    embs = sorted(embs, key=utils.emb_number)
+    return embs, annotated
+
+
+def match_names(annotated, name_LUT):
+    '''Gets the corresponding movie name for a list of annotated data, based
+    on the mapping passed in `name_LUT`.'''
+    embs = []
+    for a in annotated:
+        a_idx = int(a.stem.split('-')[0][3:])
+        e_idx = name_LUT.get(a_idx, None)
+        if not e_idx:
+            continue
+        embs.append(f"emb{e_idx}-ch2.tif")
+    return embs
