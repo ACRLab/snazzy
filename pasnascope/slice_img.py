@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+from nd2 import ND2File
 from skimage.filters import threshold_triangle
 from skimage.morphology import binary_closing, octagon
 from skimage.exposure import equalize_hist
@@ -18,6 +19,16 @@ def get_metadata(img_path):
         dtype = np.dtype(tif.byteorder + series.dtype.char)
 
     return offset, dtype, shape
+
+
+def save_as_tiff(file, dest_path):
+    '''Converts an nd2 image to tiff.'''
+    dest = Path(dest_path)
+    if dest.exists():
+        print(f"File '{dest.name}' already exists.")
+        return
+    with ND2File(file) as f:
+        f.write_tiff(dest_path)
 
 
 def get_threshold(img, thres_adjust=0):
