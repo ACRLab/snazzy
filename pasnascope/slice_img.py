@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from nd2 import ND2File
@@ -94,26 +96,27 @@ def sort_by_grid_pos(extremes, n_cols):
     '''Sorts each boundary points list based on their position in the grid.
 
     Sorts by F-order (column-wise).'''
-    centroids = [((x0+x1)//2, (y0+y1)//2, i)
-                 for i, (x0, x1, y0, y1) in enumerate(extremes)]
-    bin_size = (max((y for (x, y, i) in centroids))//n_cols) + 1
+    centroids = [((r0+r1)//2, (c0+c1)//2, i)
+                 for i, (r0, r1, c0, c1) in enumerate(extremes)]
+    # determine bin_size from the maximum column value
+    bin_size = (max((c for (r, c, i) in centroids))//n_cols) + 1
 
     bins = [[] for _ in range(n_cols)]
-
+    # add centroids to their respective bins
     for centroid in centroids:
-        y = centroid[1]
-        bin_idx = (y)//bin_size
+        col = centroid[1]
+        bin_idx = (col)//bin_size
         bins[bin_idx].append(centroid)
 
     # filter out possibly empty bins
     bins = [b for b in bins if len(b) > 0]
-
+    # sort bins by row value
     for b in bins:
         b.sort(key=lambda b: b[0])
-
-    indices = [b[-1] for bin in bins for b in bin if len(bin) > 0]
-
-    return [extremes[i] for i in indices]
+    # extracts each index
+    indices = [b[2] for bin in bins for b in bin]
+    # maps back the indices to each bounding box
+    return {i: extremes[idx] for i, idx in enumerate(indices, 1)}
 
 
 def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
@@ -121,47 +124,46 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
     each element of `extremes`.
 
     Args:
-        extremes: list of `[min_r, max_r, min_c, max_c]` points.
+        extremes: dict for `emb_number: [min_r, max_r, min_c, max_c]`.
         img_path: path to the raw image that will be cut.
-        dest: directory where the movies will be saved.'''
-    if type(embryos) == int:
-        extremes = extremes[:embryos]
+        dest: directory where the movies will be saved.
+        embs: list of embryo numbers. Used to select a subgroup of embryos.
+        pad: amount of padding to add to each movie, in pixels
+        overwrite: boolean to determine if movies should be overwritten.'''
     try:
         if type(embryos) == list:
-            extremes = [extremes[i] for i in embryos]
-    except IndexError:
-        print('Provide valid indices to the extremes list.')
+            extremes = {k: extremes[k] for k in embryos if k in extremes}
+    except KeyError:
+        print('All indices provided in `embryos` must match embryo numbers.')
         return
 
     dest_path = Path(dest)
     offset, dtype, shape = get_metadata(img_path)
     img = np.memmap(img_path, dtype=dtype, mode='r',
                     shape=shape, offset=offset)
-    for i, extreme in enumerate(extremes, 1):
+    tasks = []
+    for i, extreme in extremes.items():
         x0, x1, y0, y1 = add_padding(extreme, shape[2:], pad)
+        for ch in [0, 1]:
+            file_name = f"emb{i}-ch{ch+1}.tif"
+            output = dest_path.joinpath(file_name)
+            if output.exists() and not overwrite:
+                print(
+                    f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
+            else:
+                tasks.append((img, ch, x0, x1, y0, y1, output))
 
-        file_name = f"emb{i}-ch1.tif"
-        if Path(dest).joinpath(file_name).exists() and not overwrite:
-            print(
-                f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
-        else:
-            cut_ch1 = img[:, 0, x0:x1, y0:y1]
-            output_file = dest_path.joinpath(file_name)
-            save_movie(cut_ch1, output_file)
-
-        file_name = f"emb{i}-ch2.tif"
-        if Path(dest).joinpath(file_name).exists() and not overwrite:
-            print(
-                f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
-        else:
-            cut_ch2 = img[:, 1, x0:x1, y0:y1]
-            output_file = dest_path.joinpath(file_name)
-            save_movie(cut_ch2, output_file)
+    num_threads = os.cpu_count()
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(save_movie, *task) for task in tasks]
+        for future in futures:
+            future.result()
 
 
-def save_movie(img, file_path):
-    print(f"Processing {file_path.stem}...")
-    imwrite(file_path, img)
+def save_movie(img, ch, x0, x1, y0, y1, output):
+    print(f"Processing {output.name}..")
+    movie = img[:, ch, x0:x1, y0:y1]
+    imwrite(output, movie)
 
 
 def add_padding(points, shape, pad=20):
@@ -206,7 +208,7 @@ def get_first_image_from_mmap(img_path):
     '''Returns the first image from a mmap file, for plotting.
 
     The image is the average of the first 10 slices for channel 2.
-    It is also equalized, since this method is supposed to be used for 
+    It is also equalized, since this method is supposed to be used for
     displaying the image.'''
     img = get_initial_frames_from_mmap(img_path, n=10)
     first_frame = np.average(img[:, 1, :, :], axis=0)
