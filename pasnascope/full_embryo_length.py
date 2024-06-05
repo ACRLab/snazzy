@@ -10,6 +10,8 @@ from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes, binary_opening, disk
 from tifffile import imread
 
+from pasnascope import utils
+
 
 def binarize(image):
     '''Returns a binary image with a single label, using a low threshold.'''
@@ -50,15 +52,15 @@ def measure(img_path, start=0, end=100):
     return length_from_regions_props(bin_img)
 
 
-def export_csv(lengths, ids,  output):
+def export_csv(lengths, embryo_names,  output):
     '''Generates a csv file with embryo full length data.
 
     Parameters:
-        embryos: list of embryo names
-        vnc_lengts: list of lists, where each nested list represents VNC lengths for a single embryo. Must have same length as the `embryos`.
+        lengts: list of lists, where each nested list represents VNC lengths for a single embryo. Must have same length as the `embryos`.
+        embryo_names: list of embryo names
         output: path to the output csv file.
     '''
-    header = ['ROI ID', 'Full_length']
+    header = ['emb_name', 'ID', 'full_length']
     if output.exists():
         print(
             f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
@@ -66,8 +68,9 @@ def export_csv(lengths, ids,  output):
     with open(output, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        for id, length in zip(ids, lengths):
-            writer.writerow((id, length))
+        for emb_name, length in zip(embryo_names, lengths):
+            id = utils.emb_number(emb_name)
+            writer.writerow((emb_name, id, length))
     return True
 
 
