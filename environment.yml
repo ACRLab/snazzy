@@ -1,6 +1,12 @@
 name: pscope_analysis
 channels:
+  - conda-forge
   - defaults
 dependencies:
+  - ipykernel=6.28.0
   - python=3.11
+  - pandas=2.2.2
+  - ipykernel=6.29.3
+  - scipy=1.13.1
+  - seaborn=0.13.2
 prefix: /home/cdp58/miniconda3/envs/pscope_analysis
