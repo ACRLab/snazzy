@@ -1,0 +1,6 @@
+name: pscope_analysis
+channels:
+  - defaults
+dependencies:
+  - python=3.11
+prefix: /home/cdp58/miniconda3/envs/pscope_analysis
