@@ -77,7 +77,7 @@ def get_length_from_csv(file_path, columns=(1,), end=None, in_pixels=False, pixe
         return lengths[:end]
 
 
-def export_csv(ids, vnc_lengths, output, downsampling, frame_interval=6):
+def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
     '''Generates a csv file with VNC Length data.
 
     Parameters:
@@ -87,7 +87,7 @@ def export_csv(ids, vnc_lengths, output, downsampling, frame_interval=6):
         downsampling: interval used to calculate VNC lengths.
         frame_interval: time (seconds) between two image captures.
     '''
-    header = ['Time[h:m:s]', 'ROI ID', 'VNC_Length']
+    header = ['time', 'emb_name', 'ID', 'length']
     if output.exists():
         print(
             f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
@@ -95,16 +95,17 @@ def export_csv(ids, vnc_lengths, output, downsampling, frame_interval=6):
     with open(output, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        for (id, lengths) in zip(ids, vnc_lengths):
+        for (embryo, lengths) in zip(embryos, vnc_lengths):
             for t, length in enumerate(lengths):
                 writer.writerow(format_csv_row(t, downsampling,
-                                frame_interval, id, length))
+                                frame_interval, embryo, length))
     return True
 
 
-def format_csv_row(t, downsampling, frame_interval, id, length):
-    '''Columns in the csv file: [Time(HH:mm:ss), emb_name, id, length].'''
-    return [utils.format_seconds((t*downsampling)*frame_interval), id, f"{length:.2f}"]
+def format_csv_row(t, downsampling, frame_interval, embryo, length):
+    '''Columns in the csv file: [time, emb_name, id, length].'''
+    id = utils.emb_number(embryo)
+    return [t*downsampling*frame_interval, embryo, id, f"{length:.2f}"]
 
 
 def fit_regression(lengths):
