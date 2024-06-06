@@ -107,3 +107,8 @@ def view_full_embryo_length(img, original_img):
 
     ax[1].imshow(original_img)
     plt.show()
+
+
+def get_annotated_data(csv_path):
+    '''Reads annotated data from a csv file.'''
+    return np.genfromtxt(csv_path, delimiter=',', skip_header=1)
