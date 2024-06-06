@@ -77,7 +77,7 @@ def get_length_from_csv(file_path, columns=(1,), end=None, in_pixels=False, pixe
         return lengths[:end]
 
 
-def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
+def export_csv(ids, vnc_lengths, output_dir, downsampling, frame_interval=6):
     '''Generates a csv file with VNC Length data.
 
     Parameters:
@@ -87,25 +87,24 @@ def export_csv(embryos, vnc_lengths, output, downsampling, frame_interval=6):
         downsampling: interval used to calculate VNC lengths.
         frame_interval: time (seconds) between two image captures.
     '''
-    header = ['time', 'emb_name', 'ID', 'length']
-    if output.exists():
-        print(
-            f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
-        return False
-    with open(output, 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        for (embryo, lengths) in zip(embryos, vnc_lengths):
+    header = ['time', 'length']
+    # if output.exists():
+    #     print(
+    #         f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
+    #     return False
+    for (id, lengths) in zip(ids, vnc_lengths):
+        with open(output_dir.joinpath(f"emb{id}.csv"), 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
             for t, length in enumerate(lengths):
                 writer.writerow(format_csv_row(t, downsampling,
-                                frame_interval, embryo, length))
+                                frame_interval, length))
     return True
 
 
-def format_csv_row(t, downsampling, frame_interval, embryo, length):
-    '''Columns in the csv file: [time, emb_name, id, length].'''
-    id = utils.emb_number(embryo)
-    return [t*downsampling*frame_interval, embryo, id, f"{length:.2f}"]
+def format_csv_row(t, downsampling, frame_interval, length):
+    '''Columns in the csv file: [time, length].'''
+    return [t*downsampling*frame_interval, f"{length:.2f}"]
 
 
 def fit_regression(lengths):
