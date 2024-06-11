@@ -33,3 +33,12 @@ class Experiment:
         '''Returns a list of VNC length csv files.'''
         length_dir = self.path.joinpath('lengths')
         return sorted(list(length_dir.iterdir()), key=emb_id)
+
+    def get_embryo_files_by_id(self, id) -> list[Path]:
+        emb = f"emb{id}"
+        a = next((e for e in self.activity() if e.stem == emb), None)
+        l = next((e for e in self.lengths() if e.stem == emb), None)
+        if a and l:
+            return (a, l)
+        else:
+            return None, None
