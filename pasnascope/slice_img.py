@@ -119,7 +119,7 @@ def sort_by_grid_pos(extremes, n_cols):
     return {i: extremes[idx] for i, idx in enumerate(indices, 1)}
 
 
-def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
+def cut_movies(extremes, img_path, dest, active_ch=1, embryos=None, pad=20, overwrite=False):
     '''Extracts movies from ch1 and ch2, based on the boundaries passed for
     each element of `extremes`.
 
@@ -127,6 +127,8 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
         extremes: dict for `emb_number: [min_r, max_r, min_c, max_c]`.
         img_path: path to the raw image that will be cut.
         dest: directory where the movies will be saved.
+        active_ch: indicates the image active channel. Defaults to 1 and it 
+        is expected to be equal to 1 or 2.
         embs: list of embryo numbers. Used to select a subgroup of embryos.
         pad: amount of padding to add to each movie, in pixels
         overwrite: boolean to determine if movies should be overwritten.'''
@@ -136,16 +138,18 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
     except KeyError:
         print('All indices provided in `embryos` must match embryo numbers.')
         return
+    if active_ch != 1 and active_ch != 2:
+        raise ValueError(f'Active channel should be 1 or 2, got {active_ch}.')
 
     dest_path = Path(dest)
     offset, dtype, shape = get_metadata(img_path)
     img = np.memmap(img_path, dtype=dtype, mode='r',
                     shape=shape, offset=offset)
     tasks = []
-    for i, extreme in extremes.items():
+    for id, extreme in extremes.items():
         x0, x1, y0, y1 = add_padding(extreme, shape[2:], pad)
         for ch in [0, 1]:
-            file_name = f"emb{i}-ch{ch+1}.tif"
+            file_name = output_file_name(id, ch, active_ch)
             output = dest_path.joinpath(file_name)
             if output.exists() and not overwrite:
                 print(
@@ -158,6 +162,13 @@ def cut_movies(extremes, img_path, dest, embryos=None, pad=20, overwrite=False):
         futures = [executor.submit(save_movie, *task) for task in tasks]
         for future in futures:
             future.result()
+
+
+def output_file_name(id, ch, active_ch):
+    if active_ch != 1 and active_ch != 2:
+        raise ValueError(f'Active channel should be 1 or 2, got {active_ch}.')
+    ch_number = ch + 1 if active_ch == 1 else active_ch-ch
+    return f"emb{id}-ch{ch_number}.tif"
 
 
 def save_movie(img, ch, x0, x1, y0, y1, output):
