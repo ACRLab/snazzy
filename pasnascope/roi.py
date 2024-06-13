@@ -99,9 +99,9 @@ def get_contours(img, window=10, mask=None):
         # TODO: repeat the previous contour in no ROI is found?
         if roi is None:
             continue
-        contour = find_contours(roi)[0]
+        contour = find_contours(roi)
         if len(contour) > 0:
-            contours.append(contour)
+            contours.append(contour[0])
     return contours
 
 

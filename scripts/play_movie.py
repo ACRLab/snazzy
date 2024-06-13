@@ -25,7 +25,7 @@ active = sorted(img_dir.glob('*ch1.tif'), key=utils.emb_number)
 print('Select movie to display, based on index:')
 
 for i, file in enumerate(active):
-    print(f'[{i}] {file.stem}')
+    print(f"[{i}] {file.stem.split('-')[0]}")
 
 idx = int(input())
 
@@ -36,6 +36,6 @@ ch = int(input())
 if ch != 1 and ch != 2:
     exit(1)
 
-img = imread(structs[i]) if ch == 2 else imread(active[i])
+img = imread(structs[idx]) if ch == 2 else imread(active[idx])
 pa = custom_animation.PauseAnimation(img, interval=25)
 pa.display()
