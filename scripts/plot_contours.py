@@ -24,7 +24,7 @@ active = sorted(img_dir.glob('*ch1.tif'), key=utils.emb_number)
 print('Select movie to display, based on index:')
 
 for i, file in enumerate(structs):
-    print(f'[{i}] {file.stem}')
+    print(f"[{i}] {file.stem.split('-')[0]}")
 
 idx = int(input())
 
@@ -42,7 +42,7 @@ print('Select downsample amount to calculate the contours:')
 
 window = int(input())
 
-img = imread(structs[i]) if ch == 2 else imread(active[i])
+img = imread(structs[idx]) if ch == 2 else imread(active[idx])
 contours = roi.get_contours(img, window=window, mask=None)
 print(f"Contours within plot_contours: {len(contours)}")
 
