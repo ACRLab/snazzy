@@ -45,14 +45,19 @@ def compare_against_annotated(measured, annotated):
     return [*errors,  num_valleys]
 
 
+def point_wise_err(measured, annotated):
+    min_len = min(measured.shape[0], annotated.shape[0])
+    annotated = annotated[:min_len]
+    measured = measured[:min_len]
+    return (measured - annotated) / annotated
+
+
 def read_annotated(annotated_path, cols):
     return vnc_length.get_length_from_csv(annotated_path, columns=cols)
 
 
-def evaluate_CLE(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
+def measure_embryos(emb_files, interval, thres_rel=0.6, min_dist=5):
     measured = {k.stem: [] for k in emb_files}
-    errors = {k.stem: [] for k in emb_files}
-
     for emb in emb_files:
         print(f"Processing {emb.stem}..")
         hp = find_hatching.find_hatching_point(emb)
@@ -60,12 +65,29 @@ def evaluate_CLE(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6
         img = imread(emb, key=range(0, hp, interval))
         measured[emb.stem] = vnc_length.measure_VNC_centerline(
             img, thres_rel=thres_rel, min_dist=min_dist)
+    return measured
+
+
+def evaluate_CLE_local(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
+    pointwise_error = {k.stem: [] for k in emb_files}
+
+    measured = measure_embryos(emb_files, annotated_dir, thres_rel, min_dist)
+
+    for k, v in measured.items():
+        annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
+        pointwise_error[k] = point_wise_err(v, annotated)
+
+    return pointwise_error
+
+def evaluate_CLE_global(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
+    errors = {k.stem: [] for k in emb_files}
+
+    measured = measure_embryos(emb_files, annotated_dir, thres_rel, min_dist)
 
     for k, v in measured.items():
         annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
         errors[k] = compare_against_annotated(v, annotated)
 
-    # adjust each point to the frame number, based on the interval
     for v in errors.values():
         v[2] = v[2]*interval
 
