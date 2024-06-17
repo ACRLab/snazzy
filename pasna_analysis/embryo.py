@@ -8,6 +8,9 @@ class Embryo:
     '''Encapsulates data about a given embryo.'''
 
     def __init__(self, activity_csv: Path, vnc_len_csv: Path):
+        if activity_csv.stem != vnc_len_csv.stem:
+            raise ValueError(
+                'CSV files for activity and VNC length should refer to the same embryo.')
         self.name = activity_csv.stem
         self.activity = self.import_data(activity_csv)
         self.vnc_length = self.import_data(vnc_len_csv)
