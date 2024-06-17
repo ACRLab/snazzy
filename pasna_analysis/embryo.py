@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
 
@@ -25,6 +26,20 @@ class Embryo:
     def developmental_time(self) -> np.ndarray:
         '''Returns emb_size:VNC_size ratio.'''
         return self.size / self.vnc_length_filtered
+
+    def get_DT_from_time(self, time) -> float:
+        '''Returns the estimated (by linear interpolation) developmental time 
+        for a time point.'''
+        try:
+            dt = self.interpolator(time)
+            return dt
+        except AttributeError:
+            dvt = self.developmental_time()
+            dvt_timepoints = self.vnc_length[:, 0]
+            interpolator = interp1d(dvt_timepoints, dvt,
+                                    kind='linear', fill_value='extrapolate')
+            self.interpolator = interpolator
+            return interpolator(time)
 
     def get_id(self) -> int:
         '''Returns the number that identifies an embryo.'''
