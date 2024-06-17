@@ -10,6 +10,7 @@ class Trace:
         self.time = time
         self.active = active
         self.struct = struct
+        self.peak_times = None
 
         if trim_data:
             self.trim_idx = self.trim_data(trim_zscore)
@@ -101,7 +102,7 @@ class Trace:
 
     def get_first_peak_time(self):
         '''Returns the time when the first peak was detected.'''
-        if not any(self.peak_times):
+        if self.peak_times is None:
             self.detect_peaks()
         return self.peak_times[0]
 
