@@ -1,5 +1,7 @@
 from pathlib import Path
+
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
 
 
 class Embryo:
@@ -9,6 +11,8 @@ class Embryo:
         self.name = activity_csv.stem
         self.activity = self.import_data(activity_csv)
         self.vnc_length = self.import_data(vnc_len_csv)
+        self.vnc_length_filtered = gaussian_filter1d(
+            self.vnc_length[:, 1], sigma=3)
         emb_size_csv = vnc_len_csv.parents[1].joinpath('full-length.csv')
         self.size = self.get_emb_size(emb_size_csv)
 
@@ -17,7 +21,7 @@ class Embryo:
 
     def developmental_time(self) -> np.ndarray:
         '''Returns emb_size:VNC_size ratio.'''
-        return self.size / self.vnc_length[:, 1]
+        return self.size / self.vnc_length_filtered
 
     def get_id(self) -> int:
         '''Returns the number that identifies an embryo.'''
