@@ -1,6 +1,5 @@
 import itertools
 import numpy as np
-import pandas as pd
 import scipy as sp
 import seaborn as sns
 
@@ -105,3 +104,7 @@ def get_initial_length_by_name(emb_name, csv_path):
     data = np.loadtxt(csv_path, delimiter=',', skiprows=1)
     emb = data[data[:, 0] == id]
     return emb[0, 1]
+
+
+def coeff_variation(arr):
+    return np.std(arr)/np.average(arr)
