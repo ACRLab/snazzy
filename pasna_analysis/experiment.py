@@ -24,7 +24,7 @@ class Experiment:
         activity_dir = self.path.joinpath('activity')
         return sorted([e.stem for e in activity_dir.iterdir()], key=emb_id)
 
-    def activity(self) -> list[Path]:
+    def activities(self) -> list[Path]:
         '''Returns a list of activity csv files.'''
         activity_dir = self.path.joinpath('activity')
         return sorted(list(activity_dir.iterdir()), key=emb_id)
@@ -34,7 +34,7 @@ class Experiment:
         length_dir = self.path.joinpath('lengths')
         return sorted(list(length_dir.iterdir()), key=emb_id)
 
-    def get_embryo_files_by_id(self, id) -> list[Path]:
+    def get_embryo_files_by_id(self, id: int) -> list[Path]:
         emb = f"emb{id}"
         a = next((e for e in self.activity() if e.stem == emb), None)
         l = next((e for e in self.lengths() if e.stem == emb), None)
