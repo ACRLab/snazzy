@@ -68,21 +68,20 @@ def measure_embryos(emb_files, interval, thres_rel=0.6, min_dist=5):
     return measured
 
 
-def evaluate_CLE_local(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
-    pointwise_error = {k.stem: [] for k in emb_files}
+def get_comparison_metrics(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
+    measured = measure_embryos(emb_files, interval, thres_rel, min_dist)
+    annotated = {k.stem: [] for k in emb_files}
 
-    measured = measure_embryos(emb_files, annotated_dir, thres_rel, min_dist)
+    for k in measured.keys():
+        annotated[k] = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
 
-    for k, v in measured.items():
-        annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
-        pointwise_error[k] = point_wise_err(v, annotated)
+    return measured, annotated
 
-    return pointwise_error
 
 def evaluate_CLE_global(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
     errors = {k.stem: [] for k in emb_files}
 
-    measured = measure_embryos(emb_files, annotated_dir, thres_rel, min_dist)
+    measured = measure_embryos(emb_files, interval, thres_rel, min_dist)
 
     for k, v in measured.items():
         annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
