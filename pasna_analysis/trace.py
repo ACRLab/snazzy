@@ -2,8 +2,6 @@ import numpy as np
 import scipy.signal as spsig
 from scipy.stats import zscore
 
-ACQUISITION_TIME = 6
-
 
 class Trace:
     '''Calculates dff and peak data for the resulting trace.'''
@@ -19,6 +17,7 @@ class Trace:
         self._peak_bounds_indices = None
         self._peak_durations = None
         self._peak_rise_times = None
+        self._peak_aucs = None
 
         if trim_data:
             self.trim_idx = self.trim_data(trim_zscore)
@@ -61,9 +60,29 @@ class Trace:
 
     @property
     def peak_durations(self):
-        if self._peak_durations is None:
-            self.compute_peak_bounds()
-        return self._peak_durations
+        if self._peak_bounds_time is None:
+            self.compute_peak_bounds
+        return [end - start for (start, end) in self._peak_bounds_time]
+
+    @property
+    def peak_rise_times(self):
+        if self._peak_bounds_time is None:
+            self.compute_peak_bounds
+        start_times = self._peak_bounds_time[:, 0]
+        return self.peak_times - start_times
+
+    @property
+    def peak_decay_times(self):
+        if self._peak_bounds_time is None:
+            self.compute_peak_bounds
+        end_times = self._peak_bounds_time[:, 1]
+        return end_times - self.peak_times
+
+    @property
+    def peak_aucs(self):
+        if self._peak_aucs is None:
+            self.compute_peak_aucs_from_bounds()
+        return self._peak_aucs
 
     def compute_dff(self):
         '''Compute dff for the ratiometric active channel signal.'''
@@ -169,21 +188,33 @@ class Trace:
     def compute_peak_bounds(self, rel_height=0.92):
         '''Computes properties of each dff peak using spsig.peak_widths.'''
         savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
-        peak_widths_idxes, _, peak_left_idxes, peak_rights_idxes = spsig.peak_widths(
+        _, _, start_idxs, end_idxs = spsig.peak_widths(
             savgol, self.peak_idxes, rel_height)
-        peak_left_times = np.interp(
-            peak_left_idxes, np.arange(len(self.time)), self.time)
-        peak_right_times = np.interp(
-            peak_rights_idxes, np.arange(len(self.time)), self.time)
-        peak_bounds_time = np.dstack(
-            (peak_left_times, peak_right_times)).squeeze()
 
-        self._peak_rise_times = self.peak_times - peak_left_times
-        self._peak_decay_times = peak_right_times - self.peak_times
-        self._peak_durations = peak_widths_idxes * ACQUISITION_TIME
-        self._peak_bounds_indices = np.dstack(
-            (peak_left_idxes, peak_rights_idxes)).squeeze()
-        self._peak_bounds_time = peak_bounds_time
+        X = np.arange(len(self.time))
+        start_times = np.interp(start_idxs, X, self.time)
+        end_times = np.interp(end_idxs, X, self.time)
+        # combines two 1D nparrs of shape (n) into a 2D nparr of shape (n,2)
+        peak_times = np.vstack((start_times, end_times)).T
+
+        start_idxs = start_idxs.astype(np.int64)
+        end_idxs = end_idxs.astype(np.int64)
+        self._peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
+        self._peak_bounds_time = peak_times
+
+    def get_peak_slices_from_bounds(self):
+        peak_bounds = self.peak_bounds_indices
+        savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
+        peak_slices = [savgol[x[0]:x[1]] for x in peak_bounds]
+        time_slices = [self.time[x[0]:x[1]] for x in peak_bounds]
+        return list(zip(peak_slices, time_slices))
+
+    def compute_peak_aucs_from_bounds(self):
+        peak_time_slices = self.get_peak_slices_from_bounds()
+        peak_aucs = np.asarray([np.trapz(pslice*100, tslice)
+                               for pslice, tslice in peak_time_slices])
+
+        self._peak_aucs = peak_aucs
 
 
 def _extend_true_right(bool_array, n_right):
