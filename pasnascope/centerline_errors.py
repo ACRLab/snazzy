@@ -68,23 +68,23 @@ def measure_embryos(emb_files, interval, thres_rel=0.6, min_dist=5):
     return measured
 
 
-def get_comparison_metrics(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
+def get_comparison_metrics(emb_files, ann_files, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
     measured = measure_embryos(emb_files, interval, thres_rel, min_dist)
     annotated = {k.stem: [] for k in emb_files}
 
-    for k in measured.keys():
-        annotated[k] = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
+    for ann, k in zip(ann_files, measured.keys()):
+        annotated[k] = read_annotated(ann, cols)
 
     return measured, annotated
 
 
-def evaluate_CLE_global(emb_files, annotated_dir, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
+def evaluate_CLE_global(emb_files, annotated, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
     errors = {k.stem: [] for k in emb_files}
 
     measured = measure_embryos(emb_files, interval, thres_rel, min_dist)
 
-    for k, v in measured.items():
-        annotated = read_annotated(annotated_dir.joinpath(f"{k}.csv"), cols)
+    for ann, (k, v) in zip(annotated, measured.items()):
+        annotated = read_annotated(ann, cols)
         errors[k] = compare_against_annotated(v, annotated)
 
     for v in errors.values():
