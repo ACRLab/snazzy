@@ -10,16 +10,79 @@ class Trace:
         self.time = time
         self.active = active
         self.struct = struct
-        self.peak_times = None
+        self._peak_idxes = None
+        self._peak_times = None
+        self._peak_intervals = None
+        self._peak_amplitudes = None
+        self._peak_bounds_indices = None
+        self._peak_durations = None
+        self._peak_rise_times = None
+        self._peak_aucs = None
 
         if trim_data:
             self.trim_idx = self.trim_data(trim_zscore)
 
         self.dff = self.compute_dff()
-        # Compute Savitzky-Golay-filtered signal and its 1st and 2nd derivatives
-        self.savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
-        self.savgol1 = spsig.savgol_filter(self.dff, 21, 4, deriv=1)
-        self.savgol2 = spsig.savgol_filter(self.dff, 21, 4, deriv=2)
+
+    @property
+    def peak_times(self):
+        if self._peak_times is None:
+            self._detect_peaks()
+        return self._peak_times
+
+    @property
+    def peak_intervals(self):
+        if self._peak_intervals is None:
+            self._detect_peaks()
+        return self._peak_intervals
+
+    @property
+    def peak_amplitudes(self):
+        if self._peak_amplitudes is None:
+            self._detect_peaks()
+        return self._peak_amplitudes
+
+    @property
+    def rms(self):
+        return np.sqrt(np.mean(self.dff**2))
+
+    @property
+    def peak_bounds_indices(self):
+        if self._peak_bounds_indices is None:
+            self.compute_peak_bounds()
+        return self._peak_bounds_indices
+
+    @property
+    def peak_idxes(self):
+        if self._peak_idxes is None:
+            self._detect_peaks()
+        return self._peak_idxes
+
+    @property
+    def peak_durations(self):
+        if self._peak_bounds_time is None:
+            self.compute_peak_bounds
+        return [end - start for (start, end) in self._peak_bounds_time]
+
+    @property
+    def peak_rise_times(self):
+        if self._peak_bounds_time is None:
+            self.compute_peak_bounds
+        start_times = self._peak_bounds_time[:, 0]
+        return self.peak_times - start_times
+
+    @property
+    def peak_decay_times(self):
+        if self._peak_bounds_time is None:
+            self.compute_peak_bounds
+        end_times = self._peak_bounds_time[:, 1]
+        return end_times - self.peak_times
+
+    @property
+    def peak_aucs(self):
+        if self._peak_aucs is None:
+            self.compute_peak_aucs_from_bounds()
+        return self._peak_aucs
 
     def compute_dff(self):
         '''Compute dff for the ratiometric active channel signal.'''
@@ -67,7 +130,7 @@ class Trace:
             baseline[i] = window_baseline
         return baseline
 
-    def detect_peaks(self, mpd=71, order0_min=0.06, order1_min=0.006, extend_true_filters_by=30):
+    def _detect_peaks(self, mpd=71, order0_min=0.06, order1_min=0.006, extend_true_filters_by=30):
         '''
         Detects peaks using Savitzky-Golay-filtered signal and its derivatives, computed in __init__.
         Partly relies on spsig.find_peaks called on the signal, with parameters mpd (minimum peak distance)
@@ -75,16 +138,19 @@ class Trace:
         order1_min sets the minimum first-derivative value, and the second derivative must be <0. These filters
          are stretched out to the right by extend_true_filters_by samples. 
         '''
+        savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
         order0_idxes = spsig.find_peaks(
-            self.savgol, height=order0_min, distance=mpd)[0]
-        order0_filter = np.zeros(len(self.savgol), dtype=bool)
+            savgol, height=order0_min, distance=mpd)[0]
+        order0_filter = np.zeros(len(savgol), dtype=bool)
         order0_filter[order0_idxes] = True
 
-        order1_filter = self.savgol1 > order1_min
+        savgol1 = spsig.savgol_filter(self.dff, 21, 4, deriv=1)
+        order1_filter = savgol1 > order1_min
         order1_filter = _extend_true_right(
             order1_filter, extend_true_filters_by)
 
-        order2_filter = self.savgol2 < 0
+        savgol2 = spsig.savgol_filter(self.dff, 21, 4, deriv=2)
+        order2_filter = savgol2 < 0
         order2_filter = _extend_true_right(
             order2_filter, extend_true_filters_by)
 
@@ -93,18 +159,16 @@ class Trace:
         peak_idxes = np.where(joint_filter)[0]
         peak_times = self.time[peak_idxes]
 
-        self.peak_idxes = peak_idxes
-        self.peak_times = peak_times
-        self.peak_intervals = np.diff(peak_times)
-        self.peak_amplitudes = self.savgol[peak_idxes]
-
-        return self.peak_times
+        self._peak_idxes = peak_idxes
+        self._peak_times = peak_times
+        self._peak_intervals = np.diff(peak_times)
+        self._peak_amplitudes = savgol[peak_idxes]
 
     def get_first_peak_time(self):
         '''Returns the time when the first peak was detected.'''
-        if self.peak_times is None:
-            self.detect_peaks()
-        return self.peak_times[0]
+        if self._peak_times is None:
+            self._detect_peaks()
+        return self._peak_times[0]
 
     def trim_data(self, trim_zscore=5):
         '''
@@ -120,6 +184,37 @@ class Trace:
         # Trim 5 timepoints before
         trim_idx = trim_points[0]-5 if len(trim_points) > 0 else None
         return trim_idx
+
+    def compute_peak_bounds(self, rel_height=0.92):
+        '''Computes properties of each dff peak using spsig.peak_widths.'''
+        savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
+        _, _, start_idxs, end_idxs = spsig.peak_widths(
+            savgol, self.peak_idxes, rel_height)
+
+        X = np.arange(len(self.time))
+        start_times = np.interp(start_idxs, X, self.time)
+        end_times = np.interp(end_idxs, X, self.time)
+        # combines two 1D nparrs of shape (n) into a 2D nparr of shape (n,2)
+        peak_times = np.vstack((start_times, end_times)).T
+
+        start_idxs = start_idxs.astype(np.int64)
+        end_idxs = end_idxs.astype(np.int64)
+        self._peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
+        self._peak_bounds_time = peak_times
+
+    def get_peak_slices_from_bounds(self):
+        peak_bounds = self.peak_bounds_indices
+        savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
+        peak_slices = [savgol[x[0]:x[1]] for x in peak_bounds]
+        time_slices = [self.time[x[0]:x[1]] for x in peak_bounds]
+        return list(zip(peak_slices, time_slices))
+
+    def compute_peak_aucs_from_bounds(self):
+        peak_time_slices = self.get_peak_slices_from_bounds()
+        peak_aucs = np.asarray([np.trapz(pslice*100, tslice)
+                               for pslice, tslice in peak_time_slices])
+
+        self._peak_aucs = peak_aucs
 
 
 def _extend_true_right(bool_array, n_right):
