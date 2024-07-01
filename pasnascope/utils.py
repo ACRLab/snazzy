@@ -37,8 +37,10 @@ def emb_number(emb_path: Path | str) -> str:
     return int(emb_path.split('-')[0][3:])
 
 
-def emb_name(number: int, ch: int) -> str:
+def emb_name(number: int, ch: int, ext: str | None = None) -> str:
     '''Returns the embryo name for a given embryo number.'''
+    if ext:
+        return f'emb{number}-ch{ch}.{ext}'
     return f'emb{number}-ch{ch}'
 
 
