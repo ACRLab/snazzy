@@ -1,8 +1,9 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from tifffile import imread
 
-from pasnascope import centerline_errors
+from pasnascope import centerline_errors, vnc_length
 
 
 def heatmap(data, row_labels, col_labels, ax, cbarlabel="", **kwargs):
@@ -57,43 +58,51 @@ def annotate_heatmap(im, data):
 
 
 def write_header(x_list, x_name, y_list, y_name, file_path):
-    with open(file_path, 'a+') as f:
+    with open(file_path, 'w+') as f:
         f.write(f"Parameters used in the grid search: {x_name}, {y_name}.\n")
-        f.write(f"Values for {x_name}:\n{x_list}\n")
-        f.write(f"Values for {y_name}:\n{y_list}\n")
+        f.write(f"Param: {x_name}\n{x_list}\n")
+        f.write(f"Param: {y_name}\n{y_list}\n")
         f.write('\n')
 
 
-def search(x_list, x_name, y_list, y_name, estimator, should_save=True, file_path=None, **kwargs):
+def search(x_list, y_list, embryos, annotated, hatching_points=None, interval=20, num_samples=5):
     '''Applies a grid search to the estimator function.
 
-    Expects `estimator` to return a dict that can be used to assess the 
+    Expects `estimator` to return a dict that can be used to assess the
     estimator performance.'''
-    if should_save and not file_path:
-        print('File path required to save data.')
-        return
-    if should_save:
-        write_header(x_list, x_name, y_list, y_name, file_path)
-    for x in x_list:
-        for y in y_list:
-            print(f"Rel thres: {x}, min dist: {y}")
-            extra_params = {x_name: x, y_name: y}
-            kwargs.update(extra_params)
-            estimation = estimator(**kwargs)
-            if should_save:
-                with open(file_path, 'a+') as f:
-                    f.write(f"{x},{y}\n")
-                    for k, v in estimation.items():
-                        f.write(f"{k}: {v}\n")
-                    f.write('\n')
+    errors = {(x, y,): [] for x in x_list for y in y_list}
+    for emb in embryos[:num_samples]:
+        hp = hatching_points[emb.stem]
+        img = imread(emb, key=range(0, hp, interval))
+        for x in x_list:
+            for y in y_list:
+                lengths = vnc_length.measure_VNC_centerline(
+                    img, thres_rel=x, min_dist=y)
+                error = centerline_errors.compare(
+                    lengths, annotated[emb.stem])
+                errors[(x, y,)].append([emb.stem, error])
+    return errors
 
 
-def parse_grid_search_output(x_list, y_list, file_path):
+def write_grid(grid, file_path, x_list, x_name, y_list, y_name):
+    write_header(x_list, x_name, y_list, y_name, file_path)
+    with open(file_path, 'a+') as f:
+        for (thres_rel, min_dist), embs in grid.items():
+            f.write(f'{thres_rel}, {min_dist}\n')
+            for e in embs:
+                f.write(f'{e[0]}: {e[1]}\n')
+            f.write('\n')
+
+
+def parse_grid_search_output(file_path):
     with open(file_path, 'r') as f:
         lines = [l.rstrip() for l in f.readlines()]
         avg_errors = []
         errors = []
-        for l in lines[2:]:
+        # parse parameters
+        x, x_values, y, y_values = parse_header(lines[1:5])
+        for l in lines[6:]:
+            # empty lines are the separators between parameter combinations
             if l == '' and len(errors) > 0:
                 avg_errors.append(sum(errors)/len(errors))
                 errors = []
@@ -103,15 +112,37 @@ def parse_grid_search_output(x_list, y_list, file_path):
         if len(errors) > 0:
             avg_errors.append(sum(errors)/len(errors))
 
-    grid = np.array(avg_errors).reshape((len(x_list), len(y_list)))
+    grid = np.array(avg_errors).reshape((len(x_values), len(y_values)))
 
     fig, ax = plt.subplots()
-    im, cbar = heatmap(np.array(grid), x_list, y_list, ax=ax,
-                       cmap='viridis_r', cbarlabel='%Err - thres_rel x min_distance')
-    texts = annotate_heatmap(im, grid)
-
+    im, _ = heatmap(np.array(grid), x_values, y_values, ax=ax,
+                    cmap='viridis_r', cbarlabel=f'%Err - {x} x {y}')
+    annotate_heatmap(im, grid)
+    fig.suptitle('Grid search')
     fig.tight_layout()
     plt.show()
+
+
+def parse_header(lines):
+    x = parse_header_variable(lines[0])
+    x_values = parse_header_values(lines[1])
+    y = parse_header_variable(lines[2])
+    y_values = parse_header_values(lines[3])
+    return x, x_values, y, y_values
+
+
+def parse_header_variable(line):
+    if not line.startswith('Param: '):
+        raise ValueError(
+            f'Grid search output is formatted incorrectly. Expected "Param: <param_name>", but got "{line}".')
+    return line.split('Param: ')[1]
+
+
+def parse_header_values(line):
+    if not (line.startswith('[') and line.endswith(']')):
+        raise ValueError(
+            f'Grid search output is formatted incorrectly. Expected string to be read as an array, but got "{line}"')
+    return line.strip('[]').split(',')
 
 
 def get_emb_files(exp_dir, num_samples):
