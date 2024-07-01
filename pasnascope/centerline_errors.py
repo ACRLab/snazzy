@@ -1,4 +1,3 @@
-from pathlib import Path
 from random import shuffle
 
 import matplotlib.pyplot as plt
@@ -16,7 +15,7 @@ def get_random_files(path, n=5):
 
 def percentual_err(measured, annotated):
     err = np.abs((measured - annotated)) / annotated
-    return (np.average(err), np.max(err), np.argmax(err))
+    return np.average(err), np.max(err)
 
 
 def plot_err(measured, annotated, emb_name=None, interval=20):
@@ -30,20 +29,12 @@ def plot_err(measured, annotated, emb_name=None, interval=20):
     plt.show()
 
 
-def count_valleys(measured, thres=0.85):
-    diffs = measured[1:] / measured[:-1]
-    return np.count_nonzero(np.where(diffs <= thres))
-
-
 def compare(measured, annotated):
     # make sure both nparrays have the same size:
     min_len = min(measured.shape[0], annotated.shape[0])
     annotated = annotated[:min_len]
     measured = measured[:min_len]
-
-    num_valleys = count_valleys(measured)
-    errors = percentual_err(measured, annotated)
-    return [*errors,  num_valleys]
+    return percentual_err(measured, annotated)
 
 
 def point_wise_err(measured, annotated):
@@ -74,58 +65,51 @@ def get_comparison_metrics(img_dir, annotated_files, LUT=None, cols=(1,), interv
     embryos = annotated_to_emb.values()
     measured = measure_embryos(embryos, interval, thres_rel, min_dist)
 
-    annotated = {k.stem: [] for k in annotated_files}
+    annotated = {e.stem: [] for e in embryos}
     for ann in annotated_files:
         calc = annotated_to_emb[ann.stem]
         annotated[calc.stem] = read_annotated(ann, cols)
 
-    # for ann, k in zip(ann_files, measured.keys()):
-    #     annotated[k] = read_annotated(ann, cols)
     return measured, annotated
 
 
-def get_matching_embryos(annotated, img_dir, LUT=None):
-    '''Maps annotated files to corresponding embryo images, based on the LUT.'''
+def get_matching_embryos(embryos, annotated, LUT=None):
+    '''Maps embryo files to corresponding annotated files, based on the LUT.
+
+    The look-up table is only composed of numbers, so this function ports those numbers to the filename convention used here. Also makes sure that the embryos in the LUT actually exist as files.'''
     pairs = {}
+
     if LUT is None:
-        for ann in annotated:
-            pairs[ann.stem] = img_dir.joinpath(f'{ann.stem}.tif')
+        # if no LUT, embryos and annotated files match 1:1
+        annotated_names = [ann.stem for ann in annotated]
+        for emb in embryos:
+            if emb.stem in annotated_names:
+                ann_file = f'{emb.stem}.csv'
+                pairs[emb.name] = ann_file
         return pairs
 
-    annotated_file_names = [ann.stem for ann in annotated]
+    annotated_filenames = [ann.name for ann in annotated]
+    embryos_filenames = [emb.name for emb in embryos]
 
-    for ann, calc in LUT.items():
-        calc_emb = utils.emb_name(calc, ch=2)
-        ann_emb = utils.emb_name(ann, ch=2)
-        if ann_emb in annotated_file_names:
-            pairs[ann_emb] = img_dir.joinpath(f'{calc_emb}.tif')
+    for emb, ann in LUT.items():
+        emb_file = utils.emb_name(emb, ch=2, ext='tif')
+        ann_file = utils.emb_name(ann, ch=2, ext='csv')
+        if emb_file in embryos_filenames and ann_file in annotated_filenames:
+            pairs[emb_file] = ann_file
+            # pairs[ann_emb] = img_dir.joinpath(f'{calc_emb}.tif')
 
     return pairs
 
 
-def evaluate_CLE_global(img_dir, annotated, LUT=None, cols=(1,), interval=20, thres_rel=0.6, min_dist=5):
-    annotated_to_emb = get_matching_embryos(annotated, img_dir, LUT)
-    measured = measure_embryos(
-        annotated_to_emb.values(), interval, thres_rel, min_dist)
-
-    errors = {k.stem: [] for k in annotated_to_emb.values()}
-
-    for ann in annotated:
-        annotated = read_annotated(ann, cols)
-        calc = annotated_to_emb[ann.stem]
-        errors[calc.stem] = compare(measured[calc.stem], annotated)
-
-    for v in errors.values():
-        v[2] = v[2]*interval
-
-    return errors
+def evaluate_CLE_global(measured, annotated):
+    '''Compares measured values against manually annotated data.'''
+    return {e: compare(measured[e], annotated[e]) for e in measured.keys()}
 
 
 def load_files(emb_dir, annotated_dir):
     '''Selects the matching files from both the emb dir and the annotated data dir.'''
     annotated = sorted(list(annotated_dir.glob('*.csv')), key=utils.emb_number)
     selected = [e.stem for e in annotated]
-    print(selected)
     embs = [emb for emb in emb_dir.glob('*.tif') if emb.stem in selected]
     embs = sorted(embs, key=utils.emb_number)
     return embs, annotated
