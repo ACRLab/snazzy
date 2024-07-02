@@ -30,7 +30,19 @@ def save_as_tiff(file, dest_path):
         print(f"File '{dest.name}' already exists.")
         return
     with ND2File(file) as f:
-        f.write_tiff(dest_path)
+        f.write_tiff(dest_path, progress=True)
+
+
+def save_first_frames_as_tiff(file, dest_path, n):
+    '''Converts the first n slices of an nd2 image to tiff.'''
+    dest = Path(dest_path)
+    if dest.exists():
+        print(f"File '{dest.name}' already exists.")
+        return
+    with ND2File(file) as f:
+        darray = f.to_dask()
+        initial_frames = darray[:n].compute()
+        imwrite(dest_path, initial_frames)
 
 
 def get_threshold(img, thres_adjust=0):
