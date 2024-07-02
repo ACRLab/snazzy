@@ -60,7 +60,12 @@ def centerline_dist(image, verbose=False, pixel_width=1.62, thres_rel=0.6, min_d
             print(f"Found a single point of maxima, cannot apply RANSAC.")
         return None
 
-    estimator = apply_ransac(coords)
+    try:
+        estimator = apply_ransac(coords)
+    except ValueError:
+        # if RANSAC can't find a consensus, it raises ValueError
+        # in these cases, we return 0 to signal that no distance was found
+        return 0
 
     # points to draw the line mask
     x1 = 0
