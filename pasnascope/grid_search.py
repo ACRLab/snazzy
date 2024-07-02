@@ -72,6 +72,7 @@ def search(x_list, y_list, embryos, annotated, hatching_points=None, interval=20
     estimator performance.'''
     errors = {(x, y,): [] for x in x_list for y in y_list}
     for emb in embryos[:num_samples]:
+        print(emb.stem)
         hp = hatching_points[emb.stem]
         img = imread(emb, key=range(0, hp, interval))
         for x in x_list:
