@@ -88,12 +88,12 @@ def export_csv(ids, vnc_lengths, output_dir, downsampling, frame_interval=6):
         frame_interval: time (seconds) between two image captures.
     '''
     header = ['time', 'length']
-    # if output.exists():
-    #     print(
-    #         f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
-    #     return False
     for (id, lengths) in zip(ids, vnc_lengths):
-        with open(output_dir.joinpath(f"emb{id}.csv"), 'w') as f:
+        output_path = output_dir.joinpath(f'emb{id}.csv')
+        if output_path.exists():
+            print(f'File {output_path.stem} already exists. Skipping..')
+            continue
+        with open(output_path, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(header)
             for t, length in enumerate(lengths):
