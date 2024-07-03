@@ -41,7 +41,7 @@ def point_wise_err(measured, annotated):
     min_len = min(measured.shape[0], annotated.shape[0])
     annotated = annotated[:min_len]
     measured = measured[:min_len]
-    return (measured - annotated) / annotated
+    return np.abs(measured - annotated) / annotated
 
 
 def read_annotated(annotated_path, cols):
