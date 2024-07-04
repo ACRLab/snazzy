@@ -28,9 +28,9 @@ class Embryo:
         '''Returns emb_size:VNC_size ratio.'''
         return self.size / self.vnc_length_filtered
 
-    def get_DT_from_time(self, time: float) -> np.ndarray | float:
+    def get_DT_from_time(self, time: np.ndarray | float) -> np.ndarray | float:
         '''Returns the estimated (by linear interpolation) developmental time 
-        for a time point.'''
+        for a time series.'''
         if self.interpolator is None:
             dvt = self.developmental_time()
             dvt_timepoints = self.vnc_length[:, 0]
