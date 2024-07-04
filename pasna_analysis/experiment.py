@@ -1,44 +1,40 @@
-from pathlib import Path
-
-
-def emb_id(emb: Path | str) -> int:
-    '''Assumes that embryos are always named as emb + id, e.g: `emb21`.'''
-    if isinstance(emb, Path):
-        emb = emb.stem
-    return int(emb[3:])
+from pasna_analysis import DataLoader, Embryo, Trace
 
 
 class Experiment:
-    '''Used to access data about the current experiment.
+    '''Encapsulates data about all embryos for a given experiment.'''
 
-    Relies on the folder structure described in this project README.'''
+    def __init__(self, data: DataLoader, first_peak_threshold=30):
+        activities = data.activities()
+        lengths = data.lengths()
+        self.name = data.name
+        self.embryos = [Embryo(a, l) for a, l in zip(activities, lengths)]
+        self.first_peak_threshold = first_peak_threshold
+        self.traces = {}
+        self.filter_embryos()
 
-    def __init__(self, path: Path):
-        if not isinstance(path, Path):
-            raise TypeError('Expected a `Path` instance.')
-        self.path = path
-        self.name = path.stem
+    def filter_embryos(self):
+        '''Keeps only the embryos with valid traces.
 
-    def embryos(self) -> list[str]:
-        '''Returns a list of available embryos.'''
-        activity_dir = self.path.joinpath('activity')
-        return sorted([e.stem for e in activity_dir.iterdir()], key=emb_id)
+        A trace is valid if the first peak happens after `min` minutes.'''
+        for emb in self.embryos:
+            trace = self.get_trace(emb)
+            if trace:
+                self.traces[emb.name] = trace
 
-    def activities(self) -> list[Path]:
-        '''Returns a list of activity csv files.'''
-        activity_dir = self.path.joinpath('activity')
-        return sorted(list(activity_dir.iterdir()), key=emb_id)
+        self.embryos = [
+            e for e in self.embryos if e.name in self.traces.keys()]
 
-    def lengths(self) -> list[Path]:
-        '''Returns a list of VNC length csv files.'''
-        length_dir = self.path.joinpath('lengths')
-        return sorted(list(length_dir.iterdir()), key=emb_id)
+    def get_trace(self, emb: Embryo):
+        '''Returns the activity trace for an embryo.'''
+        time = emb.activity[:, 0]
+        act = emb.activity[:, 1]
+        stc = emb.activity[:, 2]
 
-    def get_embryo_files_by_id(self, id: int) -> list[Path]:
-        emb = f"emb{id}"
-        a = next((e for e in self.activity() if e.stem == emb), None)
-        l = next((e for e in self.lengths() if e.stem == emb), None)
-        if a and l:
-            return (a, l)
-        else:
-            return None, None
+        trace = Trace(time, act, stc)
+        first_peak = trace.get_first_peak_time() / 60
+        if first_peak < self.first_peak_threshold:
+            print(
+                f'First peak detected before {self.first_peak_threshold} mins for {emb.name} (t={first_peak} mins). Skipping..')
+            return None
+        return trace
