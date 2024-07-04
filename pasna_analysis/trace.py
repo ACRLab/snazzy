@@ -15,6 +15,7 @@ class Trace:
         self._peak_intervals = None
         self._peak_amplitudes = None
         self._peak_bounds_indices = None
+        self._peak_bounds_time = None
         self._peak_durations = None
         self._peak_rise_times = None
         self._peak_aucs = None
@@ -61,20 +62,20 @@ class Trace:
     @property
     def peak_durations(self):
         if self._peak_bounds_time is None:
-            self.compute_peak_bounds
+            self.compute_peak_bounds()
         return [end - start for (start, end) in self._peak_bounds_time]
 
     @property
     def peak_rise_times(self):
         if self._peak_bounds_time is None:
-            self.compute_peak_bounds
+            self.compute_peak_bounds()
         start_times = self._peak_bounds_time[:, 0]
         return self.peak_times - start_times
 
     @property
     def peak_decay_times(self):
         if self._peak_bounds_time is None:
-            self.compute_peak_bounds
+            self.compute_peak_bounds()
         end_times = self._peak_bounds_time[:, 1]
         return end_times - self.peak_times
 
@@ -182,7 +183,7 @@ class Trace:
 
         trim_points = np.where(np.abs(zscored_tomato) > trim_zscore)[0]
         # Trim 5 timepoints before
-        trim_idx = trim_points[0]-5 if len(trim_points) > 0 else None
+        trim_idx = trim_points[0]-5 if len(trim_points) > 0 else len(self.time)
         return trim_idx
 
     def compute_peak_bounds(self, rel_height=0.92):
