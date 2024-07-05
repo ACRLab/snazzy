@@ -60,7 +60,7 @@ def export_csv(lengths, embryo_names,  output):
         embryo_names: list of embryo names
         output: path to the output csv file.
     '''
-    header = ['ID', 'full_length', 'emb_name']
+    header = ['ID', 'full_length']
     if output.exists():
         print(
             f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file.")
@@ -70,7 +70,7 @@ def export_csv(lengths, embryo_names,  output):
         writer.writerow(header)
         for emb_name, length in zip(embryo_names, lengths):
             id = utils.emb_number(emb_name)
-            writer.writerow((id, length, emb_name))
+            writer.writerow((id, length))
     return True
 
 
