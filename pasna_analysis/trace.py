@@ -183,7 +183,10 @@ class Trace:
 
         trim_points = np.where(np.abs(zscored_tomato) > trim_zscore)[0]
         # Trim 5 timepoints before
-        trim_idx = trim_points[0]-5 if len(trim_points) > 0 else len(self.time)
+        if len(trim_points) == 0:
+            trim_idx = len(self.time) - 5
+        else:
+            trim_idx = trim_points[0] - 5
         return trim_idx
 
     def compute_peak_bounds(self, rel_height=0.92):
