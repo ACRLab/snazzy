@@ -99,12 +99,9 @@ def align_traces_to_standardized_timestamp(ts, xs, ts_standard=None, trim=False,
     return ts_standard, xs_standardized
 
 
-def get_initial_length_by_name(emb_name, csv_path):
-    id = int(emb_name[3:])
-    data = np.loadtxt(csv_path, delimiter=',', skiprows=1)
-    emb = data[data[:, 0] == id]
-    return emb[0, 1]
-
-
 def coeff_variation(arr):
     return np.std(arr)/np.average(arr)
+
+
+def split_in_bins(arr, bins):
+    return np.digitize(arr, bins)
