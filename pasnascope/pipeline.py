@@ -53,7 +53,7 @@ def calc_activity(embs_src, res_dir, window):
     active = sorted(embs_src.glob('*ch1.tif'), key=utils.emb_number)
     struct = sorted(embs_src.glob('*ch2.tif'), key=utils.emb_number)
 
-    output = res_dir.joinpath('results', 'activity')
+    output = res_dir.joinpath('activity')
     output.mkdir(parents=True, exist_ok=True)
 
     embryos = []
@@ -83,9 +83,10 @@ def calc_activity(embs_src, res_dir, window):
     return len(ids)
 
 
-def clean_up_files(embs_src, first_frames_path):
+def clean_up_files(embs_src, first_frames_path, tif_path):
     shutil.rmtree(embs_src)
     first_frames_path.unlink(missing_ok=True)
+    tif_path.unlink(missing_ok=True)
 
 
 def log_params(path, **kwargs):
