@@ -133,7 +133,7 @@ def sort_by_grid_pos(extremes, n_cols):
 
 def cut_movies(extremes, img_path, dest, active_ch=1, embryos=None, pad=20, overwrite=False):
     '''Extracts movies from ch1 and ch2, based on the boundaries passed for
-    each element of `extremes`.
+    each item of `extremes`.
 
     Args:
         extremes: dict for `emb_number: [min_r, max_r, min_c, max_c]`.
@@ -168,7 +168,8 @@ def cut_movies(extremes, img_path, dest, active_ch=1, embryos=None, pad=20, over
                     f"{file_name} already found. To overwrite the file, pass `overwrite=True`.")
             else:
                 tasks.append((img, ch, x0, x1, y0, y1, output))
-
+    if len(tasks) == 0:
+        return
     num_threads = os.cpu_count()
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(save_movie, *task) for task in tasks]
@@ -184,7 +185,6 @@ def output_file_name(id, ch, active_ch):
 
 
 def save_movie(img, ch, x0, x1, y0, y1, output):
-    print(f"Processing {output.name}..")
     movie = img[:, ch, x0:x1, y0:y1]
     imwrite(output, movie)
 
