@@ -17,13 +17,18 @@ class Trace:
         self._peak_bounds_indices = None
         self._peak_bounds_time = None
         self._peak_durations = None
-        self._peak_rise_times = None
         self._peak_aucs = None
 
         if trim_data:
             self.trim_idx = self.trim_data(trim_zscore)
 
         self.dff = self.compute_dff()
+
+    @property
+    def peak_idxes(self):
+        if self._peak_idxes is None:
+            self._detect_peaks()
+        return self._peak_idxes
 
     @property
     def peak_times(self):
@@ -44,20 +49,10 @@ class Trace:
         return self._peak_amplitudes
 
     @property
-    def rms(self):
-        return np.sqrt(np.mean(self.dff**2))
-
-    @property
     def peak_bounds_indices(self):
         if self._peak_bounds_indices is None:
             self.compute_peak_bounds()
         return self._peak_bounds_indices
-
-    @property
-    def peak_idxes(self):
-        if self._peak_idxes is None:
-            self._detect_peaks()
-        return self._peak_idxes
 
     @property
     def peak_durations(self):
@@ -84,6 +79,10 @@ class Trace:
         if self._peak_aucs is None:
             self.compute_peak_aucs_from_bounds()
         return self._peak_aucs
+
+    @property
+    def rms(self):
+        return np.sqrt(np.mean(self.dff**2))
 
     def compute_dff(self):
         '''Compute dff for the ratiometric active channel signal.'''
@@ -131,7 +130,7 @@ class Trace:
             baseline[i] = window_baseline
         return baseline
 
-    def _detect_peaks(self, mpd=71, order0_min=0.06, order1_min=0.006, extend_true_filters_by=30):
+    def _detect_peaks(self, mpd=71, order0_min=0.08, order1_min=0.006, extend_true_filters_by=30):
         '''
         Detects peaks using Savitzky-Golay-filtered signal and its derivatives, computed in __init__.
         Partly relies on spsig.find_peaks called on the signal, with parameters mpd (minimum peak distance)
@@ -160,6 +159,12 @@ class Trace:
         peak_idxes = np.where(joint_filter)[0]
         peak_times = self.time[peak_idxes]
 
+        # ignore early peaks caused by transients
+        avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
+        if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
+            peak_idxes = peak_idxes[1:]
+            peak_times = peak_times[1:]
+
         self._peak_idxes = peak_idxes
         self._peak_times = peak_times
         self._peak_intervals = np.diff(peak_times)
@@ -167,9 +172,7 @@ class Trace:
 
     def get_first_peak_time(self):
         '''Returns the time when the first peak was detected.'''
-        if self._peak_times is None:
-            self._detect_peaks()
-        return self._peak_times[0]
+        return self.peak_times[0]
 
     def trim_data(self, trim_zscore=5):
         '''
@@ -199,12 +202,12 @@ class Trace:
         start_times = np.interp(start_idxs, X, self.time)
         end_times = np.interp(end_idxs, X, self.time)
         # combines two 1D nparrs of shape (n) into a 2D nparr of shape (n,2)
-        peak_times = np.vstack((start_times, end_times)).T
+        bound_times = np.vstack((start_times, end_times)).T
 
         start_idxs = start_idxs.astype(np.int64)
         end_idxs = end_idxs.astype(np.int64)
         self._peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
-        self._peak_bounds_time = peak_times
+        self._peak_bounds_time = bound_times
 
     def get_peak_slices_from_bounds(self):
         peak_bounds = self.peak_bounds_indices
