@@ -131,7 +131,7 @@ def sort_by_grid_pos(extremes, n_cols):
     return {i: extremes[idx] for i, idx in enumerate(indices, 1)}
 
 
-def cut_movies(extremes, img_path, dest, active_ch=1, embryos=None, pad=20, overwrite=False):
+def cut_movies(extremes, img_path, dest, embryos=None, active_ch=1, channels=2, pad=20, overwrite=False):
     '''Extracts movies from ch1 and ch2, based on the boundaries passed for
     each item of `extremes`.
 
@@ -141,6 +141,7 @@ def cut_movies(extremes, img_path, dest, active_ch=1, embryos=None, pad=20, over
         dest: directory where the movies will be saved.
         active_ch: indicates the image active channel. Defaults to 1 and it 
         is expected to be equal to 1 or 2.
+        channels: (defaults to 2) number of channels imaged.
         embs: list of embryo numbers. Used to select a subgroup of embryos.
         pad: amount of padding to add to each movie, in pixels
         overwrite: boolean to determine if movies should be overwritten.'''
@@ -150,8 +151,10 @@ def cut_movies(extremes, img_path, dest, active_ch=1, embryos=None, pad=20, over
     except KeyError:
         print('All indices provided in `embryos` must match embryo numbers.')
         return
-    if active_ch != 1 and active_ch != 2:
+    if active_ch not in [1, 2]:
         raise ValueError(f'Active channel should be 1 or 2, got {active_ch}.')
+    if channels not in [1, 2]:
+        raise ValueError(f'Can only parse 1 or 2 channels, but got {channels}')
 
     dest_path = Path(dest)
     offset, dtype, shape = get_metadata(img_path)
@@ -160,7 +163,7 @@ def cut_movies(extremes, img_path, dest, active_ch=1, embryos=None, pad=20, over
     tasks = []
     for id, extreme in extremes.items():
         x0, x1, y0, y1 = add_padding(extreme, shape[2:], pad)
-        for ch in [0, 1]:
+        for ch in range(channels):
             file_name = output_file_name(id, ch, active_ch)
             output = dest_path.joinpath(file_name)
             if output.exists() and not overwrite:
