@@ -1,13 +1,9 @@
 import csv
 import math
-import random
-from pathlib import Path
 
 import numpy as np
 import numpy.ma as ma
 import matplotlib.pyplot as plt
-
-from pasnascope import utils
 
 
 def reflect_edges(signal, window_size=160):
@@ -114,14 +110,3 @@ def plot_activity(img, struct, mask, mask_path=None, plot_diff=False, save=False
         plt.savefig(f'../results/activity/{filename}.png')
 
     plt.show()
-
-
-if __name__ == '__main__':
-    act = np.array([random.randint(0, 100) for _ in range(100)])
-    struct = np.array([random.randint(0, 100) for _ in range(100)])
-    act2 = np.array([random.randint(0, 100) for _ in range(100)])
-    struct2 = np.array([random.randint(0, 100) for _ in range(100)])
-    embryos = [[act, struct], [act2, struct2]]
-
-    file_path = Path.cwd().joinpath('results', 'preview.csv')
-    export_csv(embryos, file_path)
