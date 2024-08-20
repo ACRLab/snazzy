@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import shutil
 
@@ -11,23 +12,36 @@ def measure_vnc_length(embs_src, res_dir, interval):
     embs = sorted(embs_src.glob('*ch2.tif'), key=utils.emb_number)
     output = res_dir.joinpath('lengths')
     output.mkdir(parents=True, exist_ok=True)
+    embs = [emb for emb in embs if not already_created(emb, output)]
     lengths = []
     ids = []
-    for emb in embs:
-        id = utils.emb_number(emb.stem)
-        if output.joinpath(f'emb{id}.csv').exists():
-            print(f'File emb{id}.csv already exists. Skipping..')
-            continue
-        hp = find_hatching.find_hatching_point(emb)
-        hp -= hp % interval
 
-        img = imread(emb, key=range(0, hp, interval))
-        vnc_len = vnc_length.measure_VNC_centerline(img)
-        lengths.append(vnc_len)
-        ids.append(id)
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(
+            calculate_length, emb, interval) for emb in embs]
+        for future in as_completed(futures):
+            id, vnc_len = future.result()
+            ids.append(id)
+            lengths.append(vnc_len)
 
     vnc_length.export_csv(ids, lengths, output, interval)
     return len(ids)
+
+
+def already_created(emb, output):
+    id = utils.emb_number(emb)
+    output_path = output.joinpath(f"emb{id}.csv")
+    return output_path.exists()
+
+
+def calculate_length(emb, interval):
+    id = utils.emb_number(emb.stem)
+    hp = find_hatching.find_hatching_point(emb)
+    hp -= hp % interval
+
+    img = imread(emb, key=range(0, hp, interval))
+    vnc_len = vnc_length.measure_VNC_centerline(img)
+    return id, vnc_len
 
 
 def measure_embryo_full_length(embs_src, res_dir):
@@ -48,7 +62,7 @@ def measure_embryo_full_length(embs_src, res_dir):
     return len(full_lengths)
 
 
-def calc_activity(embs_src, res_dir, window):
+def calc_activities(embs_src, res_dir, window):
     '''Calculate activity for active and structural channels'''
     active = sorted(embs_src.glob('*ch1.tif'), key=utils.emb_number)
     struct = sorted(embs_src.glob('*ch2.tif'), key=utils.emb_number)
@@ -56,31 +70,43 @@ def calc_activity(embs_src, res_dir, window):
     output = res_dir.joinpath('activity')
     output.mkdir(parents=True, exist_ok=True)
 
+    active = [emb for emb in active if not already_created(emb, output)]
+    struct = [emb for emb in struct if not already_created(emb, output)]
+
     embryos = []
     ids = []
-    for act, stct in zip(active, struct):
-        id = utils.emb_number(act)
-        file_path = output.joinpath(f'emb{id}.csv')
-        if file_path.exists():
-            print(f'File {file_path.stem} already exists. Skipping..')
-            continue
-        active_img = imread(act)
-        struct_img = imread(stct)
-        mask = roi.get_roi(struct_img, window=window)
-
-        masked_active = activity.apply_mask(active_img, mask)
-        masked_struct = activity.apply_mask(struct_img, mask)
-
-        signal_active = activity.get_activity(masked_active)
-        signal_struct = activity.get_activity(masked_struct)
-
-        emb = [signal_active, signal_struct]
-
-        embryos.append(emb)
-        ids.append(utils.emb_number(act))
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(calc_activity, act, stct, window)
+                   for act, stct in zip(active, struct)]
+        for future in as_completed(futures):
+            id, signal = future.result()
+            ids.append(id)
+            embryos.append(signal)
 
     activity.export_csv(ids, embryos, output)
     return len(ids)
+
+
+def calc_activity(act, stct, window):
+    id = utils.emb_number(act)
+    print("Calculating activity for emb {id}..")
+    if id != utils.emb_number(stct):
+        raise ValueError(
+            'Active and structural channels must come from the same embryo.')
+    active_img = imread(act)
+    struct_img = imread(stct)
+    mask = roi.get_roi(struct_img, window=window)
+    print('calculated mask')
+
+    masked_active = activity.apply_mask(active_img, mask)
+    masked_struct = activity.apply_mask(struct_img, mask)
+
+    signal_active = activity.get_activity(masked_active)
+    signal_struct = activity.get_activity(masked_struct)
+    print('calculated signals')
+
+    emb = [signal_active, signal_struct]
+    return id, emb
 
 
 def clean_up_files(embs_src, first_frames_path, tif_path):
