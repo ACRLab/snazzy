@@ -157,6 +157,8 @@ class Trace:
         joint_filter = np.all(
             [order0_filter, order1_filter, order2_filter], axis=0)
         peak_idxes = np.where(joint_filter)[0]
+        if peak_idxes.size == 0:
+            raise ValueError("No peaks found, cannot derive trace metrics.")
         peak_times = self.time[peak_idxes]
 
         # ignore early peaks caused by transients

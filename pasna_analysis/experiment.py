@@ -32,7 +32,12 @@ class Experiment:
         stc = emb.activity[:, 2]
 
         trace = Trace(time, act, stc)
-        first_peak = trace.get_first_peak_time() / 60
+        try:
+            first_peak = trace.get_first_peak_time() / 60
+        except (ValueError, IndexError):
+            # if no peak is found, exclude the embryo from the analysis:
+            print(f'No peaks detected for {emb.name}. Skipping..')
+            return None
         if first_peak < self.first_peak_threshold:
             print(
                 f'First peak detected before {self.first_peak_threshold} mins for {emb.name} (t={first_peak} mins). Skipping..')
