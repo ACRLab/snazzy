@@ -75,7 +75,9 @@ def calc_activities(embs_src, res_dir, window):
 
     embryos = []
     ids = []
-    with ThreadPoolExecutor() as executor:
+    # NOTE: number of workers is limited here because it was crashing jupyter
+    # on a machine with low RAM. Add more workers for better hardware
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [executor.submit(calc_activity, act, stct, window)
                    for act, stct in zip(active, struct)]
         for future in as_completed(futures):
@@ -89,21 +91,18 @@ def calc_activities(embs_src, res_dir, window):
 
 def calc_activity(act, stct, window):
     id = utils.emb_number(act)
-    print("Calculating activity for emb {id}..")
     if id != utils.emb_number(stct):
         raise ValueError(
             'Active and structural channels must come from the same embryo.')
     active_img = imread(act)
     struct_img = imread(stct)
     mask = roi.get_roi(struct_img, window=window)
-    print('calculated mask')
 
     masked_active = activity.apply_mask(active_img, mask)
     masked_struct = activity.apply_mask(struct_img, mask)
 
     signal_active = activity.get_activity(masked_active)
     signal_struct = activity.get_activity(masked_struct)
-    print('calculated signals')
 
     emb = [signal_active, signal_struct]
     return id, emb
