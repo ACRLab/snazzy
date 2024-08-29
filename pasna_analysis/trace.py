@@ -6,7 +6,7 @@ from scipy.stats import zscore
 class Trace:
     '''Calculates dff and peak data for the resulting trace.'''
 
-    def __init__(self, time, active, struct, trim_data=True, trim_zscore=0.35):
+    def __init__(self, time, active, struct, trim_zscore=0.35):
         self.time = time
         self.active = active
         self.struct = struct
@@ -19,8 +19,7 @@ class Trace:
         self._peak_durations = None
         self._peak_aucs = None
 
-        if trim_data:
-            self.trim_idx = self.trim_data(trim_zscore)
+        self.trim_idx = self.trim_data(trim_zscore)
 
         self.dff = self.compute_dff()
 
@@ -82,26 +81,18 @@ class Trace:
 
     @property
     def rms(self):
-        return np.sqrt(np.mean(self.dff**2))
+        return np.sqrt(np.mean((self.dff[:self.trim_idx])**2))
 
     def compute_dff(self):
         '''Compute dff for the ratiometric active channel signal.'''
         ratiom_signal = self.compute_ratiom_gcamp()
         baseline = self.compute_baseline(ratiom_signal)
-        return self._dff(ratiom_signal, baseline)
+        return (ratiom_signal-baseline)/baseline
 
     def compute_ratiom_gcamp(self):
         '''Computes the ratiometric GCaMP signal by dividing the raw GCaMP 
         signal by the tdTomato signal.'''
-        if self.trim_idx:
-            active = self.active[:self.trim_idx]
-            struct = self.struct[:self.trim_idx]
-            return active/struct
         return self.active/self.struct
-
-    def _dff(self, signal, baseline):
-        '''Helper function to compute deltaF/F given signal and baseline.'''
-        return (signal-baseline)/baseline
 
     def reflect_edges(self, signal, window_size=160):
         '''Reflects edges so we can fit windows of size window_size for the
@@ -138,18 +129,19 @@ class Trace:
         order1_min sets the minimum first-derivative value, and the second derivative must be <0. These filters
          are stretched out to the right by extend_true_filters_by samples. 
         '''
-        savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
+        dff = self.dff[:self.trim_idx]
+        savgol = spsig.savgol_filter(dff, 21, 4, deriv=0)
         order0_idxes = spsig.find_peaks(
             savgol, height=order0_min, distance=mpd)[0]
         order0_filter = np.zeros(len(savgol), dtype=bool)
         order0_filter[order0_idxes] = True
 
-        savgol1 = spsig.savgol_filter(self.dff, 21, 4, deriv=1)
+        savgol1 = spsig.savgol_filter(dff, 21, 4, deriv=1)
         order1_filter = savgol1 > order1_min
         order1_filter = _extend_true_right(
             order1_filter, extend_true_filters_by)
 
-        savgol2 = spsig.savgol_filter(self.dff, 21, 4, deriv=2)
+        savgol2 = spsig.savgol_filter(dff, 21, 4, deriv=2)
         order2_filter = savgol2 < 0
         order2_filter = _extend_true_right(
             order2_filter, extend_true_filters_by)
@@ -162,6 +154,7 @@ class Trace:
         peak_times = self.time[peak_idxes]
 
         # ignore early peaks caused by transients
+        # TODO: missing bounds check
         avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
         if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
             peak_idxes = peak_idxes[1:]
@@ -176,7 +169,7 @@ class Trace:
         '''Returns the time when the first peak was detected.'''
         return self.peak_times[0]
 
-    def trim_data(self, trim_zscore=5):
+    def trim_data(self, trim_zscore):
         '''
         Computes the z score for each Savitzky-Golay-filtered sample, and removes the data 5 samples prior to the 
         first sample whose absolute value is greater than the threshold trim_zscore. 
@@ -196,7 +189,8 @@ class Trace:
 
     def compute_peak_bounds(self, rel_height=0.92):
         '''Computes properties of each dff peak using spsig.peak_widths.'''
-        savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
+        dff = self.dff[:self.trim_idx]
+        savgol = spsig.savgol_filter(dff, 21, 4, deriv=0)
         _, _, start_idxs, end_idxs = spsig.peak_widths(
             savgol, self.peak_idxes, rel_height)
 
@@ -212,8 +206,9 @@ class Trace:
         self._peak_bounds_time = bound_times
 
     def get_peak_slices_from_bounds(self):
+        dff = self.dff[:self.trim_idx]
         peak_bounds = self.peak_bounds_indices
-        savgol = spsig.savgol_filter(self.dff, 21, 4, deriv=0)
+        savgol = spsig.savgol_filter(dff, 21, 4, deriv=0)
         peak_slices = [savgol[x[0]:x[1]] for x in peak_bounds]
         time_slices = [self.time[x[0]:x[1]] for x in peak_bounds]
         return list(zip(peak_slices, time_slices))
