@@ -105,3 +105,10 @@ def coeff_variation(arr):
 
 def split_in_bins(arr, bins):
     return np.digitize(arr, bins)
+
+
+def time_scale_list(upper_limit):
+    """Lists points in steps of 60, to be used as x_ticks for time series."""
+    if type(upper_limit) is not int:
+        upper_limit = int(upper_limit)
+    return list(range(0, upper_limit, 60))
