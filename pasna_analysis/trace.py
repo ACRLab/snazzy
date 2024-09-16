@@ -86,11 +86,11 @@ class Trace:
     def compute_dff(self):
         '''Compute dff for the ratiometric active channel signal.'''
         ratiom_signal = self.compute_ratiom_gcamp()
-        baseline = self.compute_baseline(ratiom_signal)
+        baseline = self.compute_baseline(ratiom_signal, window_size=80)
         return (ratiom_signal-baseline)/baseline
 
     def compute_ratiom_gcamp(self):
-        '''Computes the ratiometric GCaMP signal by dividing the raw GCaMP 
+        '''Computes the ratiometric GCaMP signal by dividing the raw GCaMP
         signal by the tdTomato signal.'''
         return self.active/self.struct
 
