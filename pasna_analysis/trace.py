@@ -121,7 +121,7 @@ class Trace:
             baseline[i] = window_baseline
         return baseline
 
-    def _detect_peaks(self, mpd=71, order0_min=0.08, order1_min=0.006, extend_true_filters_by=30):
+    def _detect_peaks(self, mpd=71, order0_min=0.08, order1_min=0.006, extend_true_filters_by=30, has_transients=True):
         '''
         Detects peaks using Savitzky-Golay-filtered signal and its derivatives, computed in __init__.
         Partly relies on spsig.find_peaks called on the signal, with parameters mpd (minimum peak distance)
@@ -153,12 +153,11 @@ class Trace:
             raise ValueError("No peaks found, cannot derive trace metrics.")
         peak_times = self.time[peak_idxes]
 
-        # ignore early peaks caused by transients
-        # TODO: missing bounds check
-        avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
-        if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
-            peak_idxes = peak_idxes[1:]
-            peak_times = peak_times[1:]
+        if has_transients:
+            avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
+            if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
+                peak_idxes = peak_idxes[1:]
+                peak_times = peak_times[1:]
 
         self._peak_idxes = peak_idxes
         self._peak_times = peak_times
