@@ -1,15 +1,17 @@
 import numpy as np
 import scipy.signal as spsig
+from scipy.ndimage import minimum_filter1d
 from scipy.stats import zscore
 
 
 class Trace:
     '''Calculates dff and peak data for the resulting trace.'''
 
-    def __init__(self, time, active, struct, trim_zscore=0.35):
+    def __init__(self, time, active, struct, trim_zscore=0.35, dff_strategy='baseline'):
         self.time = time
         self.active = active
         self.struct = struct
+        self.dff_strategy = dff_strategy
         self._peak_idxes = None
         self._peak_times = None
         self._peak_intervals = None
@@ -83,14 +85,20 @@ class Trace:
     def rms(self):
         return np.sqrt(np.mean((self.dff[:self.trim_idx])**2))
 
-    def compute_dff(self):
+    def compute_dff(self, window_size=80):
         '''Compute dff for the ratiometric active channel signal.'''
         ratiom_signal = self.compute_ratiom_gcamp()
-        baseline = self.compute_baseline(ratiom_signal)
-        return (ratiom_signal-baseline)/baseline
+        if self.dff_strategy == 'baseline':
+            baseline = self.compute_baseline(ratiom_signal, window_size)
+        elif self.dff_strategy == 'local_minima':
+            baseline = minimum_filter1d(ratiom_signal, size=window_size)
+        else:
+            raise ValueError(
+                f"Could not apply the dff_strategy specified: {self.dff_strategy}.")
+        return (ratiom_signal - baseline)/baseline
 
     def compute_ratiom_gcamp(self):
-        '''Computes the ratiometric GCaMP signal by dividing the raw GCaMP 
+        '''Computes the ratiometric GCaMP signal by dividing the raw GCaMP
         signal by the tdTomato signal.'''
         return self.active/self.struct
 
