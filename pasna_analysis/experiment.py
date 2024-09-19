@@ -7,7 +7,7 @@ from pasna_analysis import DataLoader, Embryo, Trace
 class Experiment:
     '''Encapsulates data about all embryos for a given experiment.'''
 
-    def __init__(self, data: DataLoader, first_peak_threshold=30, to_exclude: Optional[list[int]] = None):
+    def __init__(self, data: DataLoader, first_peak_threshold=30, to_exclude: Optional[list[int]] = None, dff_strategy='baseline'):
         activities = data.activities()
         lengths = data.lengths()
         self.name = data.name
@@ -16,6 +16,7 @@ class Experiment:
         self.traces = {}
         if to_exclude is None:
             to_exclude = []
+        self.dff_strategy = dff_strategy
         self._filter_embryos(to_exclude)
 
     def _filter_embryos(self, to_exclude: list[int]):
@@ -46,7 +47,7 @@ class Experiment:
         act = emb.activity[:, 1]
         stc = emb.activity[:, 2]
 
-        trace = Trace(time, act, stc)
+        trace = Trace(time, act, stc, dff_strategy=self.dff_strategy)
         try:
             first_peak = trace.get_first_peak_time() / 60
         except (ValueError, IndexError):
