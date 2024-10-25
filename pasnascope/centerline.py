@@ -32,6 +32,12 @@ def get_DT_maxima(image, thres_rel=0.6, min_dist=5):
     return peak_local_max(distance, footprint=np.ones((5, 5)), threshold_rel=thres_rel, min_distance=min_dist)
 
 
+def get_DT_image(image, metric='chessboard'):
+    '''Returns the distance transform image for visualization.'''
+    image = binarize(image)
+    return ndi.distance_transform_cdt(image, metric=metric)
+
+
 def apply_ransac(coords):
     '''Returns the centerline estimated by applying a RANSAC linear model.'''
     y = coords.T[0]
@@ -131,5 +137,6 @@ def view_centerline_dist(image, img_title='', thres_rel=0.6, min_dist=5):
     ax.imshow(orig_image)
     ax.imshow(inner, alpha=0.3)
     ax.set_title(img_title)
+    ax.set_axis_off()
     fig.canvas.header_visible = False
     plt.show()
