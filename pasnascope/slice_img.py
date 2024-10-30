@@ -104,6 +104,21 @@ def get_bbox_boundaries(img, s=25, n_cols=3):
     return extremes
 
 
+def increase_bbox(coords, w, h):
+    '''Increases the bbox boundaries by w and h.
+
+    Args:
+        coords: Extremes (output from `slice_img.calculate_slice_coordinates`)
+        w: int Number of pixels to increment in the bbox width (half each side)
+        h: int Number of pixels to increment in the bbox height (half each side)
+    '''
+    new_coords = coords.copy()
+    for k, coord in new_coords.items():
+        x0, x1, y0, y1 = coord
+        new_coords[k] = x0 - h//2, x1 + h//2, y0 - w//2, y1 + w//2
+    return new_coords
+
+
 def sort_by_grid_pos(extremes, n_cols):
     '''Sorts each boundary points list based on their position in the grid.
 

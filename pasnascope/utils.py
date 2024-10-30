@@ -9,6 +9,7 @@ class CounterDeque(deque):
     def __init__(self, shape):
         super().__init__()
         self.counter = 0
+        # [min_i, max_i, min_j, max_j]
         self.extremes = [shape[0], 0, shape[1], 0]
 
     def pop(self):
