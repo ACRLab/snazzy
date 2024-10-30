@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import shutil
 
+import numpy as np
 from tifffile import imread
 
 from pasnascope import activity, find_hatching, full_embryo_length, roi, utils, vnc_length
@@ -44,7 +45,7 @@ def calculate_length(emb, interval):
     return id, vnc_len
 
 
-def measure_embryo_full_length(embs_src, res_dir):
+def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
     embs = sorted(embs_src.glob('*ch2.tif'), key=utils.emb_number)
     output = res_dir.joinpath('full-length.csv')
     full_lengths = []
@@ -56,7 +57,17 @@ def measure_embryo_full_length(embs_src, res_dir):
 
     for emb in embs:
         embryo_names.append(emb.stem)
-        full_lengths.append(full_embryo_length.measure(emb))
+        full_lengths.append(full_embryo_length.measure(emb, low_non_VNC))
+
+    # NOTE: temporary fix -> warn when measuments deviate too much from others
+    # This happens sparsely due to the VNC position inside the embryo
+    z_scores = np.abs(full_lengths - np.mean(full_lengths)) / \
+        np.std(full_lengths)
+    threshold = 2
+    outliers = np.where(z_scores > threshold)[0]
+    for i in outliers:
+        print(
+            f'Embryo {embryo_names[i]} full length measurement should be manually checked.')
 
     full_embryo_length.export_csv(full_lengths, embryo_names, output)
     return len(full_lengths)
