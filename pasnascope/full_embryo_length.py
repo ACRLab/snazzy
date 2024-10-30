@@ -3,9 +3,10 @@ import math
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.ndimage import binary_fill_holes
 from skimage.draw import ellipse
 from skimage.exposure import equalize_hist
-from skimage.filters import threshold_triangle
+from skimage.filters import threshold_triangle, threshold_multiotsu, gaussian
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes, binary_opening, disk
 from tifffile import imread
@@ -29,6 +30,21 @@ def binarize(image):
     return largest_label
 
 
+def binarize_low_embryo_background(image):
+    '''Returns a binary image with a single label, assuming that background values are _higher_ than non-VNC pixels in the embryo.'''
+    image = gaussian(image, sigma=2, output=image)
+    thr = threshold_multiotsu(image, classes=3)
+    img = np.digitize(image, thr)
+
+    labels = label(img, connectivity=1, background=1)
+    largest_label = labels == np.argmax(
+        np.bincount(labels.flat)[1:]) + 1
+
+    binary_fill_holes(largest_label, output=largest_label)
+
+    return largest_label
+
+
 def length_from_regions_props(img, pixel_width=1.62):
     '''Calculates length of a binary image containing a single label.'''
     regions = regionprops(img.astype(np.uint8))
@@ -38,8 +54,11 @@ def length_from_regions_props(img, pixel_width=1.62):
     return regions[0].axis_major_length*pixel_width
 
 
-def measure(img_path, start=0, end=100):
-    '''Calculates the embryo length, based on the first 100 slices.
+def measure(img_path, low_non_VNC=False, start=1000, end=1100):
+    '''Calculates the embryo length, based on a movie fragment.
+
+    It's best to use an interval of 50 to 100 frames, and to pick frames
+    of the middle part of the movie. 
 
     The length is estimated using the major axis of the ellipse that
     matches the binary image. This is a valid estimate because the
@@ -48,7 +67,10 @@ def measure(img_path, start=0, end=100):
     img = imread(img_path, key=range(start, end))
     img = np.average(img, axis=0)
     img = equalize_hist(img)
-    bin_img = binarize(img)
+    if low_non_VNC:
+        bin_img = binarize_low_embryo_background(img)
+    else:
+        bin_img = binarize(img)
     return length_from_regions_props(bin_img)
 
 
