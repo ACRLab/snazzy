@@ -4,3 +4,4 @@ from .embryo import Embryo
 from .experiment import Experiment
 from .experiment_config import ExperimentConfig
 from .group import Group
+from .debouncer import debounce
