@@ -15,27 +15,31 @@ class Experiment:
         dff_strategy="baseline",
         has_transients=False,
     ):
+        if to_exclude is None:
+            to_exclude = []
+
         activities = data.activities()
         lengths = data.lengths()
         self.name = data.name
-        self.embryos = [Embryo(a, l) for a, l in zip(activities, lengths)]
         self.first_peak_threshold = first_peak_threshold
-        self.traces = {}
-        if to_exclude is None:
-            to_exclude = []
         self.dff_strategy = dff_strategy
         self.has_transients = has_transients
+
+        self.embryos = [Embryo(a, l) for a, l in zip(activities, lengths)]
+        self.traces: dict[str, Trace] = {}
+
+        self.pd_props = data.peak_detection_props()
         self._filter_embryos(to_exclude)
 
     def _filter_embryos(self, to_exclude: list[int]):
         """Keeps only the embryos with valid traces.
 
         A trace is valid if the first peak happens after `first_peak_threshold`\
-            minutes.
+            minutes. Embryos with IDs in `to_exclude` are also removed.
 
         Params:
         -------
-        to_exclude : list
+        to_exclude : list[int]
             List of embryo ids that should be excluded from the experiment.
         """
         for emb in self.embryos:
@@ -47,7 +51,7 @@ class Experiment:
 
         self.embryos = [e for e in self.embryos if e.name in self.traces.keys()]
 
-    def get_trace(self, emb: Embryo):
+    def get_trace(self, emb: Embryo) -> Optional[Trace]:
         """Returns the activity trace for an embryo.
 
         If no peak is found, returns `None`."""
@@ -55,16 +59,21 @@ class Experiment:
         act = emb.activity[:, 1]
         stc = emb.activity[:, 2]
 
+        corrected_peaks = None
+        if self.pd_props and emb.name in self.pd_props.get("embryos", {}):
+            corrected_peaks = self.pd_props["embryos"][emb.name]
+
         trace = Trace(
             time,
             act,
             stc,
             dff_strategy=self.dff_strategy,
             has_transients=self.has_transients,
+            pd_props=corrected_peaks,
         )
         try:
             first_peak = trace.get_first_peak_time() / 60
-        except (ValueError, IndexError):
+        except (ValueError, IndexError) as e:
             # if no peak is found, exclude the embryo from the analysis:
             print(f"No peaks detected for {emb.name}. Skipping..")
             return None

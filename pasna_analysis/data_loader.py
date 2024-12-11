@@ -1,10 +1,16 @@
+import json
 from pathlib import Path
 
 
 class DataLoader:
     """Used to access data about the current experiment.
 
-    Relies on the folder structure described in this project README."""
+    Params:
+    -------
+    path: Path
+        The path that contains the `pasnascope` output. Must follow the folder\
+        structure described in this project's README.
+    """
 
     def __init__(self, path: Path):
         if not isinstance(path, Path):
@@ -35,6 +41,17 @@ class DataLoader:
         a = next((e for e in self.activities() if e.stem == emb), None)
         l = next((e for e in self.lengths() if e.stem == emb), None)
         return a, l
+
+    def peak_detection_props(self) -> None | dict:
+        """Reads peak detection params that were added by the user."""
+        peak_detection_props = self.path.joinpath("peak_detection_params.json")
+        if peak_detection_props.exists():
+            with open(peak_detection_props, "r") as f:
+                try:
+                    return json.load(f)
+                except json.JSONDecodeError as e:
+                    print("Could not read `peak_detection_params.json`.")
+                    raise e
 
 
 def emb_id(emb: Path | str) -> int:

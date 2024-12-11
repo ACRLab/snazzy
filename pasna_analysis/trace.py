@@ -15,16 +15,15 @@ class Trace:
         trim_zscore=0.35,
         dff_strategy="baseline",
         has_transients=False,
+        pd_props=None,
     ):
         self.time = time
         self.active = active
         self.struct = struct
         self.dff_strategy = dff_strategy
         self.has_transients = has_transients
+        self.pd_props = pd_props  # peak detection props
         self._peak_idxes = None
-        self._peak_times = None
-        self._peak_intervals = None
-        self._peak_amplitudes = None
         self._peak_bounds_indices = None
         self._peak_bounds_time = None
         self._peak_durations = None
@@ -40,23 +39,21 @@ class Trace:
             self.detect_peaks()
         return self._peak_idxes
 
+    @peak_idxes.setter
+    def peak_idxes(self, peak_idxes):
+        self._peak_idxes = peak_idxes
+
     @property
     def peak_times(self):
-        if self._peak_times is None:
-            self.detect_peaks()
-        return self._peak_times
+        return self.time[self.peak_idxes]
 
     @property
     def peak_intervals(self):
-        if self._peak_intervals is None:
-            self.detect_peaks()
-        return self._peak_intervals
+        return np.diff(self.peak_times)
 
     @property
     def peak_amplitudes(self):
-        if self._peak_amplitudes is None:
-            self.detect_peaks()
-        return self._peak_amplitudes
+        return self.dff[self.peak_idxes]
 
     @property
     def peak_bounds_indices(self):
@@ -183,10 +180,22 @@ class Trace:
                 peak_idxes = peak_idxes[1:]
                 peak_times = peak_times[1:]
 
+        if self.pd_props is not None:
+            to_add = self.pd_props["manual_peaks"]
+            to_remove = self.pd_props["manual_remove"]
+            wlen = self.pd_props["wlen"]
+            filtered_peaks = [
+                p for p in peak_idxes if not any(abs(p - rp) < wlen for rp in to_remove)
+            ]
+            filtered_add = [
+                ap
+                for ap in to_add
+                if not any(abs(p - ap) < wlen for p in filtered_peaks)
+            ]
+            peak_idxes = np.sort(np.concatenate((filtered_peaks, filtered_add)))
+            peak_times = self.time[peak_idxes]
+
         self._peak_idxes = peak_idxes
-        self._peak_times = peak_times
-        self._peak_intervals = np.diff(peak_times)
-        self._peak_amplitudes = savgol[peak_idxes]
 
         return peak_times, self.dff[peak_idxes]
 
