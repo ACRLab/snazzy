@@ -79,8 +79,8 @@ class Experiment:
             return None
         if first_peak < self.first_peak_threshold:
             print(
-                f"First peak detected before {self.first_peak_threshold} mins \
-                    for {emb.name} (t={first_peak} mins). Skipping.."
+                f"First peak detected before {self.first_peak_threshold} mins.",
+                f"Skipping {emb.name}..",
             )
             return None
         return trace
