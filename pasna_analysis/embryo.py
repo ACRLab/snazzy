@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+from numpy.polynomial import Polynomial
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
@@ -28,6 +29,14 @@ class Embryo:
     def developmental_time(self) -> np.ndarray:
         """Returns emb_size:VNC_size ratio."""
         return self.size / self.vnc_length_filtered
+
+    def lin_developmental_time(self) -> np.ndarray:
+        """Returns the linearized (1st deg polynomial fit) developmental time."""
+        # which time scale to use??
+        vnc_time = self.vnc_length[:, 0]
+        linear_fit = Polynomial.fit(x=vnc_time, y=self.developmental_time(), deg=1)
+        activity_time = self.activity[:, 0]
+        return linear_fit(activity_time)
 
     def get_DT_from_time(self, time: np.ndarray | float) -> np.ndarray | float:
         """Returns the estimated (by linear interpolation) developmental time
