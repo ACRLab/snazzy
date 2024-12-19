@@ -6,8 +6,11 @@ from pathlib import Path
 import numpy as np
 
 
-def get_initial_values(pd_params_path: Path):
-    if pd_params_path.exists():
+def get_initial_values(pd_params_path: Path | None = None):
+    """Restores initial peak detection parameters.
+
+    If not found, a file with default params will be created."""
+    if pd_params_path and pd_params_path.exists():
         with open(pd_params_path) as f:
             data = json.load(f)
             default_params = {
@@ -20,7 +23,7 @@ def get_initial_values(pd_params_path: Path):
         default_params = dict(order0_min=0.06, order1_min=0.006, mpd=70, prominence=0.2)
         with open(pd_params_path, "w+") as f:
             json.dump(default_params, f, indent=4)
-    return default_params.values()
+    return default_params
 
 
 def save_detection_params(pd_params_path: Path, **kwargs):
@@ -29,6 +32,8 @@ def save_detection_params(pd_params_path: Path, **kwargs):
             config = json.load(f)
         for k, val in kwargs.items():
             config[k] = val
+    else:
+        config = kwargs
     with open(pd_params_path, "w+") as f:
         json.dump(config, f, indent=4)
 

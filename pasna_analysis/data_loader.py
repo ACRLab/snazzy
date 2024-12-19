@@ -46,6 +46,7 @@ class DataLoader:
         """Reads peak detection params that were added by the user."""
         peak_detection_props = self.path.joinpath("peak_detection_params.json")
         if peak_detection_props.exists():
+            print("Found peak detection params.json")
             with open(peak_detection_props, "r") as f:
                 try:
                     return json.load(f)
