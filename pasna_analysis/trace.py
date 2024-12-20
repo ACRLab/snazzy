@@ -16,6 +16,7 @@ class Trace:
         dff_strategy="baseline",
         has_transients=False,
         pd_props=None,
+        corrected_peaks=None,
     ):
         self.time = time
         self.active = active
@@ -23,6 +24,7 @@ class Trace:
         self.dff_strategy = dff_strategy
         self.has_transients = has_transients
         self.pd_props = pd_props  # peak detection props
+        self.corrected_peaks = corrected_peaks
         self._peak_idxes = None
         self._peak_bounds_indices = None
         self._peak_bounds_time = None
@@ -36,7 +38,10 @@ class Trace:
     @property
     def peak_idxes(self):
         if self._peak_idxes is None:
-            self.detect_peaks()
+            if self.pd_props:
+                self.detect_peaks(**self.pd_props)
+            else:
+                self.detect_peaks()
         return self._peak_idxes
 
     @peak_idxes.setter
@@ -180,10 +185,10 @@ class Trace:
                 peak_idxes = peak_idxes[1:]
                 peak_times = peak_times[1:]
 
-        if self.pd_props is not None:
-            to_add = self.pd_props["manual_peaks"]
-            to_remove = self.pd_props["manual_remove"]
-            wlen = self.pd_props["wlen"]
+        if self.corrected_peaks is not None:
+            to_add = self.corrected_peaks["manual_peaks"]
+            to_remove = self.corrected_peaks["manual_remove"]
+            wlen = self.corrected_peaks["wlen"]
             filtered_peaks = [
                 p for p in peak_idxes if not any(abs(p - rp) < wlen for rp in to_remove)
             ]

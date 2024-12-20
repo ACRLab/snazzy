@@ -28,7 +28,11 @@ class Experiment:
         self.embryos = [Embryo(a, l) for a, l in zip(activities, lengths)]
         self.traces: dict[str, Trace] = {}
 
-        self.pd_props = data.peak_detection_props()
+        self.peak_config = data.peak_detection_props()
+        self.pd_props = None
+        if self.peak_config:
+            pd_props_keys = ["mpd", "order0_min", "order1_min", "prominence"]
+            self.pd_props = {k: self.peak_config[k] for k in pd_props_keys}
         self._filter_embryos(to_exclude)
 
     def _filter_embryos(self, to_exclude: list[int]):
@@ -60,8 +64,8 @@ class Experiment:
         stc = emb.activity[:, 2]
 
         corrected_peaks = None
-        if self.pd_props and emb.name in self.pd_props.get("embryos", {}):
-            corrected_peaks = self.pd_props["embryos"][emb.name]
+        if self.peak_config and emb.name in self.peak_config.get("embryos", {}):
+            corrected_peaks = self.peak_config["embryos"][emb.name]
 
         trace = Trace(
             time,
@@ -69,7 +73,8 @@ class Experiment:
             stc,
             dff_strategy=self.dff_strategy,
             has_transients=self.has_transients,
-            pd_props=corrected_peaks,
+            pd_props=self.pd_props,
+            corrected_peaks=corrected_peaks,
         )
         try:
             first_peak = trace.get_first_peak_time() / 60
