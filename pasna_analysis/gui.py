@@ -1,22 +1,24 @@
 import json
 from pathlib import Path
+from random import choice
 import sys
 
 import numpy as np
-from PyQt6.QtCore import Qt, pyqtSignal, QPointF
+from PyQt6.QtCore import pyqtSignal, QPointF, Qt
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import (
-    QLabel,
     QApplication,
-    QMainWindow,
     QFileDialog,
-    QVBoxLayout,
+    QFrame,
     QHBoxLayout,
-    QWidget,
+    QLabel,
+    QMainWindow,
     QPushButton,
-    QSizePolicy,
     QScrollArea,
+    QSizePolicy,
     QSlider,
+    QVBoxLayout,
+    QWidget,
 )
 import pyqtgraph as pg
 
@@ -31,8 +33,6 @@ from pasna_analysis.interactive_find_peaks import (
 
 
 class InteractivePlotWidget(pg.PlotWidget):
-    # TODO: can I define different signals for every interaction?
-    # one for adding new peak, another for removing..
     add_peak_fired = pyqtSignal(float, float)
     remove_peak_fired = pyqtSignal(float, float)
 
@@ -207,12 +207,22 @@ class MainWindow(QMainWindow):
         self.button = QPushButton("Apply Changes")
         self.button.clicked.connect(self.detect_peaks_all)
         self.top_layout.addWidget(self.button)
+
+        self.toggle_graph_btn = QPushButton("Change view")
+        self.toggle_graph_btn.setCheckable(True)
+        self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
+        self.top_layout.addWidget(self.toggle_graph_btn)
         # Top layout end (sliders)
 
         # Bottom layout start: sidebar and graph container
         self.bottom_layout = QHBoxLayout()
         self.layout.addLayout(self.bottom_layout)
         # Bottom layout end
+
+        self.single_graph_frame = QFrame()
+        self.bottom_layout.addWidget(self.single_graph_frame)
+        self.single_graph_layout = QHBoxLayout()
+        self.single_graph_frame.setLayout(self.single_graph_layout)
 
         # Sidebar start
         self.sidebar = QWidget()
@@ -223,12 +233,12 @@ class MainWindow(QMainWindow):
         self.scroll_area.setWidget(self.sidebar)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFixedWidth(150)
-        self.bottom_layout.addWidget(self.scroll_area)
+        self.single_graph_layout.addWidget(self.scroll_area)
         # Sidebar end
 
         # Graph start
         self.plot_widget = InteractivePlotWidget()
-        self.bottom_layout.addWidget(self.plot_widget)
+        self.single_graph_layout.addWidget(self.plot_widget)
         self.plot_widget.hide()
 
         self.scatter_plot_item = pg.ScatterPlotItem(
@@ -239,6 +249,27 @@ class MainWindow(QMainWindow):
         self.plot_widget.add_peak_fired.connect(self.add_peak)
         self.plot_widget.remove_peak_fired.connect(self.remove_peak)
         # Graph end
+
+        # Multi graphs
+        self.graph_scroll = QScrollArea()
+        self.graph_scroll.setWidgetResizable(True)
+        self.bottom_layout.addWidget(self.graph_scroll)
+
+        self.graph_container = QWidget()
+        self.graph_layout = QVBoxLayout()
+        self.graph_container.setLayout(self.graph_layout)
+        self.graph_scroll.setWidget(self.graph_container)
+
+        self.graph_scroll.hide()
+        # Multi graphs end
+
+    def toggle_graph_view(self, checked):
+        if checked:
+            self.single_graph_frame.hide()
+            self.graph_scroll.show()
+        else:
+            self.graph_scroll.hide()
+            self.single_graph_frame.show()
 
     def remove_peak(self, x, y):
         pd_params_path = self.directory / "peak_detection_params.json"
@@ -356,8 +387,34 @@ class MainWindow(QMainWindow):
             self.add_sidebar_buttons([emb.name for emb in self.exp.embryos])
             self.calibrate_sliders()
             self.render_trace(self.curr_emb_name)
+            self.plot_graphs()
         except FileNotFoundError:
             print(f"Could not read data from {self.directory}")
+
+    def plot_graphs(self):
+        colors = ["r", "g", "b", "c", "m", "y", "w"]
+        for emb in self.exp.embryos:
+            plot_widget = pg.PlotWidget()
+            plot_widget.setMinimumHeight(200)
+
+            trace = self.exp.traces[emb.name]
+            time = trace.time[: trace.trim_idx]
+            dff = trace.dff[: trace.trim_idx]
+
+            peak_amps = trace.peak_amplitudes
+            peak_times = trace.peak_times
+
+            scatter_plot_item = pg.ScatterPlotItem(
+                size=8,
+                brush=pg.mkColor(choice(colors)),
+            )
+            scatter_plot_item.setData(peak_times, peak_amps)
+
+            plot_widget.addItem(scatter_plot_item)
+
+            plot_widget.plot(time, dff)
+            plot_widget.setTitle(emb.name)
+            self.graph_layout.addWidget(plot_widget)
 
     def calibrate_sliders(self):
         initial_values = get_initial_values(
