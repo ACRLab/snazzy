@@ -1,8 +1,10 @@
+import json
 from pathlib import Path
 import sys
 
+import numpy as np
 from PyQt6.QtCore import Qt, pyqtSignal, QPointF
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import (
     QLabel,
     QApplication,
@@ -22,11 +24,17 @@ from pasna_analysis import DataLoader, Experiment
 from pasna_analysis.interactive_find_peaks import (
     get_initial_values,
     save_detection_params,
+    local_peak_at,
+    save_remove_peak,
+    save_add_peak,
 )
 
 
 class InteractivePlotWidget(pg.PlotWidget):
-    mouse_clicked = pyqtSignal(float, float)
+    # TODO: can I define different signals for every interaction?
+    # one for adding new peak, another for removing..
+    add_peak_fired = pyqtSignal(float, float)
+    remove_peak_fired = pyqtSignal(float, float)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -41,11 +49,11 @@ class InteractivePlotWidget(pg.PlotWidget):
             mouse_point = vb.mapSceneToView(QPointF(ev.pos()))
             x, y = mouse_point.x(), mouse_point.y()
 
-            modifiers = QApplication.keyboardModifiers()
-            if modifiers and Qt.KeyboardModifier.ShiftModifier:
-                print("SHIFT held down")
-            print(x, y)
-            self.mouse_clicked.emit(x, y)
+            modifier = QApplication.keyboardModifiers()
+            if modifier == Qt.KeyboardModifier.ShiftModifier:
+                self.add_peak_fired.emit(x, y)
+            elif modifier == Qt.KeyboardModifier.ControlModifier:
+                self.remove_peak_fired.emit(x, y)
 
 
 class FloatSlider(QSlider):
@@ -108,7 +116,7 @@ class LabeledSlider(QWidget):
             self.slider.setValue(initial_value)
             # self.slider.valueChanged.connect(self.update_value_label)
         else:
-            self.slider = FloatSlider(min_value, max_value, step_size, initial_value)
+            self.slider = FloatSlider(min_value, max_value, initial_value, step_size)
         self.slider.valueChanged.connect(self.update_value_label)
 
         if custom_slot:
@@ -131,7 +139,7 @@ class LabeledSlider(QWidget):
     def update_value_label(self, value):
         # Update the value label when the slider's value changes
         if type(self.slider) == FloatSlider:
-            self.value_label.setText(f"{self.slider.value():.2f}")
+            self.value_label.setText(f"{self.slider.value():.4f}")
         else:
             self.value_label.setText(str(value))
 
@@ -151,13 +159,15 @@ class MainWindow(QMainWindow):
         # Menu start
         menu_bar = self.menuBar()
 
-        file_menu = menu_bar.addMenu("File")
+        file_menu = menu_bar.addMenu("&File")
 
         open_action = QAction("Open Directory", self)
+        open_action.setShortcut(QKeySequence("Ctrl+O"))
         open_action.triggered.connect(self.open_directory)
         file_menu.addAction(open_action)
 
         exit_action = QAction("Exit", self)
+        exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         # Menu end
@@ -177,13 +187,13 @@ class MainWindow(QMainWindow):
         # so we just initialize them with defaults:
         # TODO: extract the default values to somewhere else
         self.mpd_slider = LabeledSlider(
-            "Minimum peak distance", 40, 600, 70, custom_slot=self.repaint_curr_emb
+            "Minimum peak distance", 10, 300, 70, custom_slot=self.repaint_curr_emb
         )
         self.order_zero_slider = LabeledSlider(
             "Order 0 min", 0, 0.5, 0.06, 0.005, custom_slot=self.repaint_curr_emb
         )
         self.order_one_slider = LabeledSlider(
-            "Order 1 min", 0, 0.1, 0.006, 0.0005, custom_slot=self.repaint_curr_emb
+            "Order 1 min", 0, 0.1, 0.005, 0.0005, custom_slot=self.repaint_curr_emb
         )
         self.prominence_slider = LabeledSlider(
             "Prominence", 0, 1, 0.06, 0.005, custom_slot=self.repaint_curr_emb
@@ -226,7 +236,62 @@ class MainWindow(QMainWindow):
             brush=pg.mkColor("m"),
         )
         self.plot_widget.addItem(self.scatter_plot_item)
+        self.plot_widget.add_peak_fired.connect(self.add_peak)
+        self.plot_widget.remove_peak_fired.connect(self.remove_peak)
         # Graph end
+
+    def remove_peak(self, x, y):
+        pd_params_path = self.directory / "peak_detection_params.json"
+
+        with open(pd_params_path, "r") as f:
+            config = json.load(f)
+        if "embryos" not in config.keys():
+            config["embryos"] = {}
+
+        wlen = 10
+        x = int(x / 6)
+
+        trace = self.exp.traces[self.curr_emb_name]
+        print(f"Trying to remove peak between {x-wlen}, {x+wlen}")
+        target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
+        # FIXME: this will remove more than one peak if they fall within wlen
+        removed = trace.peak_idxes[target].tolist()
+        new_arr = trace.peak_idxes[~target]
+        trace.peak_idxes = new_arr
+
+        save_remove_peak(self.curr_emb_name, config, removed, x, wlen)
+
+        with open(pd_params_path, "w") as f:
+            json.dump(config, f, indent=4)
+
+        self.render_trace(self.curr_emb_name)
+
+    def add_peak(self, x, y):
+        pd_params_path = self.directory / "peak_detection_params.json"
+
+        with open(pd_params_path, "r") as f:
+            config = json.load(f)
+        if "embryos" not in config:
+            config["embryos"] = {}
+
+        wlen = 10
+
+        x = int(x / 6)
+
+        trace = self.exp.traces[self.curr_emb_name]
+        window = slice(x - wlen, x + wlen)
+        print(f"Trying to add peak between {x-wlen}, {x+wlen}")
+        peak = local_peak_at(x, trace.dff[window], wlen)
+        new_arr = np.append(trace.peak_idxes, peak)
+        new_arr.sort()
+        trace.peak_idxes = new_arr
+
+        save_add_peak(self.curr_emb_name, config, peak, wlen)
+
+        with open(pd_params_path, "w") as f:
+            json.dump(config, f, indent=4)
+
+        self.render_trace(self.curr_emb_name)
 
     def repaint_curr_emb(self):
         """Repaints peaks for the trace currently being displayed.
@@ -265,11 +330,11 @@ class MainWindow(QMainWindow):
 
         pd_params_path = self.directory / "peak_detection_params.json"
         save_detection_params(
-            pd_params_path,
-            mpd,
-            order_zero_min,
-            order_one_min,
-            prominence,
+            pd_params_path=pd_params_path,
+            mpd=mpd,
+            order0_min=order_zero_min,
+            order1_min=order_one_min,
+            prominence=prominence,
         )
 
     def open_directory(self):
