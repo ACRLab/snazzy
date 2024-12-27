@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from random import choice
 import sys
 
 import numpy as np
@@ -22,7 +21,7 @@ from PyQt6.QtWidgets import (
 )
 import pyqtgraph as pg
 
-from pasna_analysis import DataLoader, Experiment
+from pasna_analysis import Experiment
 from pasna_analysis.interactive_find_peaks import (
     get_initial_values,
     save_detection_params,
@@ -180,34 +179,18 @@ class MainWindow(QMainWindow):
         self.layout = QVBoxLayout()
         self.central_widget.setLayout(self.layout)
         # Main layout end
+        # Placeholder start
         self.placeholder = QLabel(
             "To get started, open a directory with pasnascope output."
         )
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
+        # Placeholder end
 
     def paint_main_view(self):
-
         # Top layout start (sliders)
         self.top_layout = QHBoxLayout()
         self.layout.addLayout(self.top_layout)
-
-        # For the first paint, we have no access to the last used initial values
-        # so we just initialize them with defaults:
-        # TODO: extract the default values to somewhere else
-
-        # self.mpd_slider = LabeledSlider(
-        #     "Minimum peak distance", 10, 300, 70, custom_slot=self.repaint_curr_emb
-        # )
-        # self.order_zero_slider = LabeledSlider(
-        #     "Order 0 min", 0, 0.5, 0.06, 0.005, custom_slot=self.repaint_curr_emb
-        # )
-        # self.order_one_slider = LabeledSlider(
-        #     "Order 1 min", 0, 0.1, 0.005, 0.0005, custom_slot=self.repaint_curr_emb
-        # )
-        # self.prominence_slider = LabeledSlider(
-        #     "Prominence", 0, 1, 0.06, 0.005, custom_slot=self.repaint_curr_emb
-        # )
 
         self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
         self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.5, 0.06, 0.005)
@@ -300,7 +283,7 @@ class MainWindow(QMainWindow):
         wlen = 10
         x = int(x / 6)
 
-        trace = self.exp.traces[self.curr_emb_name]
+        trace = self.exp.embryos[self.curr_emb_name].trace
         print(f"Trying to remove peak between {x-wlen}, {x+wlen}")
         target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
         # FIXME: this will remove more than one peak if they fall within wlen
@@ -327,7 +310,7 @@ class MainWindow(QMainWindow):
 
         x = int(x / 6)
 
-        trace = self.exp.traces[self.curr_emb_name]
+        trace = self.exp.embryos[self.curr_emb_name].trace
         window = slice(x - wlen, x + wlen)
         print(f"Trying to add peak between {x-wlen}, {x+wlen}")
         peak = local_peak_at(x, trace.dff[window], wlen)
@@ -351,7 +334,7 @@ class MainWindow(QMainWindow):
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
 
-        curr_trace = self.exp.traces[self.curr_emb_name]
+        curr_trace = self.exp.embryos[self.curr_emb_name].trace
         curr_trace.detect_peaks(
             mpd,
             order_zero_min,
@@ -369,8 +352,8 @@ class MainWindow(QMainWindow):
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
 
-        for trace in self.exp.traces.values():
-            trace.detect_peaks(
+        for emb in self.exp.embryos.values():
+            emb.trace.detect_peaks(
                 mpd,
                 order_zero_min,
                 order_one_min,
@@ -391,14 +374,12 @@ class MainWindow(QMainWindow):
 
     def open_directory(self):
         self.layout.removeWidget(self.placeholder)
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select Directory",
-        )
+        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         self.directory = Path(directory)
+
         try:
             self.exp = Experiment(
-                DataLoader(self.directory),
+                self.directory,
                 first_peak_threshold=0,
                 to_exclude=[],
                 dff_strategy="local_minima",
@@ -407,20 +388,20 @@ class MainWindow(QMainWindow):
             print(f"Could not read data from {self.directory}")
             return
 
-        self.curr_emb_name = self.exp.embryos[0].name
+        self.curr_emb_name = next(iter(self.exp.embryos))
 
         self.paint_main_view()
         self.render_trace(self.curr_emb_name)
         self.plot_graphs()
-        self.add_sidebar_buttons([emb.name for emb in self.exp.embryos])
+        self.add_sidebar_buttons([emb_name for emb_name in self.exp.embryos])
         self.calibrate_sliders()
 
     def plot_graphs(self):
-        for emb in self.exp.embryos:
+        for emb in self.exp.embryos.values():
             plot_widget = pg.PlotWidget()
             plot_widget.setMinimumHeight(200)
 
-            trace = self.exp.traces[emb.name]
+            trace = emb.trace
             time = trace.time[: trace.trim_idx]
             dff = trace.dff[: trace.trim_idx]
 
@@ -442,21 +423,19 @@ class MainWindow(QMainWindow):
             self.graph_layout.addWidget(plot_widget)
 
     def repaint_peaks(self):
-        for scatter, emb in zip(self.scatter_items, self.exp.embryos):
-            trace = self.exp.traces[emb.name]
-            scatter.setData(trace.peak_times, trace.peak_amplitudes)
+        for scatter, emb in zip(self.scatter_items, self.exp.embryos.values()):
+            scatter.setData(emb.trace.peak_times, emb.trace.peak_amplitudes)
 
     def calibrate_sliders(self):
-        initial_values = get_initial_values(
-            self.directory / "peak_detection_params.json"
-        )
-        self.mpd_slider.setValue(initial_values["mpd"])
+        pd_params = get_initial_values(self.directory / "peak_detection_params.json")
+
+        self.mpd_slider.setValue(pd_params["mpd"])
         self.mpd_slider.set_custom_slot(self.repaint_curr_emb)
-        self.order_zero_slider.setValue(initial_values["order0_min"])
+        self.order_zero_slider.setValue(pd_params["order0_min"])
         self.order_zero_slider.set_custom_slot(self.repaint_curr_emb)
-        self.order_one_slider.setValue(initial_values["order1_min"])
+        self.order_one_slider.setValue(pd_params["order1_min"])
         self.order_one_slider.set_custom_slot(self.repaint_curr_emb)
-        self.prominence_slider.setValue(initial_values["prominence"])
+        self.prominence_slider.setValue(pd_params["prominence"])
         self.prominence_slider.set_custom_slot(self.repaint_curr_emb)
 
     def add_sidebar_buttons(self, emb_names):
@@ -475,12 +454,10 @@ class MainWindow(QMainWindow):
         self.plot_widget.clear()
         self.plot_widget.show()
 
-        trace = self.exp.traces[emb_name]
+        trace = self.exp.embryos[emb_name].trace
         time = trace.time[: trace.trim_idx]
         dff = trace.dff[: trace.trim_idx]
 
-        print("Inside render_trace")
-        print(trace.peak_idxes)
         peak_amps = trace.peak_amplitudes
         peak_times = trace.peak_times
 
