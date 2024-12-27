@@ -5,11 +5,20 @@ from numpy.polynomial import Polynomial
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
+from pasna_analysis import Trace
+
 
 class Embryo:
     """Encapsulates data about a given embryo."""
 
-    def __init__(self, activity_csv: Path, vnc_len_csv: Path):
+    def __init__(
+        self,
+        activity_csv: Path,
+        vnc_len_csv: Path,
+        dff_strategy: str,
+        has_transients: bool,
+        pd_props_path: Path,
+    ):
         if activity_csv.stem != vnc_len_csv.stem:
             raise ValueError(
                 "CSV files for activity and VNC length should refer to the same embryo."
@@ -22,6 +31,13 @@ class Embryo:
         self.size = self.get_emb_size(emb_size_csv)
         self.dev_time_interpolator = None
         self.time_interpolator = None
+        self.trace = Trace(
+            self.name,
+            self.activity,
+            dff_strategy=dff_strategy,
+            has_transients=has_transients,
+            pd_props_path=pd_props_path,
+        )
 
     def import_data(self, csv_path: Path) -> np.ndarray:
         return np.loadtxt(csv_path, delimiter=",", skiprows=1)

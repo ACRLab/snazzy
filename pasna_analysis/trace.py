@@ -1,3 +1,4 @@
+import json
 import numpy as np
 import scipy.signal as spsig
 from scipy.ndimage import minimum_filter1d
@@ -9,22 +10,20 @@ class Trace:
 
     def __init__(
         self,
-        time,
-        active,
-        struct,
+        name,
+        activity,
         trim_zscore=0.35,
         dff_strategy="baseline",
         has_transients=False,
-        pd_props=None,
-        corrected_peaks=None,
+        pd_props_path=None,
     ):
-        self.time = time
-        self.active = active
-        self.struct = struct
+        self.name = name
+        self.time = activity[:, 0]
+        self.active = activity[:, 1]
+        self.struct = activity[:, 2]
         self.dff_strategy = dff_strategy
         self.has_transients = has_transients
-        self.pd_props = pd_props  # peak detection props
-        self.corrected_peaks = corrected_peaks
+        self.pd_props_path = pd_props_path  # peak detection props
         self._peak_idxes = None
         self._peak_bounds_indices = None
         self._peak_bounds_time = None
@@ -38,10 +37,7 @@ class Trace:
     @property
     def peak_idxes(self):
         if self._peak_idxes is None:
-            if self.pd_props:
-                self.detect_peaks(**self.pd_props)
-            else:
-                self.detect_peaks()
+            self.detect_peaks()
         return self._peak_idxes
 
     @peak_idxes.setter
@@ -142,12 +138,48 @@ class Trace:
             baseline[i] = window_baseline
         return baseline
 
-    def detect_peaks(
+    def detect_peaks(self, mpd=71, order0_min=0.08, order1_min=0.006, prominence=0.1):
+        self.calculate_peaks(mpd, order0_min, order1_min, prominence)
+
+        peak_times = self.peak_times
+        peak_idxes = self.peak_idxes
+        if self.has_transients:
+            avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
+            if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
+                peak_idxes = peak_idxes[1:]
+                peak_times = peak_times[1:]
+
+        corrected_peaks = None
+        if self.pd_props_path:
+            with open(self.pd_props_path, "r") as f:
+                config = json.load(f)
+                if self.name in config.get("embryos", {}):
+                    corrected_peaks = config["embryos"][self.name]
+        if corrected_peaks:
+            to_add = corrected_peaks["manual_peaks"]
+            to_remove = corrected_peaks["manual_remove"]
+            wlen = corrected_peaks["wlen"]
+            filtered_peaks = [
+                p for p in peak_idxes if not any(abs(p - rp) < wlen for rp in to_remove)
+            ]
+            filtered_add = [
+                ap
+                for ap in to_add
+                if not any(abs(p - ap) < wlen for p in filtered_peaks)
+            ]
+            peak_idxes = np.array(sorted(filtered_peaks + filtered_add))
+
+        peak_times = self.time[peak_idxes]
+        self._peak_idxes = peak_idxes
+
+        return peak_times, peak_idxes
+
+    def calculate_peaks(
         self,
         mpd=71,
         order0_min=0.08,
         order1_min=0.006,
-        prominence=0.2,
+        prominence=0.1,
         extend_true_filters_by=30,
     ):
         """
@@ -178,27 +210,6 @@ class Trace:
         if peak_idxes.size == 0:
             raise ValueError("No peaks found, cannot derive trace metrics.")
         peak_times = self.time[peak_idxes]
-
-        if self.has_transients:
-            avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
-            if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
-                peak_idxes = peak_idxes[1:]
-                peak_times = peak_times[1:]
-
-        if self.corrected_peaks is not None:
-            to_add = self.corrected_peaks["manual_peaks"]
-            to_remove = self.corrected_peaks["manual_remove"]
-            wlen = self.corrected_peaks["wlen"]
-            filtered_peaks = [
-                p for p in peak_idxes if not any(abs(p - rp) < wlen for rp in to_remove)
-            ]
-            filtered_add = [
-                ap
-                for ap in to_add
-                if not any(abs(p - ap) < wlen for p in filtered_peaks)
-            ]
-            peak_idxes = np.sort(np.concatenate((filtered_peaks, filtered_add)))
-            peak_times = self.time[peak_idxes]
 
         self._peak_idxes = peak_idxes
 
