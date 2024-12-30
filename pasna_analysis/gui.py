@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 from PyQt6.QtCore import pyqtSignal, QPointF, Qt
-from PyQt6.QtGui import QAction, QKeySequence
+from PyQt6.QtGui import QAction, QKeySequence, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -152,6 +153,22 @@ class LabeledSlider(QWidget):
         self.slider.valueChanged.connect(slot)
 
 
+class ImageWindow(QWidget):
+    def __init__(self, image_path):
+        super().__init__()
+        self.setWindowTitle("All embryos")
+        self.setGeometry(200, 200, 600, 400)
+
+        label = QLabel(self)
+        pixmap = QPixmap(image_path)
+        label.setPixmap(pixmap)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        layout = QVBoxLayout()
+        layout.addWidget(label)
+        self.setLayout(layout)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -172,6 +189,11 @@ class MainWindow(QMainWindow):
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+
+        plot_menu = menu_bar.addMenu("&Plots")
+        display_FOV_action = QAction("View all embryos", self)
+        display_FOV_action.triggered.connect(self.display_field_of_view)
+        plot_menu.addAction(display_FOV_action)
         # Menu end
         # Main layout start
         self.central_widget = QWidget()
@@ -186,6 +208,21 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
         # Placeholder end
+
+    def display_field_of_view(self):
+        img_path = self.directory / "emb_numbers.png"
+        if not img_path.exists():
+            self.show_error_message(f"Image not found:\n{img_path}")
+            return
+        self.image_window = ImageWindow(str(img_path))
+        self.image_window.show()
+
+    def show_error_message(self, msg):
+        error_dialog = QMessageBox(self)
+        error_dialog.setIcon(QMessageBox.Icon.Critical)
+        error_dialog.setWindowTitle("Error")
+        error_dialog.setText(msg)
+        error_dialog.exec()
 
     def paint_main_view(self):
         # Top layout start (sliders)
