@@ -1,4 +1,5 @@
 import json
+
 import numpy as np
 import scipy.signal as spsig
 from scipy.ndimage import minimum_filter1d
@@ -116,26 +117,48 @@ class Trace:
         half = window_size // 2
         return np.concatenate((signal[:half], signal, signal[-half:]))
 
-    def compute_baseline(self, signal, window_size=160, n_bins=20):
+    def compute_baseline(self, signal, window_size=160, n_bins=64):
         """Compute baseline for each sliding window by dividing up the signal
         into n_bins amplitude bins and taking the mean of the bin with the most
         samples.
 
         This assumes that PaSNA peaks are sparse.
-        To handle edge cases, both edges are reflected.
+        To handle edges, both edges are reflected.
         """
         expanded_signal = self.reflect_edges(signal, window_size)
 
         baseline = np.zeros_like(signal)
-        for i, _ in enumerate(signal):
+        rng = np.min(signal), np.max(signal)
+        counts, bins = np.histogram(
+            expanded_signal[:window_size], bins=n_bins, range=rng
+        )
+
+        window = expanded_signal[:window_size]
+        mode_bin_idx = np.argmax(counts)
+        mode_bin_mask = np.logical_and(
+            window > bins[mode_bin_idx], window <= bins[mode_bin_idx + 1]
+        )
+        baseline[0] = np.mean(window[mode_bin_mask])
+
+        for i in range(1, len(signal)):
             window = expanded_signal[i : i + window_size]
-            counts, bins = np.histogram(window, bins=n_bins)
+            out_point = expanded_signal[i - 1]
+            in_point = expanded_signal[i + window_size - 1]
+
+            out_bin = np.searchsorted(bins, out_point, side="right") - 1
+            in_bin = np.searchsorted(bins, in_point, side="left") - 1
+
+            if 0 <= out_bin < len(counts):
+                counts[out_bin] -= 1
+            if 0 <= in_bin < len(counts):
+                counts[in_bin] += 1
+
             mode_bin_idx = np.argmax(counts)
             mode_bin_mask = np.logical_and(
                 window > bins[mode_bin_idx], window <= bins[mode_bin_idx + 1]
             )
-            window_baseline = np.mean(window[mode_bin_mask])
-            baseline[i] = window_baseline
+            baseline[i] = np.mean(window[mode_bin_mask])
+
         return baseline
 
     def detect_peaks(self, mpd=71, order0_min=0.08, order1_min=0.006, prominence=0.1):
