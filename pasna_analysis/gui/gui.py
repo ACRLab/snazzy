@@ -3,8 +3,8 @@ from pathlib import Path
 import sys
 
 import numpy as np
-from PyQt6.QtCore import pyqtSignal, QPointF, Qt
-from PyQt6.QtGui import QAction, QKeySequence, QPixmap
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -16,7 +16,6 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
-    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -30,143 +29,9 @@ from pasna_analysis.interactive_find_peaks import (
     save_remove_peak,
     save_add_peak,
 )
-
-
-class InteractivePlotWidget(pg.PlotWidget):
-    add_peak_fired = pyqtSignal(float, float)
-    remove_peak_fired = pyqtSignal(float, float)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.setMouseTracking(True)
-
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
-        if ev.button() == Qt.MouseButton.LeftButton:
-            plot_item = self.getPlotItem()
-            vb = plot_item.vb
-            mouse_point = vb.mapSceneToView(QPointF(ev.pos()))
-            x, y = mouse_point.x(), mouse_point.y()
-
-            modifier = QApplication.keyboardModifiers()
-            if modifier == Qt.KeyboardModifier.ShiftModifier:
-                self.add_peak_fired.emit(x, y)
-            elif modifier == Qt.KeyboardModifier.ControlModifier:
-                self.remove_peak_fired.emit(x, y)
-
-
-class FloatSlider(QSlider):
-    def __init__(self, min_value, max_value, initial_value, step_size=0.1, parent=None):
-        super().__init__(Qt.Orientation.Horizontal, parent)
-
-        # Store the original min and max values as floating-point numbers
-        self._min_value = min_value
-        self._max_value = max_value
-        self._step_size = step_size
-
-        # Convert the float range to integers for the slider
-        self.setRange(int(min_value / step_size), int(max_value / step_size))
-        self.setSingleStep(
-            int(step_size / step_size)
-        )  # Ensure each tick represents the step size
-
-        self.setValue(initial_value)
-
-    def setValue(self, value):
-        """Set the value as a float."""
-        # Scale the value to fit the integer range of the slider
-        value_int = int((value - self._min_value) / self._step_size)
-        super().setValue(value_int)
-
-    def value(self):
-        """Get the value as a float."""
-        # Convert the integer value back to the float scale
-        return self._min_value + super().value() * self._step_size
-
-    def setRange(self, min_value, max_value):
-        """Set the range of the slider as floats."""
-        self._min_value = min_value
-        self._max_value = max_value
-        super().setRange(
-            int(min_value / self._step_size), int(max_value / self._step_size)
-        )
-
-
-class LabeledSlider(QWidget):
-    def __init__(
-        self,
-        name,
-        min_value,
-        max_value,
-        initial_value,
-        step_size=None,
-        custom_slot=None,
-        parent=None,
-    ):
-        super().__init__(parent)
-
-        # Layout for the slider, label, and value
-        self.layout = QVBoxLayout()
-
-        if step_size is None:
-            # Create and set up the slider
-            self.slider = QSlider(Qt.Orientation.Horizontal)
-            self.slider.setRange(min_value, max_value)
-            self.slider.setValue(initial_value)
-            # self.slider.valueChanged.connect(self.update_value_label)
-        else:
-            self.slider = FloatSlider(min_value, max_value, initial_value, step_size)
-        self.slider.valueChanged.connect(self.update_value_label)
-
-        if custom_slot:
-            self.slider.valueChanged.connect(custom_slot)
-
-        # Name label
-        self.name_label = QLabel(name)
-
-        # Value label to show current value of slider
-        self.value_label = QLabel(str(initial_value))
-
-        # Add widgets to layout
-        self.layout.addWidget(self.slider)
-        self.layout.addWidget(self.name_label)
-        self.layout.addWidget(self.value_label)
-
-        # Set the layout of this widget
-        self.setLayout(self.layout)
-
-    def update_value_label(self, value):
-        # Update the value label when the slider's value changes
-        if type(self.slider) == FloatSlider:
-            self.value_label.setText(f"{self.slider.value():.4f}")
-        else:
-            self.value_label.setText(str(value))
-
-    def value(self):
-        return self.slider.value()
-
-    def setValue(self, value):
-        return self.slider.setValue(value)
-
-    def set_custom_slot(self, slot):
-        self.slider.valueChanged.connect(slot)
-
-
-class ImageWindow(QWidget):
-    def __init__(self, image_path):
-        super().__init__()
-        self.setWindowTitle("All embryos")
-        self.setGeometry(200, 200, 600, 400)
-
-        label = QLabel(self)
-        pixmap = QPixmap(image_path)
-        label.setPixmap(pixmap)
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        layout = QVBoxLayout()
-        layout.addWidget(label)
-        self.setLayout(layout)
+from pasna_analysis.gui.image_window import ImageSequenceViewer, ImageWindow
+from pasna_analysis.gui.interactive_plot import InteractivePlotWidget
+from pasna_analysis.gui.sliders import LabeledSlider
 
 
 class MainWindow(QMainWindow):
@@ -175,7 +40,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
 
-        # Menu start
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("&File")
@@ -194,20 +58,28 @@ class MainWindow(QMainWindow):
         display_FOV_action = QAction("View all embryos", self)
         display_FOV_action.triggered.connect(self.display_field_of_view)
         plot_menu.addAction(display_FOV_action)
-        # Menu end
-        # Main layout start
+
+        display_embryo_action = QAction("View embryo raw data", self)
+        display_embryo_action.triggered.connect(self.display_embryo_movie)
+        plot_menu.addAction(display_embryo_action)
+
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout()
         self.central_widget.setLayout(self.layout)
-        # Main layout end
-        # Placeholder start
+
         self.placeholder = QLabel(
             "To get started, open a directory with pasnascope output."
         )
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
-        # Placeholder end
+
+    def display_embryo_movie(self):
+        dff_traces = {
+            emb_name: e.trace.dff for (emb_name, e) in self.exp.embryos.items()
+        }
+        self.viewer = ImageSequenceViewer(self.directory, dff_traces)
+        self.viewer.show()
 
     def display_field_of_view(self):
         img_path = self.directory / "emb_numbers.png"
@@ -321,7 +193,6 @@ class MainWindow(QMainWindow):
         x = int(x / 6)
 
         trace = self.exp.embryos[self.curr_emb_name].trace
-        print(f"Trying to remove peak between {x-wlen}, {x+wlen}")
         target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
         # FIXME: this will remove more than one peak if they fall within wlen
         removed = trace.peak_idxes[target].tolist()
@@ -349,7 +220,6 @@ class MainWindow(QMainWindow):
 
         trace = self.exp.embryos[self.curr_emb_name].trace
         window = slice(x - wlen, x + wlen)
-        print(f"Trying to add peak between {x-wlen}, {x+wlen}")
         peak = local_peak_at(x, trace.dff[window], wlen)
         new_arr = np.append(trace.peak_idxes, peak)
         new_arr.sort()
@@ -481,7 +351,6 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(lambda checked, name=emb_name: self.render_trace(name))
             self.sidebar_layout.addWidget(btn)
 
-        # Add spacer at the bottom
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.sidebar_layout.addWidget(spacer)
