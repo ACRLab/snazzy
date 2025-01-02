@@ -173,7 +173,7 @@ class Trace:
                 peak_times = peak_times[1:]
 
         corrected_peaks = None
-        if self.pd_props_path:
+        if self.pd_props_path.exists():
             with open(self.pd_props_path, "r") as f:
                 config = json.load(f)
                 if self.name in config.get("embryos", {}):
