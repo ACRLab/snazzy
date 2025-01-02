@@ -32,6 +32,7 @@ from pasna_analysis.interactive_find_peaks import (
 from pasna_analysis.gui.image_window import ImageSequenceViewer, ImageWindow
 from pasna_analysis.gui.interactive_plot import InteractivePlotWidget
 from pasna_analysis.gui.sliders import LabeledSlider
+from pasna_analysis.gui.plot_window import PlotWindow
 
 
 class MainWindow(QMainWindow):
@@ -63,6 +64,10 @@ class MainWindow(QMainWindow):
         display_embryo_action.triggered.connect(self.display_embryo_movie)
         plot_menu.addAction(display_embryo_action)
 
+        generate_plots_action = QAction("View plots", self)
+        generate_plots_action.triggered.connect(self.display_plots)
+        plot_menu.addAction(generate_plots_action)
+
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout()
@@ -73,6 +78,10 @@ class MainWindow(QMainWindow):
         )
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
+
+    def display_plots(self):
+        self.pw = PlotWindow(self.exp.embryos, self.exp.name)
+        self.pw.show()
 
     def display_embryo_movie(self):
         dff_traces = {
