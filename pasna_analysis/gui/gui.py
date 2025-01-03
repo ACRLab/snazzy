@@ -87,15 +87,20 @@ class MainWindow(QMainWindow):
         dff_traces = {
             emb_name: e.trace.dff for (emb_name, e) in self.exp.embryos.items()
         }
-        self.viewer = ImageSequenceViewer(self.directory, dff_traces)
+        try:
+            self.viewer = ImageSequenceViewer(self.directory, dff_traces)
+        except FileNotFoundError as e:
+            self.show_error_message(str(e))
+            return
         self.viewer.show()
 
     def display_field_of_view(self):
         img_path = self.directory / "emb_numbers.png"
-        if not img_path.exists():
-            self.show_error_message(f"Image not found:\n{img_path}")
+        try:
+            self.image_window = ImageWindow(str(img_path))
+        except FileNotFoundError as e:
+            self.show_error_message(str(e))
             return
-        self.image_window = ImageWindow(str(img_path))
         self.image_window.show()
 
     def show_error_message(self, msg):
@@ -300,8 +305,8 @@ class MainWindow(QMainWindow):
                 to_exclude=[],
                 dff_strategy="local_minima",
             )
-        except FileNotFoundError:
-            print(f"Could not read data from {self.directory}")
+        except (FileNotFoundError, AssertionError):
+            self.show_error_message(f"Could not read data from {self.directory}")
             return
 
         self.curr_emb_name = next(iter(self.exp.embryos))
