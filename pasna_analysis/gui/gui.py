@@ -110,6 +110,17 @@ class MainWindow(QMainWindow):
         error_dialog.setText(msg)
         error_dialog.exec()
 
+    def clear_layout(self, layout=None):
+        if not layout:
+            layout = self.layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+            elif item.layout():
+                self.clear_layout(item.layout())
+
     def paint_main_view(self):
         # Top layout start (sliders)
         self.top_layout = QHBoxLayout()
@@ -294,9 +305,11 @@ class MainWindow(QMainWindow):
         )
 
     def open_directory(self):
-        self.layout.removeWidget(self.placeholder)
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        if not directory:
+            return
         self.directory = Path(directory)
+        self.clear_layout()
 
         try:
             self.exp = Experiment(
@@ -349,6 +362,7 @@ class MainWindow(QMainWindow):
 
     def calibrate_sliders(self):
         pd_params = get_initial_values(self.directory / "peak_detection_params.json")
+        print(f"Looking for pd.json at {pd_params}")
 
         self.mpd_slider.setValue(pd_params["mpd"])
         self.mpd_slider.set_custom_slot(self.repaint_curr_emb)
