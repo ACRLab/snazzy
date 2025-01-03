@@ -24,6 +24,8 @@ class ImageWindow(QWidget):
 
         label = QLabel(self)
         pixmap = QPixmap(image_path)
+        if pixmap.isNull():
+            raise FileNotFoundError(f"File not found:\n{image_path}")
         label.setPixmap(pixmap)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -52,6 +54,8 @@ class ImageSequenceViewer(QWidget):
         self.selector_label = QLabel("Select a file:")
         self.combo_box = QComboBox()
         embs_path = self.directory / "embs"
+        if not embs_path.exists():
+            raise FileNotFoundError(f"Directory not found:\n{embs_path}")
         file_options = [str(f) for f in embs_path.iterdir() if "ch1.tif" in f.name]
         self.combo_box.addItems(file_options)
         self.open_button = QPushButton("Open Viewer")
@@ -67,12 +71,6 @@ class ImageSequenceViewer(QWidget):
         selected_file = self.combo_box.currentText()
         full_path = Path(selected_file)
         self.data = self.dff_traces[full_path.stem[:-4]]
-
-        if not full_path.exists():
-            error_msg = QLabel(f"Error: File not found - {full_path}")
-            error_msg.setStyleSheet("color: red;")
-            self.layout.addWidget(error_msg)
-            return
 
         img = tifffile.imread(full_path)
         normalized_img = (img - img.min()) / (img.max() - img.min()) * 255

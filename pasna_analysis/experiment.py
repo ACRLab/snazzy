@@ -56,8 +56,7 @@ class Experiment:
                         f"Skipping {emb.name}..",
                     )
                     continue
-            except (ValueError, IndexError) as e:
-                print(e)
+            except (ValueError, IndexError):
                 print(f"No peaks detected for {emb.name}. Skipping..")
             embryos[emb_name] = emb
 
