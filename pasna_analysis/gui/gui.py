@@ -35,9 +35,41 @@ from pasna_analysis.gui.sliders import LabeledSlider
 from pasna_analysis.gui.plot_window import PlotWindow
 
 
+class Model:
+    def __init__(self):
+        self.groups = {"group1": {}}
+        self.curr_group = "group1"
+        self.curr_exp = None
+        self.curr_emb_name = None
+
+    def add_experiment(self, experiment: Experiment, group=None):
+        if group is None:
+            group = self.curr_group
+
+        if group not in self.groups:
+            raise ValueError("Group not found.")
+
+        if experiment in self.groups[group]:
+            raise ValueError("Experiment already added to this group.")
+
+        self.groups[group][experiment.name] = experiment
+
+        if self.curr_exp is None:
+            self.curr_exp = experiment.name
+
+    def get_curr_experiment(self) -> Experiment:
+        return self.groups[self.curr_group][self.curr_exp]
+
+    def add_group(self, group):
+        self.groups[group] = {}
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.model = Model()
+
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
 
@@ -80,22 +112,23 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.placeholder)
 
     def display_plots(self):
-        self.pw = PlotWindow(self.exp.embryos, self.exp.name)
+        exp = self.model.get_curr_experiment()
+        self.pw = PlotWindow(exp.embryos, exp.name)
         self.pw.show()
 
     def display_embryo_movie(self):
-        dff_traces = {
-            emb_name: e.trace.dff for (emb_name, e) in self.exp.embryos.items()
-        }
+        exp = self.model.get_curr_experiment()
+        dff_traces = {name: e.trace.dff for (name, e) in exp.embryos.items()}
         try:
-            self.viewer = ImageSequenceViewer(self.directory, dff_traces)
+            self.viewer = ImageSequenceViewer(exp.directory, dff_traces)
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
         self.viewer.show()
 
     def display_field_of_view(self):
-        img_path = self.directory / "emb_numbers.png"
+        exp = self.model.get_curr_experiment()
+        img_path = exp.directory / "emb_numbers.png"
         try:
             self.image_window = ImageWindow(str(img_path))
         except FileNotFoundError as e:
@@ -207,9 +240,9 @@ class MainWindow(QMainWindow):
             self.single_graph_frame.show()
 
     def remove_peak(self, x, y):
-        pd_params_path = self.directory / "peak_detection_params.json"
+        exp = self.model.get_curr_experiment()
 
-        with open(pd_params_path, "r") as f:
+        with open(exp.pd_params_path, "r") as f:
             config = json.load(f)
         if "embryos" not in config.keys():
             config["embryos"] = {}
@@ -217,24 +250,24 @@ class MainWindow(QMainWindow):
         wlen = 10
         x = int(x / 6)
 
-        trace = self.exp.embryos[self.curr_emb_name].trace
+        trace = exp.embryos[self.model.curr_emb_name].trace
         target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
         # FIXME: this will remove more than one peak if they fall within wlen
         removed = trace.peak_idxes[target].tolist()
         new_arr = trace.peak_idxes[~target]
         trace.peak_idxes = new_arr
 
-        save_remove_peak(self.curr_emb_name, config, removed, x, wlen)
+        save_remove_peak(self.model.curr_emb_name, config, removed, x, wlen)
 
-        with open(pd_params_path, "w") as f:
+        with open(exp.pd_params_path, "w") as f:
             json.dump(config, f, indent=4)
 
-        self.render_trace(self.curr_emb_name)
+        self.render_trace(self.model.curr_emb_name)
 
     def add_peak(self, x, y):
-        pd_params_path = self.directory / "peak_detection_params.json"
+        exp = self.model.get_curr_experiment()
 
-        with open(pd_params_path, "r") as f:
+        with open(exp.pd_params_path, "r") as f:
             config = json.load(f)
         if "embryos" not in config:
             config["embryos"] = {}
@@ -243,19 +276,19 @@ class MainWindow(QMainWindow):
 
         x = int(x / 6)
 
-        trace = self.exp.embryos[self.curr_emb_name].trace
+        trace = exp.embryos[self.model.curr_emb_name].trace
         window = slice(x - wlen, x + wlen)
         peak = local_peak_at(x, trace.dff[window], wlen)
         new_arr = np.append(trace.peak_idxes, peak)
         new_arr.sort()
         trace.peak_idxes = new_arr
 
-        save_add_peak(self.curr_emb_name, config, peak, wlen)
+        save_add_peak(self.model.curr_emb_name, config, peak, wlen)
 
-        with open(pd_params_path, "w") as f:
+        with open(exp.pd_params_path, "w") as f:
             json.dump(config, f, indent=4)
 
-        self.render_trace(self.curr_emb_name)
+        self.render_trace(self.model.curr_emb_name)
 
     def repaint_curr_emb(self):
         """Repaints peaks for the trace currently being displayed.
@@ -266,14 +299,15 @@ class MainWindow(QMainWindow):
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
 
-        curr_trace = self.exp.embryos[self.curr_emb_name].trace
+        exp = self.model.get_curr_experiment()
+        curr_trace = exp.embryos[self.model.curr_emb_name].trace
         curr_trace.detect_peaks(
             mpd,
             order_zero_min,
             order_one_min,
             prominence,
         )
-        self.render_trace(self.curr_emb_name)
+        self.render_trace(self.model.curr_emb_name)
 
     def detect_peaks_all(self):
         """Recalculates peak indices for all embryos.
@@ -284,7 +318,9 @@ class MainWindow(QMainWindow):
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
 
-        for emb in self.exp.embryos.values():
+        exp = self.model.get_curr_experiment()
+
+        for emb in exp.embryos.values():
             emb.trace.detect_peaks(
                 mpd,
                 order_zero_min,
@@ -292,12 +328,11 @@ class MainWindow(QMainWindow):
                 prominence,
             )
 
-        self.render_trace(self.curr_emb_name)
+        self.render_trace(self.model.curr_emb_name)
         self.repaint_peaks()
 
-        pd_params_path = self.directory / "peak_detection_params.json"
         save_detection_params(
-            pd_params_path=pd_params_path,
+            pd_params_path=exp.pd_params_path,
             mpd=mpd,
             order0_min=order_zero_min,
             order1_min=order_one_min,
@@ -308,30 +343,32 @@ class MainWindow(QMainWindow):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
             return
-        self.directory = Path(directory)
+        directory = Path(directory)
         self.clear_layout()
 
         try:
-            self.exp = Experiment(
-                self.directory,
+            exp = Experiment(
+                directory,
                 first_peak_threshold=0,
                 to_exclude=[],
                 dff_strategy="local_minima",
             )
+            self.model.add_experiment(exp)
         except (FileNotFoundError, AssertionError):
-            self.show_error_message(f"Could not read data from {self.directory}")
+            self.show_error_message(f"Could not read data from {directory}")
             return
 
-        self.curr_emb_name = next(iter(self.exp.embryos))
+        self.model.curr_emb_name = next(iter(exp.embryos))
 
         self.paint_main_view()
-        self.render_trace(self.curr_emb_name)
+        self.render_trace(self.model.curr_emb_name)
         self.plot_graphs()
-        self.add_sidebar_buttons([emb_name for emb_name in self.exp.embryos])
+        self.add_sidebar_buttons([emb_name for emb_name in exp.embryos])
         self.calibrate_sliders()
 
     def plot_graphs(self):
-        for emb in self.exp.embryos.values():
+        exp = self.model.get_curr_experiment()
+        for emb in exp.embryos.values():
             plot_widget = pg.PlotWidget()
             plot_widget.setMinimumHeight(200)
 
@@ -357,11 +394,13 @@ class MainWindow(QMainWindow):
             self.graph_layout.addWidget(plot_widget)
 
     def repaint_peaks(self):
-        for scatter, emb in zip(self.scatter_items, self.exp.embryos.values()):
+        exp = self.model.get_curr_experiment()
+        for scatter, emb in zip(self.scatter_items, exp.embryos.values()):
             scatter.setData(emb.trace.peak_times, emb.trace.peak_amplitudes)
 
     def calibrate_sliders(self):
-        pd_params = get_initial_values(self.directory / "peak_detection_params.json")
+        exp = self.model.get_curr_experiment()
+        pd_params = get_initial_values(exp.pd_params_path)
         print(f"Looking for pd.json at {pd_params}")
 
         self.mpd_slider.setValue(pd_params["mpd"])
@@ -384,11 +423,13 @@ class MainWindow(QMainWindow):
         self.sidebar_layout.addWidget(spacer)
 
     def render_trace(self, emb_name):
-        self.curr_emb_name = emb_name
+        self.model.curr_emb_name = emb_name
         self.plot_widget.clear()
         self.plot_widget.show()
 
-        trace = self.exp.embryos[emb_name].trace
+        exp = self.model.get_curr_experiment()
+
+        trace = exp.embryos[emb_name].trace
         time = trace.time[: trace.trim_idx]
         dff = trace.dff[: trace.trim_idx]
 
