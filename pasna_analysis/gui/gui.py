@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 )
 import pyqtgraph as pg
 
-from pasna_analysis import Experiment
+from pasna_analysis import Experiment, Trace
 from pasna_analysis.interactive_find_peaks import (
     get_initial_values,
     save_detection_params,
@@ -37,6 +37,9 @@ from pasna_analysis.gui.plot_window import PlotWindow
 
 class Model:
     def __init__(self):
+        self.initial_state()
+
+    def initial_state(self):
         self.groups = {"group1": {}}
         self.curr_group = "group1"
         self.curr_exp = None
@@ -60,6 +63,17 @@ class Model:
     def get_curr_experiment(self) -> Experiment:
         return self.groups[self.curr_group][self.curr_exp]
 
+    def get_experiment(self, exp_name) -> Experiment:
+        curr_group = self.get_curr_group()
+        return curr_group[exp_name]
+
+    def get_curr_group(self) -> dict[str, Experiment]:
+        return self.groups[self.curr_group]
+
+    def get_curr_trace(self) -> Trace:
+        exp = self.get_curr_experiment()
+        return exp.embryos[self.curr_emb_name].trace
+
     def add_group(self, group):
         self.groups[group] = {}
 
@@ -81,6 +95,16 @@ class MainWindow(QMainWindow):
         open_action.setShortcut(QKeySequence("Ctrl+O"))
         open_action.triggered.connect(self.open_directory)
         file_menu.addAction(open_action)
+
+        self.add_experiment_action = QAction("Add Experiment", self)
+        self.add_experiment_action.triggered.connect(self.add_experiment)
+        self.add_experiment_action.setEnabled(False)
+        file_menu.addAction(self.add_experiment_action)
+
+        compare_experiment_action = QAction("Compare with experiment", self)
+        compare_experiment_action.triggered.connect(self.compare_experiment)
+        compare_experiment_action.setEnabled(False)
+        file_menu.addAction(compare_experiment_action)
 
         exit_action = QAction("Exit", self)
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
@@ -110,6 +134,12 @@ class MainWindow(QMainWindow):
         )
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
+
+    def compare_experiment(self):
+        pass
+
+    def add_experiment(self):
+        self._open_directory()
 
     def display_plots(self):
         exp = self.model.get_curr_experiment()
@@ -159,19 +189,22 @@ class MainWindow(QMainWindow):
         self.top_layout = QHBoxLayout()
         self.layout.addLayout(self.top_layout)
 
-        self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
-        self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.5, 0.06, 0.005)
-        self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
-        self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
+        group = self.model.get_curr_group()
+        # Sliders are only avaialable if a single experiment is open
+        if len(group) == 1:
+            self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
+            self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.5, 0.06, 0.005)
+            self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
+            self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
 
-        self.top_layout.addWidget(self.mpd_slider)
-        self.top_layout.addWidget(self.order_zero_slider)
-        self.top_layout.addWidget(self.order_one_slider)
-        self.top_layout.addWidget(self.prominence_slider)
+            self.top_layout.addWidget(self.mpd_slider)
+            self.top_layout.addWidget(self.order_zero_slider)
+            self.top_layout.addWidget(self.order_one_slider)
+            self.top_layout.addWidget(self.prominence_slider)
 
-        self.button = QPushButton("Apply Changes")
-        self.button.clicked.connect(self.detect_peaks_all)
-        self.top_layout.addWidget(self.button)
+            self.button = QPushButton("Apply Changes")
+            self.button.clicked.connect(self.detect_peaks_all)
+            self.top_layout.addWidget(self.button)
 
         self.toggle_graph_btn = QPushButton("View all traces")
         self.toggle_graph_btn.setCheckable(True)
@@ -197,7 +230,7 @@ class MainWindow(QMainWindow):
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidget(self.sidebar)
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setFixedWidth(150)
+        self.scroll_area.setFixedWidth(200)
         self.single_graph_layout.addWidget(self.scroll_area)
         # Sidebar end
 
@@ -250,7 +283,7 @@ class MainWindow(QMainWindow):
         wlen = 10
         x = int(x / 6)
 
-        trace = exp.embryos[self.model.curr_emb_name].trace
+        trace = self.model.get_curr_trace()
         target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
         # FIXME: this will remove more than one peak if they fall within wlen
         removed = trace.peak_idxes[target].tolist()
@@ -262,7 +295,7 @@ class MainWindow(QMainWindow):
         with open(exp.pd_params_path, "w") as f:
             json.dump(config, f, indent=4)
 
-        self.render_trace(self.model.curr_emb_name)
+        self.render_trace()
 
     def add_peak(self, x, y):
         exp = self.model.get_curr_experiment()
@@ -276,7 +309,7 @@ class MainWindow(QMainWindow):
 
         x = int(x / 6)
 
-        trace = exp.embryos[self.model.curr_emb_name].trace
+        trace = self.model.get_curr_trace()
         window = slice(x - wlen, x + wlen)
         peak = local_peak_at(x, trace.dff[window], wlen)
         new_arr = np.append(trace.peak_idxes, peak)
@@ -288,7 +321,7 @@ class MainWindow(QMainWindow):
         with open(exp.pd_params_path, "w") as f:
             json.dump(config, f, indent=4)
 
-        self.render_trace(self.model.curr_emb_name)
+        self.render_trace()
 
     def repaint_curr_emb(self):
         """Repaints peaks for the trace currently being displayed.
@@ -299,15 +332,14 @@ class MainWindow(QMainWindow):
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
 
-        exp = self.model.get_curr_experiment()
-        curr_trace = exp.embryos[self.model.curr_emb_name].trace
-        curr_trace.detect_peaks(
+        trace = self.model.get_curr_trace()
+        trace.detect_peaks(
             mpd,
             order_zero_min,
             order_one_min,
             prominence,
         )
-        self.render_trace(self.model.curr_emb_name)
+        self.render_trace()
 
     def detect_peaks_all(self):
         """Recalculates peak indices for all embryos.
@@ -328,7 +360,7 @@ class MainWindow(QMainWindow):
                 prominence,
             )
 
-        self.render_trace(self.model.curr_emb_name)
+        self.render_trace()
         self.repaint_peaks()
 
         save_detection_params(
@@ -340,6 +372,11 @@ class MainWindow(QMainWindow):
         )
 
     def open_directory(self):
+        self.add_experiment_action.setEnabled(True)
+        self.model.initial_state()
+        self._open_directory()
+
+    def _open_directory(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
             return
@@ -358,40 +395,46 @@ class MainWindow(QMainWindow):
             self.show_error_message(f"Could not read data from {directory}")
             return
 
-        self.model.curr_emb_name = next(iter(exp.embryos))
+        if not self.model.curr_emb_name:
+            emb_name = next(iter(exp.embryos))
+            self.model.curr_emb_name = emb_name
 
         self.paint_main_view()
-        self.render_trace(self.model.curr_emb_name)
+        self.render_trace()
         self.plot_graphs()
-        self.add_sidebar_buttons([emb_name for emb_name in exp.embryos])
+        self.add_sidebar_buttons()
         self.calibrate_sliders()
 
     def plot_graphs(self):
         exp = self.model.get_curr_experiment()
-        for emb in exp.embryos.values():
-            plot_widget = pg.PlotWidget()
-            plot_widget.setMinimumHeight(200)
+        for exp in self.model.get_curr_group().values():
+            for emb in exp.embryos.values():
+                plot_widget = pg.PlotWidget()
+                plot_widget.setMinimumHeight(200)
 
-            trace = emb.trace
-            time = trace.time[: trace.trim_idx]
-            dff = trace.dff[: trace.trim_idx]
+                trace = emb.trace
+                time = trace.time[: trace.trim_idx]
+                dff = trace.dff[: trace.trim_idx]
 
-            peak_amps = trace.peak_amplitudes
-            peak_times = trace.peak_times
+                peak_amps = trace.peak_amplitudes
+                peak_times = trace.peak_times
 
-            scatter_plot_item = pg.ScatterPlotItem(
-                size=8,
-                brush=pg.mkColor("m"),
-            )
-            scatter_plot_item.setData(peak_times, peak_amps)
+                scatter_plot_item = pg.ScatterPlotItem(
+                    size=8,
+                    brush=pg.mkColor("m"),
+                )
+                scatter_plot_item.setData(peak_times, peak_amps)
 
-            plot_widget.addItem(scatter_plot_item)
+                plot_widget.addItem(scatter_plot_item)
 
-            self.scatter_items.append(scatter_plot_item)
+                self.scatter_items.append(scatter_plot_item)
 
-            plot_widget.plot(time, dff)
-            plot_widget.setTitle(emb.name)
-            self.graph_layout.addWidget(plot_widget)
+                plot_widget.plot(time, dff)
+                if len(self.model.groups) > 1:
+                    plot_widget.setTitle(f"{exp.name} - {emb.name}")
+                else:
+                    plot_widget.setTitle(emb.name)
+                self.graph_layout.addWidget(plot_widget)
 
     def repaint_peaks(self):
         exp = self.model.get_curr_experiment()
@@ -399,9 +442,14 @@ class MainWindow(QMainWindow):
             scatter.setData(emb.trace.peak_times, emb.trace.peak_amplitudes)
 
     def calibrate_sliders(self):
+        """Adjusts the sliders based on pd_params.json.
+
+        The sliders should not be available when more than one experiment is loaded."""
+        group = self.model.get_curr_group()
+        if len(group) > 1:
+            return
         exp = self.model.get_curr_experiment()
         pd_params = get_initial_values(exp.pd_params_path)
-        print(f"Looking for pd.json at {pd_params}")
 
         self.mpd_slider.setValue(pd_params["mpd"])
         self.mpd_slider.set_custom_slot(self.repaint_curr_emb)
@@ -412,22 +460,35 @@ class MainWindow(QMainWindow):
         self.prominence_slider.setValue(pd_params["prominence"])
         self.prominence_slider.set_custom_slot(self.repaint_curr_emb)
 
-    def add_sidebar_buttons(self, emb_names):
-        for emb_name in emb_names:
-            btn = QPushButton(emb_name)
-            btn.clicked.connect(lambda checked, name=emb_name: self.render_trace(name))
-            self.sidebar_layout.addWidget(btn)
+    def add_sidebar_buttons(self):
+        group = self.model.get_curr_group()
+        for exp_name, exp in group.items():
+            for emb_name in exp.embryos:
+                if len(group) > 1:
+                    btn = QPushButton(f"{exp_name} - {emb_name}")
+                else:
+                    btn = QPushButton(emb_name)
+                btn.clicked.connect(
+                    lambda checked, name=emb_name, exp=exp_name: self.render_trace(
+                        name, exp
+                    )
+                )
+                self.sidebar_layout.addWidget(btn)
 
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.sidebar_layout.addWidget(spacer)
 
-    def render_trace(self, emb_name):
+    def render_trace(self, emb_name=None, exp_name=None):
+        if emb_name and exp_name:
+            exp = self.model.get_experiment(exp_name)
+        else:
+            exp = self.model.get_curr_experiment()
+            emb_name = self.model.curr_emb_name
+
         self.model.curr_emb_name = emb_name
         self.plot_widget.clear()
         self.plot_widget.show()
-
-        exp = self.model.get_curr_experiment()
 
         trace = exp.embryos[emb_name].trace
         time = trace.time[: trace.trim_idx]
