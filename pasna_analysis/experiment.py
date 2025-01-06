@@ -19,6 +19,7 @@ class Experiment:
             to_exclude = []
 
         data = DataLoader(exp_path)
+        self.directory = exp_path
         self.name = data.name
         self.pd_params_path = data.pd_params_path
 
