@@ -1,10 +1,7 @@
 from collections.abc import Callable
 
-from PyQt6.QtCore import Qt
-
 from PyQt6.QtWidgets import (
     QWidget,
-    QScrollArea,
     QVBoxLayout,
     QHBoxLayout,
     QPushButton,
@@ -12,11 +9,40 @@ from PyQt6.QtWidgets import (
 )
 
 
+class FixedSidebar(QWidget):
+    def __init__(
+        self, exp_to_embs: dict[str, str], callback: Callable[[str, str | None], None]
+    ):
+        super().__init__()
+
+        self.callback = callback
+
+        main_layout = QVBoxLayout()
+
+        self.populate_buttons(exp_to_embs, main_layout)
+        main_layout.addStretch()
+        self.setLayout(main_layout)
+
+    def populate_buttons(self, exp_to_embs, layout):
+        for exp in exp_to_embs:
+            for emb in exp_to_embs[exp]:
+                row_layout = QHBoxLayout()
+                row_layout.setSpacing(0)
+                btn = QPushButton(f"{exp} - {emb}")
+                btn.clicked.connect(
+                    lambda checked, name=emb, exp=exp: self.callback(name, exp)
+                )
+                row_layout.addWidget(btn)
+                layout.addLayout(row_layout)
+
+
 class RemovableSidebar(QWidget):
     def __init__(
         self,
         emb_names: list[str],
         callback: Callable[[str, str | None], None],
+        accepted_embs: set[str],
+        repaint_graphs: Callable[[], None],
         pd_path: str,
     ):
         super().__init__()
@@ -24,46 +50,34 @@ class RemovableSidebar(QWidget):
         self.emb_names = emb_names
         self.callback = callback
         self.pd_path = pd_path
+        self.request_repaint_graphs = repaint_graphs
 
-        # Main container and layouts
-        # container = QWidget()
         main_layout = QVBoxLayout()
 
-        # Create separate layouts for accepted and removed buttons
         self.accepted_layout = QVBoxLayout()
         self.removed_layout = QVBoxLayout()
 
-        # Section labels
-        main_layout.addWidget(QLabel("Accepted"), 0, Qt.AlignmentFlag.AlignTop)
         main_layout.addLayout(self.accepted_layout)
 
-        main_layout.addWidget(QLabel("Removed"), 0, Qt.AlignmentFlag.AlignBottom)
+        main_layout.addWidget(QLabel("Removed"))
         main_layout.addLayout(self.removed_layout)
+        main_layout.addStretch()
 
-        # Initialize buttons in the accepted category
-        self.accepted_buttons = emb_names
-        self.removed_buttons = []
+        self.accepted_embs = accepted_embs
+        self.removed_embs = set()
 
-        # Fill the accepted layout initially
-        self.populate_buttons(self.accepted_buttons, self.accepted_layout, True)
+        self.populate_buttons(self.accepted_embs, self.accepted_layout, True)
 
-        # Set up container
         self.setLayout(main_layout)
-        # self.setWidget(container)
-        # self.setWidgetResizable(True)
 
     def populate_buttons(self, labels, layout, is_accepted):
         """Populate buttons into the given layout."""
         for label in labels:
             row_layout = QHBoxLayout()
-            row_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-            # Create the first button (display label)
             btn = QPushButton(label)
-            # btn.setEnabled(False)  # Display-only button
             btn.clicked.connect(lambda checked, name=label: self.callback(name, None))
             row_layout.addWidget(btn)
 
-            # Create the second button (toggle button)
             btn2 = QPushButton("Remove" if is_accepted else "Accept")
             btn2.clicked.connect(
                 lambda _, name=label, acc=is_accepted: self.toggle_button(name, acc)
@@ -75,19 +89,17 @@ class RemovableSidebar(QWidget):
     def toggle_button(self, label, is_accepted):
         """Toggle the button between accepted and removed categories."""
         if is_accepted:
-            # Move from accepted to removed
-            self.accepted_buttons.remove(label)
-            self.removed_buttons.append(label)
+            self.accepted_embs.remove(label)
+            self.removed_embs.add(label)
         else:
-            # Move from removed to accepted
-            self.removed_buttons.remove(label)
-            self.accepted_buttons.append(label)
+            self.removed_embs.remove(label)
+            self.accepted_embs.add(label)
 
-        # Refresh layouts
         self.clear_layout(self.accepted_layout)
         self.clear_layout(self.removed_layout)
-        self.populate_buttons(self.accepted_buttons, self.accepted_layout, True)
-        self.populate_buttons(self.removed_buttons, self.removed_layout, False)
+        self.populate_buttons(self.accepted_embs, self.accepted_layout, True)
+        self.populate_buttons(self.removed_embs, self.removed_layout, False)
+        self.request_repaint_graphs()
 
     def clear_layout(self, layout):
         """Clear all widgets from a layout."""

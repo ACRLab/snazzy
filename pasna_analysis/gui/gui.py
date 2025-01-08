@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -31,8 +30,9 @@ from pasna_analysis.interactive_find_peaks import (
 )
 from pasna_analysis.gui.image_window import ImageSequenceViewer, ImageWindow
 from pasna_analysis.gui.interactive_plot import InteractivePlotWidget
-from pasna_analysis.gui.sliders import LabeledSlider
 from pasna_analysis.gui.plot_window import PlotWindow
+from pasna_analysis.gui.sidebar import RemovableSidebar, FixedSidebar
+from pasna_analysis.gui.sliders import LabeledSlider
 
 
 class Model:
@@ -77,12 +77,16 @@ class Model:
     def add_group(self, group):
         self.groups[group] = {}
 
+    def has_combined_experiments(self):
+        return len(self.get_curr_group()) > 1
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.model = Model()
+        self.accepted_embs = set()
 
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
@@ -174,7 +178,7 @@ class MainWindow(QMainWindow):
         error_dialog.exec()
 
     def clear_layout(self, layout=None):
-        if not layout:
+        if layout is None:
             layout = self.layout
         while layout.count():
             item = layout.takeAt(0)
@@ -189,9 +193,8 @@ class MainWindow(QMainWindow):
         self.top_layout = QHBoxLayout()
         self.layout.addLayout(self.top_layout)
 
-        group = self.model.get_curr_group()
         # Sliders are only avaialable if a single experiment is open
-        if len(group) == 1:
+        if not self.model.has_combined_experiments():
             self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
             self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.5, 0.06, 0.005)
             self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
@@ -223,9 +226,23 @@ class MainWindow(QMainWindow):
         self.single_graph_frame.setLayout(self.single_graph_layout)
 
         # Sidebar start
-        self.sidebar = QWidget()
-        self.sidebar_layout = QVBoxLayout()
-        self.sidebar.setLayout(self.sidebar_layout)
+        if not self.model.has_combined_experiments():
+            exp = self.model.get_curr_experiment()
+            emb_names = list(exp.embryos.keys())
+            self.accepted_embs = set(emb_names)
+            self.sidebar = RemovableSidebar(
+                emb_names,
+                self.render_trace,
+                self.accepted_embs,
+                self.request_repaint_graphs,
+                exp.pd_params_path,
+            )
+        else:
+            group = self.model.get_curr_group()
+            exp_to_embs = {}
+            for exp_name, exp in group.items():
+                exp_to_embs[exp_name] = exp.embryos.keys()
+            self.sidebar = FixedSidebar(exp_to_embs, self.render_trace)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidget(self.sidebar)
@@ -402,13 +419,17 @@ class MainWindow(QMainWindow):
         self.paint_main_view()
         self.render_trace()
         self.plot_graphs()
-        self.add_sidebar_buttons()
-        self.calibrate_sliders()
+
+    def request_repaint_graphs(self):
+        self.clear_layout(self.graph_layout)
+        self.plot_graphs()
 
     def plot_graphs(self):
-        exp = self.model.get_curr_experiment()
-        for exp in self.model.get_curr_group().values():
+        group = self.model.get_curr_group()
+        for exp_name, exp in group.items():
             for emb in exp.embryos.values():
+                if emb.name not in self.accepted_embs:
+                    continue
                 plot_widget = pg.PlotWidget()
                 plot_widget.setMinimumHeight(200)
 
@@ -430,8 +451,8 @@ class MainWindow(QMainWindow):
                 self.scatter_items.append(scatter_plot_item)
 
                 plot_widget.plot(time, dff)
-                if len(self.model.groups) > 1:
-                    plot_widget.setTitle(f"{exp.name} - {emb.name}")
+                if self.model.has_combined_experiments():
+                    plot_widget.setTitle(f"{exp_name} - {emb.name}")
                 else:
                     plot_widget.setTitle(emb.name)
                 self.graph_layout.addWidget(plot_widget)
@@ -445,8 +466,7 @@ class MainWindow(QMainWindow):
         """Adjusts the sliders based on pd_params.json.
 
         The sliders should not be available when more than one experiment is loaded."""
-        group = self.model.get_curr_group()
-        if len(group) > 1:
+        if self.model.has_combined_experiments():
             return
         exp = self.model.get_curr_experiment()
         pd_params = get_initial_values(exp.pd_params_path)
@@ -460,30 +480,13 @@ class MainWindow(QMainWindow):
         self.prominence_slider.setValue(pd_params["prominence"])
         self.prominence_slider.set_custom_slot(self.repaint_curr_emb)
 
-    def add_sidebar_buttons(self):
-        group = self.model.get_curr_group()
-        for exp_name, exp in group.items():
-            for emb_name in exp.embryos:
-                if len(group) > 1:
-                    btn = QPushButton(f"{exp_name} - {emb_name}")
-                else:
-                    btn = QPushButton(emb_name)
-                btn.clicked.connect(
-                    lambda checked, name=emb_name, exp=exp_name: self.render_trace(
-                        name, exp
-                    )
-                )
-                self.sidebar_layout.addWidget(btn)
-
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.sidebar_layout.addWidget(spacer)
-
     def render_trace(self, emb_name=None, exp_name=None):
         if emb_name and exp_name:
             exp = self.model.get_experiment(exp_name)
-        else:
+        if not exp_name:
             exp = self.model.get_curr_experiment()
+            exp_name = exp.name
+        if not emb_name:
             emb_name = self.model.curr_emb_name
 
         self.model.curr_emb_name = emb_name
@@ -500,7 +503,10 @@ class MainWindow(QMainWindow):
         self.scatter_plot_item.setData(peak_times, peak_amps)
         self.plot_widget.addItem(self.scatter_plot_item)
         self.plot_widget.plot(time, dff)
-        self.plot_widget.setTitle(emb_name)
+        if self.model.has_combined_experiments():
+            self.plot_widget.setTitle(f"{exp_name} - {emb_name}")
+        else:
+            self.plot_widget.setTitle(emb_name)
 
 
 def main():
