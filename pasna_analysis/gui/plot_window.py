@@ -14,7 +14,7 @@ matplotlib.use("QtAgg")
 
 
 class PlotWindow(QWidget):
-    def __init__(self, embryos: dict[str, Embryo], exp_name: str):
+    def __init__(self, embryos: list[Embryo], exp_names: list[str]):
         super().__init__()
         self.setWindowTitle("Plots")
 
@@ -27,7 +27,8 @@ class PlotWindow(QWidget):
         self.canvas = FigureCanvasQTAgg(Figure(figsize=(5, 4)))
         self.ax = self.canvas.figure.subplots()
         self.embryos = embryos
-        self.exp_name = exp_name
+        # TODO: change the way we represent experiments here
+        self.exp_names = exp_names
 
         layout.addWidget(self.canvas)
         self.setLayout(layout)
@@ -46,7 +47,7 @@ class PlotWindow(QWidget):
     def plot_peaks(self):
         self.ax.clear()
         times = []
-        for emb in self.embryos.values():
+        for emb in self.embryos:
             trace = emb.trace
             times.append(
                 [t / 60 for t in trace.peak_times if t < trace.time[trace.trim_idx]]
@@ -54,7 +55,7 @@ class PlotWindow(QWidget):
         style = {"marker": ".", "linestyle": "dashed", "linewidth": 0.5}
         for i, time in enumerate(times):
             self.ax.plot(time, [i] * len(time), **style)
-        self.ax.set_title(f"Peak times for exp {self.exp_name}")
+        self.ax.set_title(f"Peak times")
         self.ax.set_xlabel("time (mins)")
         self.ax.set_ylabel("emb")
         self.ax.set_yticks([])
@@ -66,7 +67,7 @@ class PlotWindow(QWidget):
         n_bins = 5
         first_bin = 2
         bin_width = 0.2
-        for i, emb in enumerate(self.embryos.values()):
+        for i, emb in enumerate(self.embryos):
             trace = emb.trace
 
             dev_time_at_peaks = emb.get_DT_from_time(trace.peak_times)
@@ -83,6 +84,6 @@ class PlotWindow(QWidget):
         x_labels = [f"{s}~{e}" for (s, e) in zip(bins[:-1], bins[1:])]
         sns.pointplot(data=data, x="bin", y="auc", linestyle="None", ax=self.ax)
         self.ax.set_xticks(ticks=list(range(n_bins)), labels=x_labels)
-        self.ax.set_title(f"Binned AUC - Exp {self.exp_name}")
+        self.ax.set_title(f"Binned AUC")
         self.ax.set_ylabel("AUC [activity*t]")
         self.canvas.draw()
