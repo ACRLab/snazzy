@@ -146,8 +146,12 @@ class MainWindow(QMainWindow):
         self._open_directory()
 
     def display_plots(self):
-        exp = self.model.get_curr_experiment()
-        self.pw = PlotWindow(exp.embryos, exp.name)
+        group = self.model.get_curr_group()
+        embryos = [
+            (emb, exp.name) for exp in group.values() for emb in exp.embryos.values()
+        ]
+        embryos, exp_names = list(zip(*embryos))
+        self.pw = PlotWindow(embryos, exp_names)
         self.pw.show()
 
     def display_embryo_movie(self):
@@ -428,7 +432,7 @@ class MainWindow(QMainWindow):
         group = self.model.get_curr_group()
         for exp_name, exp in group.items():
             for emb in exp.embryos.values():
-                if emb.name not in self.accepted_embs:
+                if len(group) == 1 and emb.name not in self.accepted_embs:
                     continue
                 plot_widget = pg.PlotWidget()
                 plot_widget.setMinimumHeight(200)
