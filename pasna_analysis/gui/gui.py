@@ -7,9 +7,11 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication,
+    QComboBox,
     QFileDialog,
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -60,6 +62,20 @@ class Model:
         if self.curr_exp is None:
             self.curr_exp = experiment.name
 
+        if self.curr_emb_name is None:
+            emb_name = next(iter(experiment.embryos))
+            self.curr_emb_name = emb_name
+
+    def set_curr_group(self, group=str):
+        if group not in self.groups:
+            raise ValueError("Group not found.")
+        self.curr_group = group
+
+        self.curr_exp = next(iter(self.groups[group]))
+        curr_exp = self.get_curr_experiment()
+
+        self.curr_emb_name = next(iter(curr_exp.embryos))
+
     def get_curr_experiment(self) -> Experiment:
         return self.groups[self.curr_group][self.curr_exp]
 
@@ -105,10 +121,10 @@ class MainWindow(QMainWindow):
         self.add_experiment_action.setEnabled(False)
         file_menu.addAction(self.add_experiment_action)
 
-        compare_experiment_action = QAction("Compare with experiment", self)
-        compare_experiment_action.triggered.connect(self.compare_experiment)
-        compare_experiment_action.setEnabled(False)
-        file_menu.addAction(compare_experiment_action)
+        self.compare_experiment_action = QAction("Compare with experiment", self)
+        self.compare_experiment_action.triggered.connect(self.compare_experiments)
+        self.compare_experiment_action.setEnabled(False)
+        file_menu.addAction(self.compare_experiment_action)
 
         exit_action = QAction("Exit", self)
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
@@ -139,8 +155,45 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
 
-    def compare_experiment(self):
-        pass
+    def change_group(self, i):
+        self.model.set_curr_group(self.group_combo_box.itemText(i))
+
+        self.clear_layout(self.bottom_layout)
+        self.paint_graphs()
+        self.render_trace()
+        self.plot_graphs()
+
+    def compare_experiments(self):
+        # add a new group
+        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        if not directory:
+            return
+        directory = Path(directory)
+
+        group_name, ok = QInputDialog.getText(self, "Enter Group Name", "Group Name:")
+        if not ok:
+            return
+        if not group_name:
+            group_name = f"group{len(self.models) + 1}"
+
+        try:
+            exp = Experiment(
+                directory,
+                first_peak_threshold=0,
+                to_exclude=[],
+                dff_strategy="local_minima",
+            )
+        except (FileNotFoundError, AssertionError):
+            self.show_error_message(f"Could not read data from {directory}")
+            return
+
+        self.model.add_group(group_name)
+        self.model.add_experiment(exp, group_name)
+
+        self.clear_layout(self.top_app_bar)
+        self.paint_top_app_bar()
+        self.clear_layout(self.top_layout)
+        self.paint_controls()
 
     def add_experiment(self):
         self._open_directory()
@@ -151,7 +204,7 @@ class MainWindow(QMainWindow):
             (emb, exp.name) for exp in group.values() for emb in exp.embryos.values()
         ]
         embryos, exp_names = list(zip(*embryos))
-        self.pw = PlotWindow(embryos, exp_names)
+        self.pw = PlotWindow(embryos, exp_names, self.model.curr_group)
         self.pw.show()
 
     def display_embryo_movie(self):
@@ -192,13 +245,37 @@ class MainWindow(QMainWindow):
             elif item.layout():
                 self.clear_layout(item.layout())
 
-    def paint_main_view(self):
-        # Top layout start (sliders)
-        self.top_layout = QHBoxLayout()
-        self.layout.addLayout(self.top_layout)
+    def get_top_bar_content(self):
+        if len(self.model.groups) > 1:
+            select_group = QComboBox()
+            # TODO: pick a proper width for the combo box
+            select_group.setMaximumWidth(400)
+            select_group.activated.connect(self.change_group)
 
+            for i, group in enumerate(self.model.groups):
+                select_group.insertItem(i, group)
+
+            return select_group
+        curr_group = self.model.get_curr_group()
+        if len(curr_group) > 1:
+            label_text = f"Group: {' '.join(curr_group.keys())}"
+            return QLabel(label_text)
+        curr_exp = self.model.get_curr_experiment()
+        label_text = f"Experiment: {curr_exp.name}"
+        return QLabel(label_text)
+
+    def paint_top_app_bar(self):
+        top_app_bar_content = self.get_top_bar_content()
+
+        if isinstance(top_app_bar_content, QComboBox):
+            self.group_combo_box = top_app_bar_content
+
+        self.top_app_bar.addWidget(top_app_bar_content)
+        self.top_app_bar.addStretch()
+
+    def paint_controls(self):
         # Sliders are only avaialable if a single experiment is open
-        if not self.model.has_combined_experiments():
+        if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
             self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
             self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.5, 0.06, 0.005)
             self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
@@ -213,15 +290,14 @@ class MainWindow(QMainWindow):
             self.button.clicked.connect(self.detect_peaks_all)
             self.top_layout.addWidget(self.button)
 
+            self.calibrate_sliders()
+
         self.toggle_graph_btn = QPushButton("View all traces")
         self.toggle_graph_btn.setCheckable(True)
         self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
         self.top_layout.addWidget(self.toggle_graph_btn)
-        # Top layout end (sliders)
 
-        # Bottom layout start: sidebar and graph container
-        self.bottom_layout = QHBoxLayout()
-        self.layout.addLayout(self.bottom_layout)
+    def paint_graphs(self):
         # Bottom layout end
 
         self.single_graph_frame = QFrame()
@@ -282,6 +358,19 @@ class MainWindow(QMainWindow):
 
         self.graph_scroll.hide()
         # Multi graphs end
+
+    def paint_main_view(self):
+        self.top_app_bar = QHBoxLayout()
+        self.layout.addLayout(self.top_app_bar)
+        self.paint_top_app_bar()
+
+        self.top_layout = QHBoxLayout()
+        self.layout.addLayout(self.top_layout)
+        self.paint_controls()
+
+        self.bottom_layout = QHBoxLayout()
+        self.layout.addLayout(self.bottom_layout)
+        self.paint_graphs()
 
     def toggle_graph_view(self, checked):
         if checked:
@@ -394,6 +483,7 @@ class MainWindow(QMainWindow):
 
     def open_directory(self):
         self.add_experiment_action.setEnabled(True)
+        self.compare_experiment_action.setEnabled(True)
         self.model.initial_state()
         self._open_directory()
 
@@ -411,14 +501,11 @@ class MainWindow(QMainWindow):
                 to_exclude=[],
                 dff_strategy="local_minima",
             )
-            self.model.add_experiment(exp)
         except (FileNotFoundError, AssertionError):
             self.show_error_message(f"Could not read data from {directory}")
             return
 
-        if not self.model.curr_emb_name:
-            emb_name = next(iter(exp.embryos))
-            self.model.curr_emb_name = emb_name
+        self.model.add_experiment(exp)
 
         self.paint_main_view()
         self.render_trace()

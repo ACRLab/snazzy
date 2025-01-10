@@ -14,21 +14,21 @@ matplotlib.use("QtAgg")
 
 
 class PlotWindow(QWidget):
-    def __init__(self, embryos: list[Embryo], exp_names: list[str]):
+    def __init__(self, embryos: list[Embryo], exp_names: list[str], group: str):
         super().__init__()
-        self.setWindowTitle("Plots")
+        self.embryos = embryos
+        # TODO: change the way we represent experiments here
+        self.exp_names = exp_names
+
+        self.setWindowTitle(f"Plots - {group}")
 
         layout = QHBoxLayout()
-
         self.sidebar = QVBoxLayout()
         self.sidebar.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addLayout(self.sidebar)
 
         self.canvas = FigureCanvasQTAgg(Figure(figsize=(5, 4)))
         self.ax = self.canvas.figure.subplots()
-        self.embryos = embryos
-        # TODO: change the way we represent experiments here
-        self.exp_names = exp_names
 
         layout.addWidget(self.canvas)
         self.setLayout(layout)
