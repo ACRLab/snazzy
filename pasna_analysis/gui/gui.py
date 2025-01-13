@@ -30,6 +30,8 @@ from pasna_analysis.interactive_find_peaks import (
     save_remove_peak,
     save_add_peak,
 )
+
+from pasna_analysis.gui.compare_plot_window import ComparePlotWindow
 from pasna_analysis.gui.image_window import ImageSequenceViewer, ImageWindow
 from pasna_analysis.gui.interactive_plot import InteractivePlotWidget
 from pasna_analysis.gui.plot_window import PlotWindow
@@ -144,6 +146,10 @@ class MainWindow(QMainWindow):
         generate_plots_action.triggered.connect(self.display_plots)
         plot_menu.addAction(generate_plots_action)
 
+        generate_comp_plots_action = QAction("View comparison plots", self)
+        generate_comp_plots_action.triggered.connect(self.display_compare_plots)
+        plot_menu.addAction(generate_comp_plots_action)
+
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout()
@@ -206,6 +212,10 @@ class MainWindow(QMainWindow):
         embryos, exp_names = list(zip(*embryos))
         self.pw = PlotWindow(embryos, exp_names, self.model.curr_group)
         self.pw.show()
+
+    def display_compare_plots(self):
+        self.cpw = ComparePlotWindow(self.model.groups)
+        self.cpw.show()
 
     def display_embryo_movie(self):
         exp = self.model.get_curr_experiment()
