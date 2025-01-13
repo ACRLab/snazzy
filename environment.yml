@@ -9,3 +9,12 @@ dependencies:
   - pandas=2.2.2
   - scipy=1.13.1
   - seaborn=0.13.2
+  - ipywidgets=8.1.5
+  - tifffile=2024.12.12
+  - pip:
+    - ipympl==0.9.4
+    - ipyhton-genutils==0.2.0
+    - pyqt6==6.8.0
+    - pyqt6-qt6==6.8.1
+    - pyqt6-sip==13.9.1
+    - pyqtgraph==0.13.7   
