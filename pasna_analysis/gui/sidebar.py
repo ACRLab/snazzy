@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -37,20 +38,19 @@ class FixedSidebar(QWidget):
 
 
 class RemovableSidebar(QWidget):
+    emb_visibility_toggled = pyqtSignal(str)
+
     def __init__(
         self,
-        emb_names: list[str],
         callback: Callable[[str, str | None], None],
         accepted_embs: set[str],
-        repaint_graphs: Callable[[], None],
+        removed_embs: set[str],
         pd_path: str,
     ):
         super().__init__()
 
-        self.emb_names = emb_names
         self.callback = callback
         self.pd_path = pd_path
-        self.request_repaint_graphs = repaint_graphs
 
         main_layout = QVBoxLayout()
 
@@ -64,9 +64,10 @@ class RemovableSidebar(QWidget):
         main_layout.addStretch()
 
         self.accepted_embs = accepted_embs
-        self.removed_embs = set()
+        self.removed_embs = removed_embs
 
         self.populate_buttons(self.accepted_embs, self.accepted_layout, True)
+        self.populate_buttons(self.removed_embs, self.removed_layout, False)
 
         self.setLayout(main_layout)
 
@@ -99,7 +100,8 @@ class RemovableSidebar(QWidget):
         self.clear_layout(self.removed_layout)
         self.populate_buttons(self.accepted_embs, self.accepted_layout, True)
         self.populate_buttons(self.removed_embs, self.removed_layout, False)
-        self.request_repaint_graphs()
+
+        self.emb_visibility_toggled.emit(label)
 
     def clear_layout(self, layout):
         """Clear all widgets from a layout."""

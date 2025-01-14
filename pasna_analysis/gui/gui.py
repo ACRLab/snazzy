@@ -1,3 +1,4 @@
+from copy import deepcopy
 import json
 from pathlib import Path
 import sys
@@ -46,6 +47,7 @@ class Model:
     def initial_state(self):
         self.groups = {"group1": {}}
         self.curr_group = "group1"
+        self.to_remove = {}
         self.curr_exp = None
         self.curr_emb_name = None
 
@@ -60,6 +62,7 @@ class Model:
             raise ValueError("Experiment already added to this group.")
 
         self.groups[group][experiment.name] = experiment
+        self.to_remove[experiment.name] = set()
 
         if self.curr_exp is None:
             self.curr_exp = experiment.name
@@ -67,6 +70,29 @@ class Model:
         if self.curr_emb_name is None:
             emb_name = next(iter(experiment.embryos))
             self.curr_emb_name = emb_name
+
+    def get_filtered_groups(self):
+        groups = deepcopy(self.groups)
+        for group_name, group in groups.items():
+            for exp_name, exp in group.items():
+                exp.embryos = self.get_filtered_embs(exp_name, group_name)
+        return groups
+
+    def get_filtered_embs(self, exp_name, group_name=None):
+        exp = self.get_experiment(exp_name, group_name)
+        if exp_name not in self.to_remove:
+            return exp.embryos
+        return {
+            emb_name: emb
+            for emb_name, emb in exp.embryos.items()
+            if emb_name not in self.to_remove[exp_name]
+        }
+
+    def get_filtered_group(self):
+        group = deepcopy(self.groups[self.curr_group])
+        for exp_name, exp in group.items():
+            exp.embryos = self.get_filtered_embs(exp_name)
+        return group
 
     def set_curr_group(self, group=str):
         if group not in self.groups:
@@ -81,8 +107,11 @@ class Model:
     def get_curr_experiment(self) -> Experiment:
         return self.groups[self.curr_group][self.curr_exp]
 
-    def get_experiment(self, exp_name) -> Experiment:
-        curr_group = self.get_curr_group()
+    def get_experiment(self, exp_name, group_name=None) -> Experiment:
+        if group_name is None:
+            curr_group = self.get_curr_group()
+        else:
+            curr_group = self.groups[group_name]
         return curr_group[exp_name]
 
     def get_curr_group(self) -> dict[str, Experiment]:
@@ -104,7 +133,6 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.model = Model()
-        self.accepted_embs = set()
 
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
@@ -170,7 +198,6 @@ class MainWindow(QMainWindow):
         self.plot_graphs()
 
     def compare_experiments(self):
-        # add a new group
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
             return
@@ -205,16 +232,18 @@ class MainWindow(QMainWindow):
         self._open_directory()
 
     def display_plots(self):
-        group = self.model.get_curr_group()
+        group = self.model.get_filtered_group()
         embryos = [
             (emb, exp.name) for exp in group.values() for emb in exp.embryos.values()
         ]
         embryos, exp_names = list(zip(*embryos))
+
         self.pw = PlotWindow(embryos, exp_names, self.model.curr_group)
         self.pw.show()
 
     def display_compare_plots(self):
-        self.cpw = ComparePlotWindow(self.model.groups)
+        groups = self.model.get_filtered_groups()
+        self.cpw = ComparePlotWindow(groups)
         self.cpw.show()
 
     def display_embryo_movie(self):
@@ -307,9 +336,15 @@ class MainWindow(QMainWindow):
         self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
         self.top_layout.addWidget(self.toggle_graph_btn)
 
+    def toggle_emb_visibility(self, emb_name):
+        exp = self.model.get_curr_experiment()
+        if emb_name in self.model.to_remove[exp.name]:
+            self.model.to_remove[exp.name].remove(emb_name)
+        else:
+            self.model.to_remove[exp.name].add(emb_name)
+
     def paint_graphs(self):
         # Bottom layout end
-
         self.single_graph_frame = QFrame()
         self.bottom_layout.addWidget(self.single_graph_frame)
         self.single_graph_layout = QHBoxLayout()
@@ -318,15 +353,15 @@ class MainWindow(QMainWindow):
         # Sidebar start
         if not self.model.has_combined_experiments():
             exp = self.model.get_curr_experiment()
-            emb_names = list(exp.embryos.keys())
-            self.accepted_embs = set(emb_names)
+            accepted_embs = set(self.model.get_filtered_embs(exp.name).keys())
+            removed_embs = set(self.model.to_remove[exp.name])
             self.sidebar = RemovableSidebar(
-                emb_names,
                 self.render_trace,
-                self.accepted_embs,
-                self.request_repaint_graphs,
+                accepted_embs,
+                removed_embs,
                 exp.pd_params_path,
             )
+            self.sidebar.emb_visibility_toggled.connect(self.toggle_emb_visibility)
         else:
             group = self.model.get_curr_group()
             exp_to_embs = {}
@@ -386,6 +421,9 @@ class MainWindow(QMainWindow):
         if checked:
             self.toggle_graph_btn.setText("View single trace")
             self.single_graph_frame.hide()
+            # repaint graphs to make sure they are in sync with accepted embs
+            self.clear_layout(self.graph_layout)
+            self.plot_graphs()
             self.graph_scroll.show()
         else:
             self.toggle_graph_btn.setText("View all traces")
@@ -526,11 +564,9 @@ class MainWindow(QMainWindow):
         self.plot_graphs()
 
     def plot_graphs(self):
-        group = self.model.get_curr_group()
+        group = self.model.get_filtered_group()
         for exp_name, exp in group.items():
             for emb in exp.embryos.values():
-                if len(group) == 1 and emb.name not in self.accepted_embs:
-                    continue
                 plot_widget = pg.PlotWidget()
                 plot_widget.setMinimumHeight(200)
 
