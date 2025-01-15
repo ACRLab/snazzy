@@ -133,6 +133,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.model = Model()
+        self.moveable_width_bars = False
+        self.show_peak_widths = True
 
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
@@ -312,6 +314,14 @@ class MainWindow(QMainWindow):
         self.top_app_bar.addWidget(top_app_bar_content)
         self.top_app_bar.addStretch()
 
+    def toggle_moveable_widths(self):
+        self.moveable_width_bars = not self.moveable_width_bars
+        self.render_trace()
+
+    def toggle_width_view(self):
+        self.show_peak_widths = not self.show_peak_widths
+        self.render_trace()
+
     def paint_controls(self):
         # Sliders are only avaialable if a single experiment is open
         if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
@@ -328,6 +338,14 @@ class MainWindow(QMainWindow):
             self.button = QPushButton("Apply Changes")
             self.button.clicked.connect(self.detect_peaks_all)
             self.top_layout.addWidget(self.button)
+
+            self.moveable_width_btn = QPushButton("Adjust widths")
+            self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
+            self.top_layout.addWidget(self.moveable_width_btn)
+
+            self.toggle_width_view_btn = QPushButton("View widths")
+            self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
+            self.top_layout.addWidget(self.toggle_width_view_btn)
 
             self.calibrate_sliders()
 
@@ -381,11 +399,6 @@ class MainWindow(QMainWindow):
         self.single_graph_layout.addWidget(self.plot_widget)
         self.plot_widget.hide()
 
-        self.scatter_plot_item = pg.ScatterPlotItem(
-            size=8,
-            brush=pg.mkColor("m"),
-        )
-        self.plot_widget.addItem(self.scatter_plot_item)
         self.plot_widget.add_peak_fired.connect(self.add_peak)
         self.plot_widget.remove_peak_fired.connect(self.remove_peak)
         # Graph end
@@ -637,13 +650,30 @@ class MainWindow(QMainWindow):
         peak_amps = trace.peak_amplitudes
         peak_times = trace.peak_times
 
-        self.scatter_plot_item.setData(peak_times, peak_amps)
-        self.plot_widget.addItem(self.scatter_plot_item)
+        scatter_plot_item = pg.ScatterPlotItem(size=8, brush=pg.mkColor("m"))
+        scatter_plot_item.setData(peak_times, peak_amps)
+        self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
+
         if self.model.has_combined_experiments():
             self.plot_widget.setTitle(f"{exp_name} - {emb_name}")
         else:
             self.plot_widget.setTitle(emb_name)
+
+        if not self.show_peak_widths:
+            return
+
+        peak_bounds = trace.peak_bounds_indices.flatten()
+        peak_bound_times = time[peak_bounds]
+
+        for i, idx in enumerate(peak_bound_times):
+            il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
+            if self.moveable_width_bars:
+                if i % 2 == 0:
+                    il.addMarker("<|")
+                else:
+                    il.addMarker("|>")
+            self.plot_widget.addItem(il)
 
 
 def main():
