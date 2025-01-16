@@ -30,6 +30,7 @@ class Trace:
         self._peak_bounds_time = None
         self._peak_durations = None
         self._peak_aucs = None
+        self._order_zero_savgol = None
 
         self.trim_idx = self.trim_data(trim_zscore)
 
@@ -63,6 +64,10 @@ class Trace:
             self.compute_peak_bounds()
         return self._peak_bounds_indices
 
+    @peak_bounds_indices.setter
+    def peak_bounds_indices(self, peak_bounds):
+        self._peak_bounds_indices = peak_bounds
+
     @property
     def peak_durations(self):
         if self._peak_bounds_time is None:
@@ -92,6 +97,14 @@ class Trace:
     @property
     def rms(self):
         return np.sqrt(np.mean((self.dff[: self.trim_idx]) ** 2))
+
+    @property
+    def order_zero_savgol(self):
+        if self._order_zero_savgol is None:
+            self._order_zero_savgol = spsig.savgol_filter(
+                self.dff[: self.trim_idx], 21, 4, deriv=0
+            )
+        return self._order_zero_savgol
 
     def compute_dff(self, window_size=80):
         """Compute dff for the ratiometric active channel signal."""
@@ -259,14 +272,24 @@ class Trace:
             trim_idx = trim_points[0] - 5
         return trim_idx
 
-    def compute_peak_bounds(self, rel_height=0.92):
+    def compute_peak_bounds(self, rel_height=0.92, peak_idxes=None):
         """Computes properties of each dff peak using spsig.peak_widths."""
-        dff = self.dff[: self.trim_idx]
-        savgol = spsig.savgol_filter(dff, 21, 4, deriv=0)
+        manual_peak_bounds = None
+        if self.pd_props_path.exists():
+            with open(self.pd_props_path, "r") as f:
+                config = json.load(f)
+                if self.name in config.get("embryos", {}):
+                    manual_peak_bounds = config["embryos"][self.name].get(
+                        "manual_widths", None
+                    )
+
+        if peak_idxes is None:
+            peak_idxes = self.peak_idxes
         _, _, start_idxs, end_idxs = spsig.peak_widths(
-            savgol, self.peak_idxes, rel_height
+            self.order_zero_savgol, peak_idxes, rel_height
         )
 
+        # TODO: this is all to determine peak times, and should be somewhere else
         X = np.arange(len(self.time))
         start_times = np.interp(start_idxs, X, self.time)
         end_times = np.interp(end_idxs, X, self.time)
@@ -276,6 +299,26 @@ class Trace:
         start_idxs = start_idxs.astype(np.int64)
         end_idxs = end_idxs.astype(np.int64)
         self._peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
+
+        peaks_to_bounds = {
+            p: [s, e] for (p, s, e) in zip(peak_idxes, start_idxs, end_idxs)
+        }
+
+        # reconcile the peak_bounds with manually changed peak widths here:
+        # if a peak has associated manual width data, change that peak's bounds
+        if manual_peak_bounds:
+            manual_peak_bounds = {
+                np.int64(k): [np.int64(n) for n in v]
+                for k, v in manual_peak_bounds.items()
+            }
+
+            # peaks_to_bounds.update(manual_peak_bounds)
+            for peak in peaks_to_bounds:
+                if peak in manual_peak_bounds:
+                    peaks_to_bounds[peak] = manual_peak_bounds[peak]
+
+        self._peak_bounds_indices = np.array(list(peaks_to_bounds.values()))
+
         self._peak_bounds_time = bound_times
 
     def get_peak_slices_from_bounds(self):
