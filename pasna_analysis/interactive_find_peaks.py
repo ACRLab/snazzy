@@ -50,6 +50,7 @@ def save_add_peak(emb_name, config, x, wlen):
             "wlen": wlen,
             "manual_peaks": [],
             "manual_remove": [],
+            "manual_widths": {},
         }
     to_add = config["embryos"][emb_name]["manual_peaks"]
     to_add.append(x)
@@ -72,6 +73,7 @@ def save_remove_peak(emb_name, config, removed, x, wlen):
             "wlen": wlen,
             "manual_peaks": [],
             "manual_remove": [],
+            "manual_widths": {},
         }
     to_remove = config["embryos"][emb_name]["manual_remove"]
     config["embryos"][emb_name]["manual_remove"] = list(set(to_remove + removed))
