@@ -25,3 +25,7 @@ class InteractivePlotWidget(pg.PlotWidget):
                 self.add_peak_fired.emit(x, y)
             elif modifier == Qt.KeyboardModifier.ControlModifier:
                 self.remove_peak_fired.emit(x, y)
+
+    def get_items(self):
+        """Returns the list of `QGraphicsItem` associated to this PlotWidget."""
+        return super().items()
