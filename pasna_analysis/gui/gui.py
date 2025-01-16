@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
         self.model = Model()
         self.moveable_width_bars = False
         self.show_peak_widths = True
+        self.is_dragging_slider = False
 
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
@@ -316,7 +317,21 @@ class MainWindow(QMainWindow):
 
     def toggle_moveable_widths(self):
         self.moveable_width_bars = not self.moveable_width_bars
-        self.render_trace()
+        ils = (
+            item
+            for item in self.plot_widget.get_items()
+            if isinstance(item, pg.InfiniteLine)
+        )
+        for i, il in enumerate(ils):
+            if self.moveable_width_bars:
+                il.setMovable(True)
+                if i % 2 == 0:
+                    il.addMarker("<|")
+                else:
+                    il.addMarker("|>")
+            else:
+                il.setMovable(False)
+                il.clearMarkers()
 
     def toggle_width_view(self):
         self.show_peak_widths = not self.show_peak_widths
@@ -467,6 +482,28 @@ class MainWindow(QMainWindow):
             json.dump(config, f, indent=4)
 
         self.render_trace()
+
+    def save_peak_pos(self, peak_widths, peak_index):
+        exp = self.model.get_curr_experiment()
+
+        with open(exp.pd_params_path, "r") as f:
+            config = json.load(f)
+        if "embryos" not in config:
+            config["embryos"] = {}
+
+        emb_name = self.model.curr_emb_name
+        if not emb_name in config["embryos"]:
+            config["embryos"][emb_name] = {
+                "wlen": 10,
+                "manual_peaks": [],
+                "manual_remove": [],
+                "manual_widths": {},
+            }
+
+        config["embryos"][emb_name]["manual_widths"][peak_index] = peak_widths
+
+        with open(exp.pd_params_path, "w") as f:
+            json.dump(config, f, indent=4)
 
     def add_peak(self, x, y):
         exp = self.model.get_curr_experiment()
@@ -623,12 +660,27 @@ class MainWindow(QMainWindow):
 
         self.mpd_slider.setValue(pd_params["mpd"])
         self.mpd_slider.set_custom_slot(self.repaint_curr_emb)
+        self.mpd_slider.slider.sliderPressed.connect(self.started_dragging)
+        self.mpd_slider.slider.sliderReleased.connect(self.stopped_dragging)
         self.order_zero_slider.setValue(pd_params["order0_min"])
         self.order_zero_slider.set_custom_slot(self.repaint_curr_emb)
+        self.order_one_slider.slider.sliderPressed.connect(self.started_dragging)
+        self.order_one_slider.slider.sliderReleased.connect(self.stopped_dragging)
         self.order_one_slider.setValue(pd_params["order1_min"])
         self.order_one_slider.set_custom_slot(self.repaint_curr_emb)
+        self.order_one_slider.slider.sliderPressed.connect(self.started_dragging)
+        self.order_one_slider.slider.sliderReleased.connect(self.stopped_dragging)
         self.prominence_slider.setValue(pd_params["prominence"])
         self.prominence_slider.set_custom_slot(self.repaint_curr_emb)
+        self.prominence_slider.slider.sliderPressed.connect(self.started_dragging)
+        self.prominence_slider.slider.sliderReleased.connect(self.stopped_dragging)
+
+    def started_dragging(self):
+        self.is_dragging_slider = True
+
+    def stopped_dragging(self):
+        self.is_dragging_slider = False
+        self.render_trace()
 
     def render_trace(self, emb_name=None, exp_name=None):
         if emb_name and exp_name:
@@ -663,17 +715,33 @@ class MainWindow(QMainWindow):
         if not self.show_peak_widths:
             return
 
-        peak_bounds = trace.peak_bounds_indices.flatten()
-        peak_bound_times = time[peak_bounds]
+        if not self.is_dragging_slider:
+            trace.compute_peak_bounds()
+            peak_bounds = trace.peak_bounds_indices.flatten()
+            peak_bound_times = time[peak_bounds]
 
-        for i, idx in enumerate(peak_bound_times):
-            il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
-            if self.moveable_width_bars:
-                if i % 2 == 0:
-                    il.addMarker("<|")
-                else:
-                    il.addMarker("|>")
-            self.plot_widget.addItem(il)
+            for i, idx in enumerate(peak_bound_times):
+                il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
+                il.peak_index = i
+                if self.moveable_width_bars:
+                    if i % 2 == 0:
+                        il.addMarker("<|")
+                    else:
+                        il.addMarker("|>")
+                il.sigPositionChangeFinished.connect(self.change_peak_pos)
+                self.plot_widget.addItem(il)
+
+    def change_peak_pos(self, il_obj):
+        trace = self.model.get_curr_trace()
+
+        row, col = divmod(il_obj.peak_index, 2)
+        trace.peak_bounds_indices[row, col] = il_obj.getXPos() // 6
+        peak_bounds = trace.peak_bounds_indices[row].tolist()
+        # cast values to int / str because that will be json dumped
+        peak_bounds = [int(pb) for pb in peak_bounds]
+        # indirectly the row represents the peak_index that this il is associated to
+        peak_index = str(trace.peak_idxes[row])
+        self.save_peak_pos(peak_bounds, peak_index)
 
 
 def main():
