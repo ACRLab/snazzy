@@ -177,8 +177,9 @@ class Trace:
     def detect_peaks(self, mpd=71, order0_min=0.08, order1_min=0.006, prominence=0.1):
         self.calculate_peaks(mpd, order0_min, order1_min, prominence)
 
-        peak_times = self.peak_times
         peak_idxes = self.peak_idxes
+        peak_times = self.peak_times
+
         if self.has_transients:
             avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
             if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
@@ -203,11 +204,12 @@ class Trace:
                 for ap in to_add
                 if not any(abs(p - ap) < wlen for p in filtered_peaks)
             ]
-            peak_idxes = np.array(sorted(filtered_peaks + filtered_add))
+            peak_idxes = np.array(sorted(filtered_peaks + filtered_add), dtype=np.int64)
 
-        peak_times = self.time[peak_idxes]
         self._peak_idxes = peak_idxes
-
+        peak_times = self.time[peak_idxes]
+        # TODO: this return stmt is here only to support the debouncer in ipynb
+        # should be removed after the ipynb is rewritten
         return peak_times, peak_idxes
 
     def calculate_peaks(
@@ -242,14 +244,7 @@ class Trace:
         order2_filter = _extend_true_right(order2_filter, extend_true_filters_by)
 
         joint_filter = np.all([order0_filter, order1_filter, order2_filter], axis=0)
-        peak_idxes = np.where(joint_filter)[0]
-        if peak_idxes.size == 0:
-            raise ValueError("No peaks found, cannot derive trace metrics.")
-        peak_times = self.time[peak_idxes]
-
-        self._peak_idxes = peak_idxes
-
-        return peak_times, self.dff[peak_idxes]
+        self._peak_idxes = np.where(joint_filter)[0]
 
     def get_first_peak_time(self):
         """Returns the time when the first peak was detected."""

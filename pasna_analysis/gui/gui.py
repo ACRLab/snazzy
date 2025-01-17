@@ -287,7 +287,6 @@ class MainWindow(QMainWindow):
         self.graph_scroll = QScrollArea()
         self.graph_scroll.setWidgetResizable(True)
         self.bottom_layout.addWidget(self.graph_scroll)
-        self.scatter_items = []
 
         self.graph_container = QWidget()
         self.graph_layout = QVBoxLayout()
@@ -489,7 +488,7 @@ class MainWindow(QMainWindow):
     def open_directory(self):
         self.add_experiment_action.setEnabled(True)
         self.compare_experiment_action.setEnabled(True)
-        self.model.initial_state()
+        self.model.set_initial_state()
         self._open_directory()
 
     def _open_directory(self):
@@ -522,6 +521,7 @@ class MainWindow(QMainWindow):
 
     def plot_graphs(self):
         group = self.model.get_filtered_group()
+        self.scatter_items = {}
         for exp_name, exp in group.items():
             for emb in exp.embryos.values():
                 plot_widget = pg.PlotWidget()
@@ -542,7 +542,7 @@ class MainWindow(QMainWindow):
 
                 plot_widget.addItem(scatter_plot_item)
 
-                self.scatter_items.append(scatter_plot_item)
+                self.scatter_items[emb.name] = scatter_plot_item
 
                 plot_widget.plot(time, dff)
                 if self.model.has_combined_experiments():
@@ -552,9 +552,12 @@ class MainWindow(QMainWindow):
                 self.graph_layout.addWidget(plot_widget)
 
     def repaint_peaks(self):
+        """Repaints the scatter items in the multi trace view."""
         exp = self.model.get_curr_experiment()
-        for scatter, emb in zip(self.scatter_items, exp.embryos.values()):
-            scatter.setData(emb.trace.peak_times, emb.trace.peak_amplitudes)
+        for emb_name, scatter in self.scatter_items.items():
+            if emb_name not in self.model.to_remove:
+                trace = exp.embryos[emb_name].trace
+                scatter.setData(trace.peak_times, trace.peak_amplitudes)
 
     def calibrate_sliders(self):
         """Adjusts the sliders based on pd_params.json.
@@ -624,6 +627,9 @@ class MainWindow(QMainWindow):
 
         trace.compute_peak_bounds()
         peak_bounds = trace.peak_bounds_indices.flatten()
+        if peak_bounds.size == 0:
+            return
+
         peak_bound_times = time[peak_bounds]
 
         for i, idx in enumerate(peak_bound_times):
