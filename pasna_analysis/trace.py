@@ -39,7 +39,14 @@ class Trace:
     @property
     def peak_idxes(self):
         if self._peak_idxes is None:
-            self.detect_peaks()
+            if self.pd_props_path and self.pd_props_path.exists():
+                try:
+                    pd_params = self.get_peak_detection_params()
+                except ValueError:
+                    pd_params = {}
+                self.detect_peaks(**pd_params)
+            else:
+                self.detect_peaks()
         return self._peak_idxes
 
     @peak_idxes.setter
@@ -105,6 +112,16 @@ class Trace:
                 self.dff[: self.trim_idx], 21, 4, deriv=0
             )
         return self._order_zero_savgol
+
+    def get_peak_detection_params(self):
+        """Reads peak detection params from config file."""
+        if self.pd_props_path.exists():
+            with open(self.pd_props_path, "r") as f:
+                config = json.load(f)
+        pd_params = ["mpd", "order0_min", "order1_min", "prominence"]
+        if any(param not in config for param in pd_params):
+            raise ValueError("Missing params in pd_params file")
+        return {param: config[param] for param in pd_params}
 
     def compute_dff(self, window_size=80):
         """Compute dff for the ratiometric active channel signal."""
