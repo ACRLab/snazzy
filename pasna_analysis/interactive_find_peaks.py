@@ -88,3 +88,10 @@ def save_remove_peak(emb_name, config, removed, x, wlen):
             config["embryos"][emb_name]["manual_peaks"] = to_add
         except StopIteration:
             pass
+    if "manual_widths" in config["embryos"][emb_name]:
+        widths = config["embryos"][emb_name]["manual_widths"]
+        try:
+            peak = next(int(p) for p in widths if x - wlen <= int(p) <= x + wlen)
+        except StopIteration:
+            return
+        del config["embryos"][emb_name]["manual_widths"][str(peak)]
