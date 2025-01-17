@@ -216,7 +216,7 @@ class MainWindow(QMainWindow):
             self.top_layout.addWidget(self.prominence_slider)
 
             self.button = QPushButton("Apply Changes")
-            self.button.clicked.connect(self.detect_peaks_all)
+            self.button.clicked.connect(self.update_all_embs)
             self.top_layout.addWidget(self.button)
 
             self.moveable_width_btn = QPushButton("Adjust widths")
@@ -455,6 +455,11 @@ class MainWindow(QMainWindow):
         )
         self.render_trace()
 
+    def update_all_embs(self):
+        self.detect_peaks_all()
+        self.render_trace()
+        self.repaint_peaks()
+
     def detect_peaks_all(self):
         """Recalculates peak indices for all embryos.
 
@@ -473,9 +478,6 @@ class MainWindow(QMainWindow):
                 order_one_min,
                 prominence,
             )
-
-        self.render_trace()
-        self.repaint_peaks()
 
         save_detection_params(
             pd_params_path=exp.pd_params_path,
@@ -609,8 +611,8 @@ class MainWindow(QMainWindow):
         time = trace.time[: trace.trim_idx]
         dff = trace.dff[: trace.trim_idx]
 
-        peak_amps = trace.peak_amplitudes
         peak_times = trace.peak_times
+        peak_amps = trace.peak_amplitudes
 
         scatter_plot_item = pg.ScatterPlotItem(size=8, brush=pg.mkColor("m"))
         scatter_plot_item.setData(peak_times, peak_amps)
