@@ -8,34 +8,27 @@ from PyQt6.QtWidgets import (
 
 
 class FloatSlider(QSlider):
-    def __init__(self, min_value, max_value, initial_value, step_size=0.1, parent=None):
-        super().__init__(Qt.Orientation.Horizontal, parent)
+    def __init__(self, min_value, max_value, initial_value, step_size=0.1):
+        super().__init__(Qt.Orientation.Horizontal)
 
-        self._min_value = min_value
-        self._max_value = max_value
-        self._step_size = step_size
+        self.min_value = min_value
+        self.max_value = max_value
+        self.step_size = step_size
 
         self.setRange(int(min_value / step_size), int(max_value / step_size))
         self.setSingleStep(int(step_size / step_size))
 
-        self.setValue(initial_value)
+        self.setValue(initial_value / step_size)
 
     def setValue(self, value):
-        """Set the value as a float."""
-        value_int = int((value - self._min_value) / self._step_size)
+        value_int = int((value - self.min_value) / self.step_size)
         super().setValue(value_int)
 
     def value(self):
-        """Get the value as a float."""
-        return self._min_value + super().value() * self._step_size
+        return self.min_value + super().value() * self.step_size
 
     def setRange(self, min_value, max_value):
-        """Set the range of the slider as floats."""
-        self._min_value = min_value
-        self._max_value = max_value
-        super().setRange(
-            int(min_value / self._step_size), int(max_value / self._step_size)
-        )
+        super().setRange(min_value, max_value)
 
 
 class LabeledSlider(QWidget):
@@ -47,9 +40,8 @@ class LabeledSlider(QWidget):
         initial_value,
         step_size=None,
         custom_slot=None,
-        parent=None,
     ):
-        super().__init__(parent)
+        super().__init__()
 
         self.layout = QVBoxLayout()
 
@@ -65,7 +57,6 @@ class LabeledSlider(QWidget):
             self.slider.valueChanged.connect(custom_slot)
 
         self.name_label = QLabel(name)
-
         self.value_label = QLabel(str(initial_value))
 
         self.layout.addWidget(self.slider)
