@@ -1,4 +1,3 @@
-from copy import deepcopy
 import json
 from pathlib import Path
 import sys
@@ -23,7 +22,7 @@ from PyQt6.QtWidgets import (
 )
 import pyqtgraph as pg
 
-from pasna_analysis import Experiment, Trace
+from pasna_analysis import Experiment
 from pasna_analysis.interactive_find_peaks import (
     get_initial_values,
     save_detection_params,
@@ -35,97 +34,10 @@ from pasna_analysis.interactive_find_peaks import (
 from pasna_analysis.gui.compare_plot_window import ComparePlotWindow
 from pasna_analysis.gui.image_window import ImageSequenceViewer, ImageWindow
 from pasna_analysis.gui.interactive_plot import InteractivePlotWidget
+from pasna_analysis.gui.model import Model
 from pasna_analysis.gui.plot_window import PlotWindow
 from pasna_analysis.gui.sidebar import RemovableSidebar, FixedSidebar
 from pasna_analysis.gui.sliders import LabeledSlider
-
-
-class Model:
-    def __init__(self):
-        self.initial_state()
-
-    def initial_state(self):
-        self.groups = {"group1": {}}
-        self.curr_group = "group1"
-        self.to_remove = {}
-        self.curr_exp = None
-        self.curr_emb_name = None
-
-    def add_experiment(self, experiment: Experiment, group=None):
-        if group is None:
-            group = self.curr_group
-
-        if group not in self.groups:
-            raise ValueError("Group not found.")
-
-        if experiment in self.groups[group]:
-            raise ValueError("Experiment already added to this group.")
-
-        self.groups[group][experiment.name] = experiment
-        self.to_remove[experiment.name] = set()
-
-        if self.curr_exp is None:
-            self.curr_exp = experiment.name
-
-        if self.curr_emb_name is None:
-            emb_name = next(iter(experiment.embryos))
-            self.curr_emb_name = emb_name
-
-    def get_filtered_groups(self):
-        groups = deepcopy(self.groups)
-        for group_name, group in groups.items():
-            for exp_name, exp in group.items():
-                exp.embryos = self.get_filtered_embs(exp_name, group_name)
-        return groups
-
-    def get_filtered_embs(self, exp_name, group_name=None):
-        exp = self.get_experiment(exp_name, group_name)
-        if exp_name not in self.to_remove:
-            return exp.embryos
-        return {
-            emb_name: emb
-            for emb_name, emb in exp.embryos.items()
-            if emb_name not in self.to_remove[exp_name]
-        }
-
-    def get_filtered_group(self):
-        group = deepcopy(self.groups[self.curr_group])
-        for exp_name, exp in group.items():
-            exp.embryos = self.get_filtered_embs(exp_name)
-        return group
-
-    def set_curr_group(self, group=str):
-        if group not in self.groups:
-            raise ValueError("Group not found.")
-        self.curr_group = group
-
-        self.curr_exp = next(iter(self.groups[group]))
-        curr_exp = self.get_curr_experiment()
-
-        self.curr_emb_name = next(iter(curr_exp.embryos))
-
-    def get_curr_experiment(self) -> Experiment:
-        return self.groups[self.curr_group][self.curr_exp]
-
-    def get_experiment(self, exp_name, group_name=None) -> Experiment:
-        if group_name is None:
-            curr_group = self.get_curr_group()
-        else:
-            curr_group = self.groups[group_name]
-        return curr_group[exp_name]
-
-    def get_curr_group(self) -> dict[str, Experiment]:
-        return self.groups[self.curr_group]
-
-    def get_curr_trace(self) -> Trace:
-        exp = self.get_curr_experiment()
-        return exp.embryos[self.curr_emb_name].trace
-
-    def add_group(self, group):
-        self.groups[group] = {}
-
-    def has_combined_experiments(self):
-        return len(self.get_curr_group()) > 1
 
 
 class MainWindow(QMainWindow):
@@ -140,46 +52,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
 
-        menu_bar = self.menuBar()
-
-        file_menu = menu_bar.addMenu("&File")
-
-        open_action = QAction("Open Directory", self)
-        open_action.setShortcut(QKeySequence("Ctrl+O"))
-        open_action.triggered.connect(self.open_directory)
-        file_menu.addAction(open_action)
-
-        self.add_experiment_action = QAction("Add Experiment", self)
-        self.add_experiment_action.triggered.connect(self.add_experiment)
-        self.add_experiment_action.setEnabled(False)
-        file_menu.addAction(self.add_experiment_action)
-
-        self.compare_experiment_action = QAction("Compare with experiment", self)
-        self.compare_experiment_action.triggered.connect(self.compare_experiments)
-        self.compare_experiment_action.setEnabled(False)
-        file_menu.addAction(self.compare_experiment_action)
-
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut(QKeySequence("Ctrl+Q"))
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
-
-        plot_menu = menu_bar.addMenu("&Plots")
-        display_FOV_action = QAction("View all embryos", self)
-        display_FOV_action.triggered.connect(self.display_field_of_view)
-        plot_menu.addAction(display_FOV_action)
-
-        display_embryo_action = QAction("View embryo raw data", self)
-        display_embryo_action.triggered.connect(self.display_embryo_movie)
-        plot_menu.addAction(display_embryo_action)
-
-        generate_plots_action = QAction("View plots", self)
-        generate_plots_action.triggered.connect(self.display_plots)
-        plot_menu.addAction(generate_plots_action)
-
-        generate_comp_plots_action = QAction("View comparison plots", self)
-        generate_comp_plots_action.triggered.connect(self.display_compare_plots)
-        plot_menu.addAction(generate_comp_plots_action)
+        self.paint_menu()
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -276,21 +149,9 @@ class MainWindow(QMainWindow):
         error_dialog.setText(msg)
         error_dialog.exec()
 
-    def clear_layout(self, layout=None):
-        if layout is None:
-            layout = self.layout
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-            elif item.layout():
-                self.clear_layout(item.layout())
-
     def get_top_bar_content(self):
         if len(self.model.groups) > 1:
             select_group = QComboBox()
-            # TODO: pick a proper width for the combo box
             select_group.setMaximumWidth(400)
             select_group.activated.connect(self.change_group)
 
@@ -298,9 +159,10 @@ class MainWindow(QMainWindow):
                 select_group.insertItem(i, group)
 
             return select_group
+
         curr_group = self.model.get_curr_group()
         if len(curr_group) > 1:
-            label_text = f"Group: {' '.join(curr_group.keys())}"
+            label_text = f"Group: {'-'.join(curr_group.keys())}"
             return QLabel(label_text)
         curr_exp = self.model.get_curr_experiment()
         label_text = f"Experiment: {curr_exp.name}"
@@ -317,10 +179,13 @@ class MainWindow(QMainWindow):
 
     def toggle_moveable_widths(self):
         self.moveable_width_bars = not self.moveable_width_bars
-        ils = (
-            item
-            for item in self.plot_widget.get_items()
-            if isinstance(item, pg.InfiniteLine)
+        ils = sorted(
+            (
+                item
+                for item in self.plot_widget.get_items()
+                if isinstance(item, pg.InfiniteLine)
+            ),
+            key=lambda il: il.peak_index,
         )
         for i, il in enumerate(ils):
             if self.moveable_width_bars:
@@ -341,7 +206,7 @@ class MainWindow(QMainWindow):
         # Sliders are only avaialable if a single experiment is open
         if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
             self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
-            self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.5, 0.06, 0.005)
+            self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.8, 0.06, 0.005)
             self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
             self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
 
@@ -402,11 +267,11 @@ class MainWindow(QMainWindow):
                 exp_to_embs[exp_name] = exp.embryos.keys()
             self.sidebar = FixedSidebar(exp_to_embs, self.render_trace)
 
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidget(self.sidebar)
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setFixedWidth(200)
-        self.single_graph_layout.addWidget(self.scroll_area)
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(self.sidebar)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFixedWidth(200)
+        self.single_graph_layout.addWidget(scroll_area)
         # Sidebar end
 
         # Graph start
@@ -431,6 +296,48 @@ class MainWindow(QMainWindow):
 
         self.graph_scroll.hide()
         # Multi graphs end
+
+    def paint_menu(self):
+        menu_bar = self.menuBar()
+
+        file_menu = menu_bar.addMenu("&File")
+
+        open_action = QAction("Open Directory", self)
+        open_action.setShortcut(QKeySequence("Ctrl+O"))
+        open_action.triggered.connect(self.open_directory)
+        file_menu.addAction(open_action)
+
+        self.add_experiment_action = QAction("Add Experiment", self)
+        self.add_experiment_action.triggered.connect(self.add_experiment)
+        self.add_experiment_action.setEnabled(False)
+        file_menu.addAction(self.add_experiment_action)
+
+        self.compare_experiment_action = QAction("Compare with experiment", self)
+        self.compare_experiment_action.triggered.connect(self.compare_experiments)
+        self.compare_experiment_action.setEnabled(False)
+        file_menu.addAction(self.compare_experiment_action)
+
+        exit_action = QAction("Exit", self)
+        exit_action.setShortcut(QKeySequence("Ctrl+Q"))
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        plot_menu = menu_bar.addMenu("&Plots")
+        display_FOV_action = QAction("View all embryos", self)
+        display_FOV_action.triggered.connect(self.display_field_of_view)
+        plot_menu.addAction(display_FOV_action)
+
+        display_embryo_action = QAction("View embryo movie", self)
+        display_embryo_action.triggered.connect(self.display_embryo_movie)
+        plot_menu.addAction(display_embryo_action)
+
+        generate_plots_action = QAction("View plots", self)
+        generate_plots_action.triggered.connect(self.display_plots)
+        plot_menu.addAction(generate_plots_action)
+
+        generate_comp_plots_action = QAction("View comparison plots", self)
+        generate_comp_plots_action.triggered.connect(self.display_compare_plots)
+        plot_menu.addAction(generate_comp_plots_action)
 
     def paint_main_view(self):
         self.top_app_bar = QHBoxLayout()
@@ -664,8 +571,8 @@ class MainWindow(QMainWindow):
         self.mpd_slider.slider.sliderReleased.connect(self.stopped_dragging)
         self.order_zero_slider.setValue(pd_params["order0_min"])
         self.order_zero_slider.set_custom_slot(self.repaint_curr_emb)
-        self.order_one_slider.slider.sliderPressed.connect(self.started_dragging)
-        self.order_one_slider.slider.sliderReleased.connect(self.stopped_dragging)
+        self.order_zero_slider.slider.sliderPressed.connect(self.started_dragging)
+        self.order_zero_slider.slider.sliderReleased.connect(self.stopped_dragging)
         self.order_one_slider.setValue(pd_params["order1_min"])
         self.order_one_slider.set_custom_slot(self.repaint_curr_emb)
         self.order_one_slider.slider.sliderPressed.connect(self.started_dragging)
@@ -712,24 +619,23 @@ class MainWindow(QMainWindow):
         else:
             self.plot_widget.setTitle(emb_name)
 
-        if not self.show_peak_widths:
+        if not self.show_peak_widths or self.is_dragging_slider:
             return
 
-        if not self.is_dragging_slider:
-            trace.compute_peak_bounds()
-            peak_bounds = trace.peak_bounds_indices.flatten()
-            peak_bound_times = time[peak_bounds]
+        trace.compute_peak_bounds()
+        peak_bounds = trace.peak_bounds_indices.flatten()
+        peak_bound_times = time[peak_bounds]
 
-            for i, idx in enumerate(peak_bound_times):
-                il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
-                il.peak_index = i
-                if self.moveable_width_bars:
-                    if i % 2 == 0:
-                        il.addMarker("<|")
-                    else:
-                        il.addMarker("|>")
-                il.sigPositionChangeFinished.connect(self.change_peak_pos)
-                self.plot_widget.addItem(il)
+        for i, idx in enumerate(peak_bound_times):
+            il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
+            il.peak_index = i
+            if self.moveable_width_bars:
+                if i % 2 == 0:
+                    il.addMarker("<|")
+                else:
+                    il.addMarker("|>")
+            il.sigPositionChangeFinished.connect(self.change_peak_pos)
+            self.plot_widget.addItem(il)
 
     def change_peak_pos(self, il_obj):
         trace = self.model.get_curr_trace()
@@ -742,6 +648,17 @@ class MainWindow(QMainWindow):
         # indirectly the row represents the peak_index that this il is associated to
         peak_index = str(trace.peak_idxes[row])
         self.save_peak_pos(peak_bounds, peak_index)
+
+    def clear_layout(self, layout=None):
+        if layout is None:
+            layout = self.layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+            elif item.layout():
+                self.clear_layout(item.layout())
 
 
 def main():
