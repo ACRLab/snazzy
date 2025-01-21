@@ -38,6 +38,7 @@ class ComparePlotWindow(QWidget):
             "Peak amplitudes by episode": self.peak_amplitudes_by_ep,
             "Dev time by episode": self.dt_by_ep,
             "Episode intervals": self.ep_intervals,
+            "Decay times": self.decay_times,
         }
 
         for label, fn in btns.items():
@@ -161,4 +162,32 @@ class ComparePlotWindow(QWidget):
         self.ax.set_title("Intervals by burst")
         self.ax.set_xlabel("Interval #")
         self.ax.set_ylabel("Interval (min)")
+        self.canvas.draw()
+
+    def decay_times(self):
+        """Decay times"""
+        self.ax.clear()
+        data = {"group": [], "decay_times": [], "idx": []}
+
+        for group_name, group in self.groups.items():
+            for exp in group.values():
+                for emb in exp.embryos.values():
+                    for i, decay in zip(range(15), emb.trace.peak_decay_times):
+                        data["group"].append(group_name)
+                        data["decay_times"].append(decay)
+                        data["idx"].append(i)
+
+        sns.pointplot(
+            data=data,
+            x="idx",
+            y="decay_times",
+            hue="group",
+            errorbar="ci",
+            linestyle="None",
+            ax=self.ax,
+        )
+        self.ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
+        self.ax.set_title("Peak decay times")
+        self.ax.set_xlabel("Peak #")
+        self.ax.set_ylabel("Duration (min)")
         self.canvas.draw()
