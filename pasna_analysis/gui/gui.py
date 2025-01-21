@@ -151,6 +151,12 @@ class MainWindow(QMainWindow):
         error_dialog.setText(msg)
         error_dialog.exec()
 
+    def show_notification(self, note_title, msg):
+        notification = QMessageBox(self)
+        notification.setWindowTitle(note_title)
+        notification.setText(msg)
+        notification.exec()
+
     def get_top_bar_content(self):
         if len(self.model.groups) > 1:
             select_group = QComboBox()
@@ -195,6 +201,10 @@ class MainWindow(QMainWindow):
         self.toggle_graph_btn.setCheckable(True)
         self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
         self.top_app_bar.addWidget(self.toggle_graph_btn)
+
+        self.clear_manual_data_btn = QPushButton("Clear manual data")
+        self.clear_manual_data_btn.clicked.connect(self.clear_manual_data)
+        self.top_app_bar.addWidget(self.clear_manual_data_btn)
 
     def toggle_color_mode(self):
         self.color_mode = not self.color_mode
@@ -395,8 +405,9 @@ class MainWindow(QMainWindow):
 
         trace = self.model.get_curr_trace()
         target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
-        # FIXME: this will remove more than one peak if they fall within wlen
+        # TODO: this will remove more than one peak if they fall within wlen
         removed = trace.peak_idxes[target].tolist()
+        trace.to_remove.extend(removed)
         new_arr = trace.peak_idxes[~target]
         trace.peak_idxes = new_arr
 
@@ -443,7 +454,8 @@ class MainWindow(QMainWindow):
 
         trace = self.model.get_curr_trace()
         window = slice(x - wlen, x + wlen)
-        peak = local_peak_at(x, trace.dff[window], wlen)
+        peak = local_peak_at(x, trace.order_zero_savgol[window], wlen)
+        trace.to_add.append(peak)
         new_arr = np.append(trace.peak_idxes, peak)
         new_arr.sort()
         trace.peak_idxes = new_arr
@@ -474,6 +486,7 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def update_all_embs(self):
+        """Calculates and paints again all peaks."""
         self.detect_peaks_all()
         self.render_trace()
         self.repaint_peaks()
@@ -639,6 +652,7 @@ class MainWindow(QMainWindow):
         trace = exp.embryos[emb_name].trace
         time = trace.time[: trace.trim_idx]
         dff = trace.dff[: trace.trim_idx]
+        savgol = trace.order_zero_savgol
 
         peak_times = trace.peak_times
         peak_amps = trace.peak_amplitudes
@@ -647,8 +661,20 @@ class MainWindow(QMainWindow):
         scatter_plot_item = pg.ScatterPlotItem(
             peak_times, peak_amps, size=8, brush=brushes, pen=QPen(Qt.PenStyle.NoPen)
         )
+
+        if trace.to_add or trace.to_remove:
+            ttad = np.array([*trace.to_add, *trace.to_remove])
+            # manual_times = time[trace.to_add]
+            manual_times = time[ttad]
+            manual_amps = dff[ttad]
+            manual_scatter = pg.ScatterPlotItem(
+                manual_times, manual_amps, size=10, brush=QColor("cyan")
+            )
+            self.plot_widget.addItem(manual_scatter)
+
         self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
+        self.plot_widget.plot(time, savgol)
 
         if self.model.has_combined_experiments():
             self.plot_widget.setTitle(f"{exp_name} - {emb_name}")
@@ -709,6 +735,24 @@ class MainWindow(QMainWindow):
                 widget.deleteLater()
             elif item.layout():
                 self.clear_layout(item.layout())
+
+    def clear_manual_data(self):
+        exp = self.model.get_curr_experiment()
+
+        for emb in exp.embryos.values():
+            emb.trace.to_add = []
+            emb.trace.to_remove = []
+
+        with open(exp.pd_params_path, "r") as f:
+            config = json.load(f)
+
+        del config["embryos"]
+
+        with open(exp.pd_params_path, "w") as f:
+            json.dump(config, f, indent=4)
+
+        self.update_all_embs()
+        self.show_notification("Clear manual data", "Manually added data was removed.")
 
 
 def main():

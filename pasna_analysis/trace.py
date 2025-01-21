@@ -27,10 +27,9 @@ class Trace:
         self.pd_props_path = pd_props_path  # peak detection props
         self._peak_idxes = None
         self._peak_bounds_indices = None
-        self._peak_bounds_time = None
-        self._peak_durations = None
-        self._peak_aucs = None
         self._order_zero_savgol = None
+        self.to_add = []
+        self.to_remove = []
 
         self.trim_idx = self.trim_data(trim_zscore)
 
@@ -95,7 +94,7 @@ class Trace:
 
     @property
     def peak_aucs(self):
-        return self.compute_peak_aucs_from_bounds()
+        return self.get_peak_aucs_from_bounds()
 
     @property
     def rms(self):
@@ -219,6 +218,8 @@ class Trace:
                 if not any(abs(p - ap) < wlen for p in filtered_peaks)
             ]
             peak_idxes = np.array(sorted(filtered_peaks + filtered_add), dtype=np.int64)
+            self.to_add = to_add
+            self.to_remove = to_remove
 
         self._peak_idxes = peak_idxes
         peak_times = self.time[peak_idxes]
@@ -337,13 +338,12 @@ class Trace:
         time_slices = [self.time[x[0] : x[1]] for x in peak_bounds]
         return list(zip(peak_slices, time_slices))
 
-    def compute_peak_aucs_from_bounds(self):
+    def get_peak_aucs_from_bounds(self):
         peak_time_slices = self.get_peak_slices_from_bounds()
         peak_aucs = np.asarray(
             [np.trapz(pslice * 100, tslice) for pslice, tslice in peak_time_slices]
         )
-
-        self._peak_aucs = peak_aucs
+        return peak_aucs
 
 
 def _extend_true_right(bool_array, n_right):
