@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QKeySequence
+from PyQt6.QtGui import QAction, QBrush, QColor, QKeySequence, QPen
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -48,7 +48,9 @@ class MainWindow(QMainWindow):
         self.moveable_width_bars = False
         self.show_peak_widths = True
         self.is_dragging_slider = False
+        self.color_mode = False
 
+        self.brushes = [QBrush(pg.mkColor("m"))]
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
 
@@ -176,6 +178,21 @@ class MainWindow(QMainWindow):
 
         self.top_app_bar.addWidget(top_app_bar_content)
         self.top_app_bar.addStretch()
+
+        self.color_mode_btn = QPushButton("Colored Peaks")
+        self.color_mode_btn.clicked.connect(self.toggle_color_mode)
+
+        self.top_app_bar.addWidget(self.color_mode_btn)
+
+    def toggle_color_mode(self):
+        self.color_mode = not self.color_mode
+        if self.color_mode:
+            self.color_mode_btn.setText("Single color peaks")
+            self.brushes = self.create_brushes_table()
+        else:
+            self.color_mode_btn.setText("Colored peaks")
+            self.brushes = [QBrush(pg.mkColor("m"))]
+        self.render_trace()
 
     def toggle_moveable_widths(self):
         self.moveable_width_bars = not self.moveable_width_bars
@@ -594,6 +611,11 @@ class MainWindow(QMainWindow):
         self.is_dragging_slider = False
         self.render_trace()
 
+    def create_brushes_table(self):
+        colormap = pg.colormap.get("PAL-relaxed_bright")
+        colors = colormap.getLookupTable(nPts=6)
+        return [QBrush(QColor(*color)) for color in colors]
+
     def render_trace(self, emb_name=None, exp_name=None):
         if emb_name and exp_name:
             exp = self.model.get_experiment(exp_name)
@@ -614,8 +636,10 @@ class MainWindow(QMainWindow):
         peak_times = trace.peak_times
         peak_amps = trace.peak_amplitudes
 
-        scatter_plot_item = pg.ScatterPlotItem(size=8, brush=pg.mkColor("m"))
-        scatter_plot_item.setData(peak_times, peak_amps)
+        brushes = [self.brushes[i % len(self.brushes)] for i in range(len(peak_times))]
+        scatter_plot_item = pg.ScatterPlotItem(
+            peak_times, peak_amps, size=8, brush=brushes, pen=QPen(Qt.PenStyle.NoPen)
+        )
         self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
 
@@ -634,8 +658,18 @@ class MainWindow(QMainWindow):
 
         peak_bound_times = time[peak_bounds]
 
+        brushes = [
+            self.brushes[i % len(self.brushes)] for i in range(len(peak_bound_times))
+        ]
         for i, idx in enumerate(peak_bound_times):
-            il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
+            if self.color_mode:
+                il = pg.InfiniteLine(
+                    idx,
+                    movable=self.moveable_width_bars,
+                    pen=pg.mkPen(brushes[i // 2].color()),
+                )
+            else:
+                il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
             il.peak_index = i
             if self.moveable_width_bars:
                 if i % 2 == 0:
