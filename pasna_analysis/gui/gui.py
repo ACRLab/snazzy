@@ -226,11 +226,13 @@ class MainWindow(QMainWindow):
             self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.8, 0.06, 0.005)
             self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
             self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
+            self.width_slider = LabeledSlider("Rel height", 0, 1, 0.92, 0.005)
 
             self.top_layout.addWidget(self.mpd_slider)
             self.top_layout.addWidget(self.order_zero_slider)
             self.top_layout.addWidget(self.order_one_slider)
             self.top_layout.addWidget(self.prominence_slider)
+            self.top_layout.addWidget(self.width_slider)
 
             self.button = QPushButton("Apply Changes")
             self.button.clicked.connect(self.update_all_embs)
@@ -485,6 +487,7 @@ class MainWindow(QMainWindow):
         order_one_min = self.order_one_slider.value()
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
+        rel_height = self.width_slider.value()
 
         exp = self.model.get_curr_experiment()
 
@@ -502,6 +505,7 @@ class MainWindow(QMainWindow):
             order0_min=order_zero_min,
             order1_min=order_one_min,
             prominence=prominence,
+            rel_height=rel_height,
         )
 
     def open_directory(self):
@@ -603,6 +607,9 @@ class MainWindow(QMainWindow):
         self.prominence_slider.set_custom_slot(self.repaint_curr_emb)
         self.prominence_slider.slider.sliderPressed.connect(self.started_dragging)
         self.prominence_slider.slider.sliderReleased.connect(self.stopped_dragging)
+        # it's too costly to repaint all peak widths, so I wont update them as we drag
+        # the width_slider
+        self.width_slider.setValue(pd_params["rel_height"])
 
     def started_dragging(self):
         self.is_dragging_slider = True
@@ -651,7 +658,8 @@ class MainWindow(QMainWindow):
         if not self.show_peak_widths or self.is_dragging_slider:
             return
 
-        trace.compute_peak_bounds()
+        rel_height = self.width_slider.value()
+        trace.compute_peak_bounds(rel_height)
         peak_bounds = trace.peak_bounds_indices.flatten()
         if peak_bounds.size == 0:
             return
