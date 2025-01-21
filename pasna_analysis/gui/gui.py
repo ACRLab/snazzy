@@ -181,8 +181,20 @@ class MainWindow(QMainWindow):
 
         self.color_mode_btn = QPushButton("Colored Peaks")
         self.color_mode_btn.clicked.connect(self.toggle_color_mode)
-
         self.top_app_bar.addWidget(self.color_mode_btn)
+
+        self.moveable_width_btn = QPushButton("Adjust widths")
+        self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
+        self.top_app_bar.addWidget(self.moveable_width_btn)
+
+        self.toggle_width_view_btn = QPushButton("View widths")
+        self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
+        self.top_app_bar.addWidget(self.toggle_width_view_btn)
+
+        self.toggle_graph_btn = QPushButton("View all traces")
+        self.toggle_graph_btn.setCheckable(True)
+        self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
+        self.top_app_bar.addWidget(self.toggle_graph_btn)
 
     def toggle_color_mode(self):
         self.color_mode = not self.color_mode
@@ -226,7 +238,7 @@ class MainWindow(QMainWindow):
             self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.8, 0.06, 0.005)
             self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
             self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
-            self.width_slider = LabeledSlider("Rel height", 0, 1, 0.92, 0.005)
+            self.width_slider = LabeledSlider("Rel height", 0.7, 1, 0.92, 0.005)
 
             self.top_layout.addWidget(self.mpd_slider)
             self.top_layout.addWidget(self.order_zero_slider)
@@ -238,20 +250,7 @@ class MainWindow(QMainWindow):
             self.button.clicked.connect(self.update_all_embs)
             self.top_layout.addWidget(self.button)
 
-            self.moveable_width_btn = QPushButton("Adjust widths")
-            self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
-            self.top_layout.addWidget(self.moveable_width_btn)
-
-            self.toggle_width_view_btn = QPushButton("View widths")
-            self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
-            self.top_layout.addWidget(self.toggle_width_view_btn)
-
             self.calibrate_sliders()
-
-        self.toggle_graph_btn = QPushButton("View all traces")
-        self.toggle_graph_btn.setCheckable(True)
-        self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
-        self.top_layout.addWidget(self.toggle_graph_btn)
 
     def toggle_emb_visibility(self, emb_name):
         exp = self.model.get_curr_experiment()
@@ -588,6 +587,7 @@ class MainWindow(QMainWindow):
         The sliders should not be available when more than one experiment is loaded."""
         if self.model.has_combined_experiments():
             return
+
         exp = self.model.get_curr_experiment()
         pd_params = get_initial_values(exp.pd_params_path)
 
