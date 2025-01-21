@@ -25,7 +25,7 @@ class FloatSlider(QSlider):
         super().setValue(value_int)
 
     def value(self):
-        return self.min_value + super().value() * self.step_size
+        return super().value() * self.step_size
 
     def setRange(self, min_value, max_value):
         super().setRange(min_value, max_value)
