@@ -76,30 +76,26 @@ class Trace:
         self._peak_bounds_indices = peak_bounds
 
     @property
+    def peak_bounds_times(self):
+        return self.get_peak_bounds_times()
+
+    @property
     def peak_durations(self):
-        if self._peak_bounds_time is None:
-            self.compute_peak_bounds()
-        return [end - start for (start, end) in self._peak_bounds_time]
+        return [end - start for (start, end) in self.peak_bounds_times]
 
     @property
     def peak_rise_times(self):
-        if self._peak_bounds_time is None:
-            self.compute_peak_bounds()
-        start_times = self._peak_bounds_time[:, 0]
+        start_times = self.peak_bounds_times[:, 0]
         return self.peak_times - start_times
 
     @property
     def peak_decay_times(self):
-        if self._peak_bounds_time is None:
-            self.compute_peak_bounds()
-        end_times = self._peak_bounds_time[:, 1]
+        end_times = self.peak_bounds_times[:, 1]
         return end_times - self.peak_times
 
     @property
     def peak_aucs(self):
-        if self._peak_aucs is None:
-            self.compute_peak_aucs_from_bounds()
-        return self._peak_aucs
+        return self.compute_peak_aucs_from_bounds()
 
     @property
     def rms(self):
@@ -203,6 +199,7 @@ class Trace:
                 peak_idxes = peak_idxes[1:]
                 peak_times = peak_times[1:]
 
+        # reconcile the calculated peaks with manually corrected data:
         corrected_peaks = None
         if self.pd_props_path.exists():
             with open(self.pd_props_path, "r") as f:
@@ -284,8 +281,22 @@ class Trace:
             trim_idx = trim_points[0] - 5
         return trim_idx
 
-    def compute_peak_bounds(self, rel_height=0.92, peak_idxes=None):
+    def compute_peak_bounds(self, rel_height=0.92):
         """Computes properties of each dff peak using spsig.peak_widths."""
+        _, _, start_idxs, end_idxs = spsig.peak_widths(
+            self.order_zero_savgol, self.peak_idxes, rel_height
+        )
+
+        start_idxs = start_idxs.astype(np.int64)
+        end_idxs = end_idxs.astype(np.int64)
+        self._peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
+
+        peaks_to_bounds = {
+            p: [s, e] for (p, s, e) in zip(self.peak_idxes, start_idxs, end_idxs)
+        }
+
+        # reconcile the peak_bounds with manually changed peak widths here:
+        # if a peak has associated manual width data, overwrite that peak's bounds
         manual_peak_bounds = None
         if self.pd_props_path.exists():
             with open(self.pd_props_path, "r") as f:
@@ -295,43 +306,28 @@ class Trace:
                         "manual_widths", None
                     )
 
-        if peak_idxes is None:
-            peak_idxes = self.peak_idxes
-        _, _, start_idxs, end_idxs = spsig.peak_widths(
-            self.order_zero_savgol, peak_idxes, rel_height
-        )
-
-        # TODO: this is all to determine peak times, and should be somewhere else
-        X = np.arange(len(self.time))
-        start_times = np.interp(start_idxs, X, self.time)
-        end_times = np.interp(end_idxs, X, self.time)
-        # combines two 1D nparrs of shape (n) into a 2D nparr of shape (n,2)
-        bound_times = np.vstack((start_times, end_times)).T
-
-        start_idxs = start_idxs.astype(np.int64)
-        end_idxs = end_idxs.astype(np.int64)
-        self._peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
-
-        peaks_to_bounds = {
-            p: [s, e] for (p, s, e) in zip(peak_idxes, start_idxs, end_idxs)
-        }
-
-        # reconcile the peak_bounds with manually changed peak widths here:
-        # if a peak has associated manual width data, change that peak's bounds
         if manual_peak_bounds:
+            # must convert the data from json file to np types:
             manual_peak_bounds = {
                 np.int64(k): [np.int64(n) for n in v]
                 for k, v in manual_peak_bounds.items()
             }
 
-            # peaks_to_bounds.update(manual_peak_bounds)
             for peak in peaks_to_bounds:
                 if peak in manual_peak_bounds:
                     peaks_to_bounds[peak] = manual_peak_bounds[peak]
 
         self._peak_bounds_indices = np.array(list(peaks_to_bounds.values()))
 
-        self._peak_bounds_time = bound_times
+    def get_peak_bounds_times(self):
+        """Returns times at peak boundaries as a 2D nparray of shape (N, 2),
+        where the inner dim represents [start_time, end_time] and N is the
+        number of peaks."""
+        start_idxs = self.peak_bounds_indices[:, 0]
+        end_idxs = self.peak_bounds_indices[:, 1]
+
+        bound_times = np.vstack((self.time[start_idxs], self.time[end_idxs])).T
+        return bound_times
 
     def get_peak_slices_from_bounds(self):
         dff = self.dff[: self.trim_idx]
