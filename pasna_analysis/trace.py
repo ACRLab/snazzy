@@ -345,6 +345,35 @@ class Trace:
         )
         return peak_aucs
 
+    def compute_local_peaks(self, height=0.02, prominence=0.01):
+        """Counts local peaks that happen within an episode."""
+        peak_bounds = self.peak_bounds_indices
+
+        local_peaks = []
+        for s, e in peak_bounds:
+            if e >= self.trim_idx:
+                break
+            local_trace = self.dff[s:e]
+            peak_indices, _ = spsig.find_peaks(
+                local_trace, height=height, prominence=prominence
+            )
+            local_peaks.append(len(peak_indices))
+        return local_peaks
+
+    def compute_all_local_peaks(self, split_idx, height=0.02, prominence=0.01):
+        """Counts number of local peaks before and after the `split_idx`."""
+        first_peak = self.peak_idxes[0]
+        dff = self.dff[: self.trim_idx]
+
+        lp_before, _ = spsig.find_peaks(
+            dff[first_peak:split_idx], height=height, prominence=prominence
+        )
+        lp_after, _ = spsig.find_peaks(
+            dff[split_idx:], height=height, prominence=prominence
+        )
+
+        return (len(lp_before), len(lp_after))
+
 
 def _extend_true_right(bool_array, n_right):
     """
