@@ -30,3 +30,6 @@ cover/
 
 # Sphinx docs
 docs/build
+
+# saved images
+notebooks/*.svg
