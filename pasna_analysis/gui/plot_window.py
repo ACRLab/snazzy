@@ -7,18 +7,17 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from pasna_analysis import Embryo, utils
+from pasna_analysis import Experiment, utils
 
 
 matplotlib.use("QtAgg")
 
 
 class PlotWindow(QWidget):
-    def __init__(self, embryos: list[Embryo], exp_names: list[str], group: str):
+    def __init__(self, group: dict[str, Experiment]):
         super().__init__()
-        self.embryos = embryos
-        # TODO: change the way we represent experiments here
-        self.exp_names = exp_names
+
+        self.embryos = [emb for exp in group.values() for emb in exp.embryos.values()]
 
         self.setWindowTitle(f"Plots - {group}")
 
@@ -36,6 +35,11 @@ class PlotWindow(QWidget):
         self.create_buttons()
 
     def create_buttons(self):
+        """Populates buttons in the sidebar.
+
+        `btns` should receive a dict[str, Callable], where the str is the btn
+        text and Callable is a function that adds a plot to `self.ax`.
+        """
         btns = {"Peaks": self.plot_peaks, "Area Under the Curve": self.plot_AUC}
 
         for label, fn in btns.items():
@@ -45,6 +49,9 @@ class PlotWindow(QWidget):
             self.sidebar.addWidget(button)
 
     def plot_peaks(self):
+        """Peak times for all embryos.
+
+        Embryos are represented as horizontal lines."""
         self.ax.clear()
         times = []
         for emb in self.embryos:
@@ -62,6 +69,7 @@ class PlotWindow(QWidget):
         self.canvas.draw()
 
     def plot_AUC(self):
+        """Binned area under the curve."""
         self.ax.clear()
         data = {"auc": [], "bin": [], "emb": []}
         n_bins = 5

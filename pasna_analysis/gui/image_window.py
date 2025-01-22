@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import (
 )
 import pyqtgraph as pg
 
+from pasna_analysis import Experiment
+
 
 class ImageWindow(QWidget):
     def __init__(self, image_path):
@@ -35,10 +37,10 @@ class ImageWindow(QWidget):
 
 
 class ImageSequenceViewer(QWidget):
-    def __init__(self, directory, dff_traces):
+    def __init__(self, directory: Path, exp: Experiment):
         super().__init__()
         self.directory = directory
-        self.dff_traces = dff_traces
+        self.dff_traces = {name: e.trace.dff for (name, e) in exp.embryos.items()}
 
         self.setWindowTitle("Image Sequence Viewer")
         self.setGeometry(100, 100, 800, 600)
