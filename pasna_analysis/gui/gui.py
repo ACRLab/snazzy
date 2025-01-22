@@ -49,23 +49,21 @@ class MainWindow(QMainWindow):
         self.show_peak_widths = True
         self.is_dragging_slider = False
         self.color_mode = False
-
         self.brushes = [QBrush(pg.mkColor("m"))]
+
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
 
         self.paint_menu()
 
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
         self.layout = QVBoxLayout()
-        self.central_widget.setLayout(self.layout)
+        central_widget.setLayout(self.layout)
 
-        self.placeholder = QLabel(
-            "To get started, open a directory with pasnascope output."
-        )
-        self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.placeholder)
+        placeholder = QLabel("To get started, open a directory with pasnascope output.")
+        placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(placeholder)
 
     def change_group(self, i):
         self.model.set_curr_group(self.group_combo_box.itemText(i))
@@ -73,7 +71,7 @@ class MainWindow(QMainWindow):
         self.clear_layout(self.bottom_layout)
         self.paint_graphs()
         self.render_trace()
-        self.plot_graphs()
+        self.plot_all_traces()
 
     def compare_experiments(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -110,13 +108,7 @@ class MainWindow(QMainWindow):
         self._open_directory()
 
     def display_plots(self):
-        group = self.model.get_filtered_group()
-        embryos = [
-            (emb, exp.name) for exp in group.values() for emb in exp.embryos.values()
-        ]
-        embryos, exp_names = list(zip(*embryos))
-
-        self.pw = PlotWindow(embryos, exp_names, self.model.curr_group)
+        self.pw = PlotWindow(self.model.get_curr_group())
         self.pw.show()
 
     def display_compare_plots(self):
@@ -126,9 +118,8 @@ class MainWindow(QMainWindow):
 
     def display_embryo_movie(self):
         exp = self.model.get_curr_experiment()
-        dff_traces = {name: e.trace.dff for (name, e) in exp.embryos.items()}
         try:
-            self.viewer = ImageSequenceViewer(exp.directory, dff_traces)
+            self.viewer = ImageSequenceViewer(exp.directory, exp)
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
@@ -157,7 +148,7 @@ class MainWindow(QMainWindow):
         notification.setText(msg)
         notification.exec()
 
-    def get_top_bar_content(self):
+    def get_group_selector(self):
         if len(self.model.groups) > 1:
             select_group = QComboBox()
             select_group.setMaximumWidth(400)
@@ -177,7 +168,7 @@ class MainWindow(QMainWindow):
         return QLabel(label_text)
 
     def paint_top_app_bar(self):
-        top_app_bar_content = self.get_top_bar_content()
+        top_app_bar_content = self.get_group_selector()
 
         if isinstance(top_app_bar_content, QComboBox):
             self.group_combo_box = top_app_bar_content
@@ -270,11 +261,10 @@ class MainWindow(QMainWindow):
             self.model.to_remove[exp.name].add(emb_name)
 
     def paint_graphs(self):
-        # Bottom layout end
         self.single_graph_frame = QFrame()
         self.bottom_layout.addWidget(self.single_graph_frame)
-        self.single_graph_layout = QHBoxLayout()
-        self.single_graph_frame.setLayout(self.single_graph_layout)
+        single_graph_layout = QHBoxLayout()
+        self.single_graph_frame.setLayout(single_graph_layout)
 
         # Sidebar start
         if not self.model.has_combined_experiments():
@@ -299,19 +289,19 @@ class MainWindow(QMainWindow):
         scroll_area.setWidget(self.sidebar)
         scroll_area.setWidgetResizable(True)
         scroll_area.setFixedWidth(200)
-        self.single_graph_layout.addWidget(scroll_area)
+        single_graph_layout.addWidget(scroll_area)
         # Sidebar end
 
         # Graph start
         self.plot_widget = InteractivePlotWidget()
-        self.single_graph_layout.addWidget(self.plot_widget)
+        single_graph_layout.addWidget(self.plot_widget)
         self.plot_widget.hide()
 
         self.plot_widget.add_peak_fired.connect(self.add_peak)
         self.plot_widget.remove_peak_fired.connect(self.remove_peak)
         # Graph end
 
-        # Multi graphs
+        # All traces start
         self.graph_scroll = QScrollArea()
         self.graph_scroll.setWidgetResizable(True)
         self.bottom_layout.addWidget(self.graph_scroll)
@@ -322,7 +312,7 @@ class MainWindow(QMainWindow):
         self.graph_scroll.setWidget(self.graph_container)
 
         self.graph_scroll.hide()
-        # Multi graphs end
+        # All traces end
 
     def paint_menu(self):
         menu_bar = self.menuBar()
@@ -354,17 +344,17 @@ class MainWindow(QMainWindow):
         display_FOV_action.triggered.connect(self.display_field_of_view)
         plot_menu.addAction(display_FOV_action)
 
-        display_embryo_action = QAction("View embryo movie", self)
-        display_embryo_action.triggered.connect(self.display_embryo_movie)
-        plot_menu.addAction(display_embryo_action)
+        display_movie_action = QAction("View embryo movie", self)
+        display_movie_action.triggered.connect(self.display_embryo_movie)
+        plot_menu.addAction(display_movie_action)
 
-        generate_plots_action = QAction("View plots", self)
-        generate_plots_action.triggered.connect(self.display_plots)
-        plot_menu.addAction(generate_plots_action)
+        display_plots_action = QAction("View plots", self)
+        display_plots_action.triggered.connect(self.display_plots)
+        plot_menu.addAction(display_plots_action)
 
-        generate_comp_plots_action = QAction("View comparison plots", self)
-        generate_comp_plots_action.triggered.connect(self.display_compare_plots)
-        plot_menu.addAction(generate_comp_plots_action)
+        display_comp_plots_action = QAction("View comparison plots", self)
+        display_comp_plots_action.triggered.connect(self.display_compare_plots)
+        plot_menu.addAction(display_comp_plots_action)
 
     def paint_main_view(self):
         self.top_app_bar = QHBoxLayout()
@@ -385,7 +375,7 @@ class MainWindow(QMainWindow):
             self.single_graph_frame.hide()
             # repaint graphs to make sure they are in sync with accepted embs
             self.clear_layout(self.graph_layout)
-            self.plot_graphs()
+            self.plot_all_traces()
             self.graph_scroll.show()
         else:
             self.toggle_graph_btn.setText("View all traces")
@@ -548,13 +538,9 @@ class MainWindow(QMainWindow):
 
         self.paint_main_view()
         self.render_trace()
-        self.plot_graphs()
+        self.plot_all_traces()
 
-    def request_repaint_graphs(self):
-        self.clear_layout(self.graph_layout)
-        self.plot_graphs()
-
-    def plot_graphs(self):
+    def plot_all_traces(self):
         group = self.model.get_filtered_group()
         self.scatter_items = {}
         for exp_name, exp in group.items():
@@ -652,29 +638,26 @@ class MainWindow(QMainWindow):
         trace = exp.embryos[emb_name].trace
         time = trace.time[: trace.trim_idx]
         dff = trace.dff[: trace.trim_idx]
-        savgol = trace.order_zero_savgol
 
         peak_times = trace.peak_times
         peak_amps = trace.peak_amplitudes
-
+        # paint peaks
         brushes = [self.brushes[i % len(self.brushes)] for i in range(len(peak_times))]
         scatter_plot_item = pg.ScatterPlotItem(
             peak_times, peak_amps, size=8, brush=brushes, pen=QPen(Qt.PenStyle.NoPen)
         )
-
+        # paint manual data
         if trace.to_add or trace.to_remove:
             ttad = np.array([*trace.to_add, *trace.to_remove])
-            # manual_times = time[trace.to_add]
             manual_times = time[ttad]
             manual_amps = dff[ttad]
             manual_scatter = pg.ScatterPlotItem(
                 manual_times, manual_amps, size=10, brush=QColor("cyan")
             )
             self.plot_widget.addItem(manual_scatter)
-
+        # paint trace
         self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
-        self.plot_widget.plot(time, savgol)
 
         if self.model.has_combined_experiments():
             self.plot_widget.setTitle(f"{exp_name} - {emb_name}")
@@ -683,7 +666,7 @@ class MainWindow(QMainWindow):
 
         if not self.show_peak_widths or self.is_dragging_slider:
             return
-
+        # paint peak widths
         rel_height = self.width_slider.value()
         trace.compute_peak_bounds(rel_height)
         peak_bounds = trace.peak_bounds_indices.flatten()
@@ -691,7 +674,6 @@ class MainWindow(QMainWindow):
             return
 
         peak_bound_times = time[peak_bounds]
-
         brushes = [
             self.brushes[i % len(self.brushes)] for i in range(len(peak_bound_times))
         ]
@@ -710,10 +692,10 @@ class MainWindow(QMainWindow):
                     il.addMarker("<|")
                 else:
                     il.addMarker("|>")
-            il.sigPositionChangeFinished.connect(self.change_peak_pos)
+            il.sigPositionChangeFinished.connect(self.change_peak_bounds)
             self.plot_widget.addItem(il)
 
-    def change_peak_pos(self, il_obj):
+    def change_peak_bounds(self, il_obj):
         trace = self.model.get_curr_trace()
 
         row, col = divmod(il_obj.peak_index, 2)
@@ -737,6 +719,9 @@ class MainWindow(QMainWindow):
                 self.clear_layout(item.layout())
 
     def clear_manual_data(self):
+        """Removes all manual data from pd_params.json file.
+
+        All manual data is stored under the 'embryos' key."""
         exp = self.model.get_curr_experiment()
 
         for emb in exp.embryos.values():
