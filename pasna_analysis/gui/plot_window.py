@@ -14,12 +14,12 @@ matplotlib.use("QtAgg")
 
 
 class PlotWindow(QWidget):
-    def __init__(self, group: dict[str, Experiment]):
+    def __init__(self, group: dict[str, Experiment], group_name: str):
         super().__init__()
 
         self.embryos = [emb for exp in group.values() for emb in exp.embryos.values()]
 
-        self.setWindowTitle(f"Plots - {group}")
+        self.setWindowTitle(f"Plots - {group_name}")
 
         layout = QHBoxLayout()
         self.sidebar = QVBoxLayout()
@@ -40,7 +40,10 @@ class PlotWindow(QWidget):
         `btns` should receive a dict[str, Callable], where the str is the btn
         text and Callable is a function that adds a plot to `self.ax`.
         """
-        btns = {"Peaks": self.plot_peaks, "Area Under the Curve": self.plot_AUC}
+        btns = {
+            "Peaks": self.plot_peaks,
+            "Area Under the Curve": self.plot_AUC,
+        }
 
         for label, fn in btns.items():
             button = QPushButton(label)
