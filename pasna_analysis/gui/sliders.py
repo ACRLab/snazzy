@@ -21,7 +21,7 @@ class FloatSlider(QSlider):
         self.setValue(initial_value / step_size)
 
     def setValue(self, value):
-        value_int = int((value - self.min_value) / self.step_size)
+        value_int = int(value / self.step_size)
         super().setValue(value_int)
 
     def value(self):
@@ -75,7 +75,7 @@ class LabeledSlider(QWidget):
         return self.slider.value()
 
     def setValue(self, value):
-        return self.slider.setValue(value)
+        self.slider.setValue(value)
 
     def set_custom_slot(self, slot):
         self.slider.valueChanged.connect(slot)
