@@ -1,6 +1,8 @@
 import matplotlib
+import matplotlib.axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+import numpy as np
 import seaborn as sns
 
 from PyQt6.QtCore import Qt
@@ -22,14 +24,19 @@ class ComparePlotWindow(QWidget):
         self.sidebar.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addLayout(self.sidebar)
 
-        self.canvas = FigureCanvasQTAgg(Figure(figsize=(8, 6)))
+        self.canvas = FigureCanvasQTAgg(Figure(figsize=(16, 10)))
         sns.set_theme(style="whitegrid", palette="colorblind", font_scale=1.5)
         self.ax = self.canvas.figure.subplots()
+        self.axes = [self.ax]
 
         layout.addWidget(self.canvas)
         self.setLayout(layout)
 
         self.create_buttons()
+
+    def clear_axes(self, rows=1, cols=1):
+        self.canvas.figure.clear()
+        self.ax = self.canvas.figure.subplots(rows, cols)
 
     def create_buttons(self):
         btns = {
@@ -39,6 +46,7 @@ class ComparePlotWindow(QWidget):
             "Dev time by episode": self.dt_by_ep,
             "Episode intervals": self.ep_intervals,
             "Decay times": self.decay_times,
+            "Average spectrograms": self.average_spectrogram,
         }
 
         for label, fn in btns.items():
@@ -49,7 +57,7 @@ class ComparePlotWindow(QWidget):
 
     def dt_first_peak(self):
         """Developmental time at first peak."""
-        self.ax.clear()
+        self.clear_axes()
         data = {"dev_fp": [], "group": []}
 
         for group_name, group in self.groups.items():
@@ -65,11 +73,11 @@ class ComparePlotWindow(QWidget):
         self.ax.set_title("Developmental times at first peak")
         self.ax.set_ylabel("Dev time")
         self.ax.set_xlabel("Group")
-        self.canvas.draw()
+        # self.canvas.draw()
 
     def cdf_dt(self):
         """Cummulative distribution function of peak developmental times."""
-        self.ax.clear()
+        self.clear_axes()
         data = {"dev_time": [], "group": []}
 
         for group_name, group in self.groups.items():
@@ -88,7 +96,7 @@ class ComparePlotWindow(QWidget):
 
     def peak_amplitudes_by_ep(self):
         """Peak amplitudes for each episode."""
-        self.ax.clear()
+        self.clear_axes()
         data = {"peak_amp": [], "group": [], "peak_idx": []}
         num_of_peaks = 15
 
@@ -116,7 +124,7 @@ class ComparePlotWindow(QWidget):
 
     def dt_by_ep(self):
         """Developmental time for each episode."""
-        self.ax.clear()
+        self.clear_axes()
         data = {"group": [], "dev_time": [], "idx": []}
         num_of_peaks = 15
 
@@ -140,7 +148,7 @@ class ComparePlotWindow(QWidget):
 
     def ep_intervals(self):
         """Intervals between each episode."""
-        self.ax.clear()
+        self.clear_axes()
         data = {"group": [], "interval": [], "idx": []}
         num_of_peaks = 15
 
@@ -166,7 +174,7 @@ class ComparePlotWindow(QWidget):
 
     def decay_times(self):
         """Decay times"""
-        self.ax.clear()
+        self.clear_axes()
         data = {"group": [], "decay_times": [], "idx": []}
 
         for group_name, group in self.groups.items():
@@ -190,4 +198,48 @@ class ComparePlotWindow(QWidget):
         self.ax.set_title("Peak decay times")
         self.ax.set_xlabel("Peak #")
         self.ax.set_ylabel("Duration (min)")
+        self.canvas.draw()
+
+    def average_spectrogram(self):
+        self.canvas.figure.clear()
+        ax = self.canvas.figure.subplots(len(self.groups), 1)
+
+        if isinstance(ax, matplotlib.axes.Axes) == 1:
+            self.ax = [ax]
+        else:
+            self.ax = ax
+
+        for i, (group_name, group) in enumerate(self.groups.items()):
+            f_zero = None
+            t_zero = None
+            for exp in group.values():
+                Zxxs = []
+                for emb in exp.embryos.values():
+                    stft = emb.trace.stft(duration=3600)
+                    if stft is None:
+                        continue
+                    f, t, zxx = stft
+                    if f_zero is None and t_zero is None:
+                        f_zero = f
+                        t_zero = t
+                    Zxxs.append(zxx)
+                Zxxs = np.array(Zxxs)
+                abs_Zxx = np.abs(Zxxs)
+                avg_Zxx = np.mean(abs_Zxx, axis=0)
+
+            self.ax[i].pcolormesh(
+                t_zero,
+                f_zero,
+                abs(avg_Zxx),
+                vmin=0,
+                vmax=0.03,
+                cmap="plasma",
+                shading="nearest",
+                snap=True,
+            )
+            self.ax[i].set_title(group_name)
+            self.ax[i].set_ylabel("Hz")
+            self.ax[i].set_xlabel("time (mins)")
+
+        self.canvas.figure.tight_layout()
         self.canvas.draw()

@@ -374,6 +374,30 @@ class Trace:
 
         return (len(lp_before), len(lp_after))
 
+    def stft(self, fs=1 / 6, fft_size=600, noverlap=None, duration=3600):
+        left_pad = 150
+        if noverlap is None:
+            noverlap = 3 * (fft_size / 4)
+
+        dff = np.zeros(duration)
+
+        try:
+            start = self.peak_bounds_indices[0][0] - left_pad
+        except IndexError:
+            print(f"Cannot find onset for {self.name}. Cannot calculate STFT.")
+            return
+
+        if start < 0:
+            print(f"{self.name} onset happened too soon. Cannot calculate STFT.")
+            return
+
+        end = self.trim_idx
+        # the num of points used to calculate stft cannot exceed `duration`:
+        if self.trim_idx - start > duration:
+            end = start + duration
+        dff[: end - start] = self.dff[start:end]
+        return spsig.stft(dff, fs, nperseg=fft_size, noverlap=noverlap, nfft=fft_size)
+
 
 def _extend_true_right(bool_array, n_right):
     """
