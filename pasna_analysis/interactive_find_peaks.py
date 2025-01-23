@@ -18,11 +18,11 @@ def get_initial_values(pd_params_path: Path | None = None):
                 "order1_min": float(data["order1_min"]),
                 "mpd": int(data["mpd"]),
                 "prominence": float(data["prominence"]),
-                "rel_height": float(data["rel_height"]),
+                "peak_width": float(data["peak_width"]),
             }
     else:
         default_params = dict(
-            order0_min=0.06, order1_min=0.006, mpd=70, prominence=0.2, rel_height=0.92
+            order0_min=0.06, order1_min=0.006, mpd=70, prominence=0.2, peak_width=0.92
         )
         with open(pd_params_path, "w+") as f:
             json.dump(default_params, f, indent=4)
