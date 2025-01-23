@@ -108,7 +108,7 @@ class MainWindow(QMainWindow):
         self._open_directory()
 
     def display_plots(self):
-        self.pw = PlotWindow(self.model.get_curr_group())
+        self.pw = PlotWindow(self.model.get_curr_group(), self.model.curr_group)
         self.pw.show()
 
     def display_compare_plots(self):
