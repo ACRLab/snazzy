@@ -511,8 +511,6 @@ class MainWindow(QMainWindow):
         )
 
     def open_directory(self):
-        self.add_experiment_action.setEnabled(True)
-        self.compare_experiment_action.setEnabled(True)
         self.model.set_initial_state()
         self._open_directory()
 
@@ -536,6 +534,8 @@ class MainWindow(QMainWindow):
 
         self.model.add_experiment(exp)
 
+        self.add_experiment_action.setEnabled(True)
+        self.compare_experiment_action.setEnabled(True)
         self.paint_main_view()
         self.render_trace()
         self.plot_all_traces()
