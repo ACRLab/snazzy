@@ -23,21 +23,17 @@ from PyQt6.QtWidgets import (
 import pyqtgraph as pg
 
 from pasna_analysis import Experiment
-from pasna_analysis.interactive_find_peaks import (
-    get_initial_values,
-    save_detection_params,
-    local_peak_at,
-    save_remove_peak,
-    save_add_peak,
+from pasna_analysis.gui import (
+    ComparePlotWindow,
+    FixedSidebar,
+    ImageSequenceViewer,
+    ImageWindow,
+    InteractivePlotWidget,
+    LabeledSlider,
+    Model,
+    PlotWindow,
+    RemovableSidebar,
 )
-
-from pasna_analysis.gui.compare_plot_window import ComparePlotWindow
-from pasna_analysis.gui.image_window import ImageSequenceViewer, ImageWindow
-from pasna_analysis.gui.interactive_plot import InteractivePlotWidget
-from pasna_analysis.gui.model import Model
-from pasna_analysis.gui.plot_window import PlotWindow
-from pasna_analysis.gui.sidebar import RemovableSidebar, FixedSidebar
-from pasna_analysis.gui.sliders import LabeledSlider
 
 
 class MainWindow(QMainWindow):
@@ -382,78 +378,38 @@ class MainWindow(QMainWindow):
             self.graph_scroll.hide()
             self.single_graph_frame.show()
 
-    def remove_peak(self, x, y):
-        exp = self.model.get_curr_experiment()
-
-        with open(exp.pd_params_path, "r") as f:
-            config = json.load(f)
-        if "embryos" not in config.keys():
-            config["embryos"] = {}
-
-        wlen = 10
-        x = int(x / 6)
-
-        trace = self.model.get_curr_trace()
-        target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
-        # TODO: this will remove more than one peak if they fall within wlen
-        removed = trace.peak_idxes[target].tolist()
-        trace.to_remove.extend(removed)
-        new_arr = trace.peak_idxes[~target]
-        trace.peak_idxes = new_arr
-
-        save_remove_peak(self.model.curr_emb_name, config, removed, x, wlen)
-
-        with open(exp.pd_params_path, "w") as f:
-            json.dump(config, f, indent=4)
-
-        self.render_trace()
-
     def save_peak_pos(self, peak_widths, peak_index):
         exp = self.model.get_curr_experiment()
-
-        with open(exp.pd_params_path, "r") as f:
-            config = json.load(f)
-        if "embryos" not in config:
-            config["embryos"] = {}
-
         emb_name = self.model.curr_emb_name
-        if not emb_name in config["embryos"]:
-            config["embryos"][emb_name] = {
-                "wlen": 10,
-                "manual_peaks": [],
-                "manual_remove": [],
-                "manual_widths": {},
-            }
+        config_path = exp.pd_params_path
 
-        config["embryos"][emb_name]["manual_widths"][peak_index] = peak_widths
-
-        with open(exp.pd_params_path, "w") as f:
-            json.dump(config, f, indent=4)
+        self.model.pf.save_peak_widths(config_path, emb_name, peak_widths, peak_index)
 
     def add_peak(self, x, y):
         exp = self.model.get_curr_experiment()
-
-        with open(exp.pd_params_path, "r") as f:
-            config = json.load(f)
-        if "embryos" not in config:
-            config["embryos"] = {}
-
-        wlen = 10
-
+        trace = self.model.get_curr_trace()
+        emb_name = self.model.curr_emb_name
         x = int(x / 6)
 
-        trace = self.model.get_curr_trace()
-        window = slice(x - wlen, x + wlen)
-        peak = local_peak_at(x, trace.order_zero_savgol[window], wlen)
+        peak, new_peaks = self.model.pf.add_peak(x, emb_name, exp.pd_params_path, trace)
+
         trace.to_add.append(peak)
-        new_arr = np.append(trace.peak_idxes, peak)
-        new_arr.sort()
-        trace.peak_idxes = new_arr
+        trace.peak_idxes = new_peaks
 
-        save_add_peak(self.model.curr_emb_name, config, peak, wlen)
+        self.render_trace()
 
-        with open(exp.pd_params_path, "w") as f:
-            json.dump(config, f, indent=4)
+    def remove_peak(self, x, y):
+        exp = self.model.get_curr_experiment()
+        trace = self.model.get_curr_trace()
+        emb_name = self.model.curr_emb_name
+        x = int(x / 6)
+
+        removed_peaks, new_peaks = self.model.pf.remove_peak(
+            x, emb_name, exp.pd_params_path, trace
+        )
+
+        trace.to_remove.extend(removed_peaks)
+        trace.peak_idxes = new_peaks
 
         self.render_trace()
 
@@ -461,17 +417,19 @@ class MainWindow(QMainWindow):
         """Repaints peaks for the trace currently being displayed.
 
         This funciton runs after any of the peak detection params sliders change."""
-        order_zero_min = self.order_zero_slider.value()
-        order_one_min = self.order_one_slider.value()
-        mpd = self.mpd_slider.value()
-        prominence = self.prominence_slider.value()
+
+        pd_params = self.collect_slider_params()
+
+        if pd_params is None:
+            exp = self.model.get_curr_experiment()
+            pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
 
         trace = self.model.get_curr_trace()
         trace.detect_peaks(
-            mpd,
-            order_zero_min,
-            order_one_min,
-            prominence,
+            pd_params["mpd"],
+            pd_params["order0_min"],
+            pd_params["order1_min"],
+            pd_params["prominence"],
         )
         self.render_trace()
 
@@ -481,34 +439,46 @@ class MainWindow(QMainWindow):
         self.render_trace()
         self.repaint_peaks()
 
-    def detect_peaks_all(self):
-        """Recalculates peak indices for all embryos.
+    def collect_slider_params(self):
+        # on 'combined exp' mode, the top_layout that hold the slider will be removed
+        if not self.top_layout:
+            return None
 
-        Persists peak detection params in `peak_detection_params.json`."""
-        order_zero_min = self.order_zero_slider.value()
-        order_one_min = self.order_one_slider.value()
+        order0_min = self.order_zero_slider.value()
+        order1_min = self.order_one_slider.value()
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
         peak_width = self.width_slider.value()
 
+        return {
+            "order0_min": float(order0_min),
+            "order1_min": float(order1_min),
+            "mpd": int(mpd),
+            "prominence": float(prominence),
+            "peak_width": float(peak_width),
+        }
+
+    def detect_peaks_all(self):
+        """Recalculates peak indices for all embryos.
+
+        Persists peak detection params in `peak_detection_params.json`."""
         exp = self.model.get_curr_experiment()
+
+        pd_params = self.collect_slider_params()
+
+        if pd_params is None:
+            pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
 
         for emb in exp.embryos.values():
             emb.trace.detect_peaks(
-                mpd,
-                order_zero_min,
-                order_one_min,
-                prominence,
+                pd_params["mpd"],
+                pd_params["order0_min"],
+                pd_params["order1_min"],
+                pd_params["prominence"],
             )
 
-        save_detection_params(
-            pd_params_path=exp.pd_params_path,
-            mpd=mpd,
-            order0_min=order_zero_min,
-            order1_min=order_one_min,
-            prominence=prominence,
-            peak_width=peak_width,
-        )
+        if pd_params:
+            self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
 
     def open_directory(self):
         self.model.set_initial_state()
@@ -588,24 +558,19 @@ class MainWindow(QMainWindow):
             return
 
         exp = self.model.get_curr_experiment()
-        pd_params = get_initial_values(exp.pd_params_path)
+        pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
 
-        self.mpd_slider.setValue(pd_params["mpd"])
-        self.mpd_slider.set_custom_slot(self.repaint_curr_emb)
-        self.mpd_slider.slider.sliderPressed.connect(self.started_dragging)
-        self.mpd_slider.slider.sliderReleased.connect(self.stopped_dragging)
-        self.order_zero_slider.setValue(pd_params["order0_min"])
-        self.order_zero_slider.set_custom_slot(self.repaint_curr_emb)
-        self.order_zero_slider.slider.sliderPressed.connect(self.started_dragging)
-        self.order_zero_slider.slider.sliderReleased.connect(self.stopped_dragging)
-        self.order_one_slider.setValue(pd_params["order1_min"])
-        self.order_one_slider.set_custom_slot(self.repaint_curr_emb)
-        self.order_one_slider.slider.sliderPressed.connect(self.started_dragging)
-        self.order_one_slider.slider.sliderReleased.connect(self.stopped_dragging)
-        self.prominence_slider.setValue(pd_params["prominence"])
-        self.prominence_slider.set_custom_slot(self.repaint_curr_emb)
-        self.prominence_slider.slider.sliderPressed.connect(self.started_dragging)
-        self.prominence_slider.slider.sliderReleased.connect(self.stopped_dragging)
+        for sld, name in (
+            (self.mpd_slider, "mpd"),
+            (self.order_zero_slider, "order0_min"),
+            (self.order_one_slider, "order1_min"),
+            (self.prominence_slider, "prominence"),
+        ):
+            sld.setValue(pd_params[name])
+            sld.set_custom_slot(self.repaint_curr_emb)
+            sld.slider.sliderPressed.connect(self.started_dragging)
+            sld.slider.sliderReleased.connect(self.stopped_dragging)
+
         # it's too costly to repaint all peak widths, so I wont update them as we drag
         # the width_slider
         self.width_slider.setValue(pd_params["peak_width"])
@@ -623,15 +588,21 @@ class MainWindow(QMainWindow):
         return [QBrush(QColor(*color)) for color in colors]
 
     def render_trace(self, emb_name=None, exp_name=None):
-        if emb_name and exp_name:
-            exp = self.model.get_experiment(exp_name)
-        if not exp_name:
-            exp = self.model.get_curr_experiment()
-            exp_name = exp.name
-        if not emb_name:
-            emb_name = self.model.curr_emb_name
+        """Renders the currently selected trace.
 
-        self.model.curr_emb_name = emb_name
+        Omitted values will be replaced by currently selected values in `self.model`.
+        For example, passing only an emb_name will select that emb from the current experiment.
+        """
+        if exp_name is None:
+            exp = self.model.get_curr_experiment()
+        else:
+            exp = self.model.get_experiment(exp_name)
+
+        if emb_name is None:
+            emb_name = self.model.curr_emb_name
+        else:
+            self.model.curr_emb_name = emb_name
+
         self.plot_widget.clear()
         self.plot_widget.show()
 
@@ -660,15 +631,15 @@ class MainWindow(QMainWindow):
         self.plot_widget.plot(time, dff)
 
         if self.model.has_combined_experiments():
-            self.plot_widget.setTitle(f"{exp_name} - {emb_name}")
+            self.plot_widget.setTitle(f"{exp.name} - {emb_name}")
         else:
             self.plot_widget.setTitle(emb_name)
 
         if not self.show_peak_widths or self.is_dragging_slider:
             return
         # paint peak widths
-        peak_width = self.width_slider.value()
-        trace.compute_peak_bounds(peak_width)
+        pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
+        trace.compute_peak_bounds(pd_params["peak_width"])
         peak_bounds = trace.peak_bounds_indices.flatten()
         if peak_bounds.size == 0:
             return

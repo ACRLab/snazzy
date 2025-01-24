@@ -1,10 +1,12 @@
 from copy import deepcopy
 
 from pasna_analysis import Experiment, Trace
+from pasna_analysis.gui.peak_finder import PeakFinder
 
 
 class Model:
     def __init__(self):
+        self.pf = PeakFinder()
         self.set_initial_state()
 
     def set_initial_state(self):
