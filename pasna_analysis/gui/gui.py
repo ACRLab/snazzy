@@ -438,6 +438,7 @@ class MainWindow(QMainWindow):
         self.detect_peaks_all()
         self.render_trace()
         self.repaint_peaks()
+        self.plot_all_traces()
 
     def collect_slider_params(self):
         # on 'combined exp' mode, the top_layout that hold the slider will be removed
@@ -511,6 +512,7 @@ class MainWindow(QMainWindow):
         self.plot_all_traces()
 
     def plot_all_traces(self):
+        self.clear_layout(self.graph_layout)
         group = self.model.get_filtered_group()
         self.scatter_items = {}
         for exp_name, exp in group.items():
@@ -524,6 +526,15 @@ class MainWindow(QMainWindow):
 
                 peak_amps = trace.peak_amplitudes
                 peak_times = trace.peak_times
+
+                if trace.to_add or trace.to_remove:
+                    ttad = np.array([*trace.to_add, *trace.to_remove])
+                    manual_times = time[ttad]
+                    manual_amps = dff[ttad]
+                    manual_scatter = pg.ScatterPlotItem(
+                        manual_times, manual_amps, size=10, brush=QColor("cyan")
+                    )
+                    plot_widget.addItem(manual_scatter)
 
                 scatter_plot_item = pg.ScatterPlotItem(
                     size=8,
