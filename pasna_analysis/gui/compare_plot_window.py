@@ -73,7 +73,7 @@ class ComparePlotWindow(QWidget):
         self.ax.set_title("Developmental times at first peak")
         self.ax.set_ylabel("Dev time")
         self.ax.set_xlabel("Group")
-        # self.canvas.draw()
+        self.canvas.draw()
 
     def cdf_dt(self):
         """Cummulative distribution function of peak developmental times."""
