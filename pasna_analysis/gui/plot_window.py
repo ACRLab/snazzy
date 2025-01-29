@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
@@ -5,7 +7,7 @@ import numpy as np
 import seaborn as sns
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 from pasna_analysis import Experiment, utils
 
@@ -17,22 +19,50 @@ class PlotWindow(QWidget):
     def __init__(self, group: dict[str, Experiment], group_name: str):
         super().__init__()
 
+        self.group = group
         self.embryos = [emb for exp in group.values() for emb in exp.embryos.values()]
 
         self.setWindowTitle(f"Plots - {group_name}")
 
-        layout = QHBoxLayout()
+        layout = QVBoxLayout()
+        self.save_all_btn = QPushButton("Save all plots")
+        self.save_all_btn.clicked.connect(self.save_all_plots)
+        layout.addWidget(self.save_all_btn)
+
+        plots_container = QHBoxLayout()
+        layout.addLayout(plots_container)
+
         self.sidebar = QVBoxLayout()
         self.sidebar.setAlignment(Qt.AlignmentFlag.AlignTop)
-        layout.addLayout(self.sidebar)
+        plots_container.addLayout(self.sidebar)
 
         self.canvas = FigureCanvasQTAgg(Figure(figsize=(5, 4)))
         self.ax = self.canvas.figure.subplots()
 
-        layout.addWidget(self.canvas)
+        plots_container.addWidget(self.canvas)
         self.setLayout(layout)
 
+        self.btns = {
+            "Peaks": self.plot_peaks,
+            "Area Under the Curve": self.plot_AUC,
+        }
+
         self.create_buttons()
+
+    def save_all_plots(self):
+        for exp in self.group.values():
+            exp_dir = exp.pd_params_path.parent
+            timestamp = datetime.now().strftime("%m%d%Y_%H:%M:%S")
+            save_path = exp_dir / "plots" / timestamp
+            save_path.mkdir(parents=True, exist_ok=True)
+
+            for plot_fn in self.btns.values():
+                plot_fn(save=True, save_dir=save_path)
+
+        notification = QMessageBox(self)
+        notification.setWindowTitle("Save plots")
+        notification.setText("All plots were saved.")
+        notification.exec()
 
     def create_buttons(self):
         """Populates buttons in the sidebar.
@@ -40,18 +70,13 @@ class PlotWindow(QWidget):
         `btns` should receive a dict[str, Callable], where the str is the btn
         text and Callable is a function that adds a plot to `self.ax`.
         """
-        btns = {
-            "Peaks": self.plot_peaks,
-            "Area Under the Curve": self.plot_AUC,
-        }
-
-        for label, fn in btns.items():
+        for label, fn in self.btns.items():
             button = QPushButton(label)
             button.clicked.connect(fn)
             button.setMaximumWidth(150)
             self.sidebar.addWidget(button)
 
-    def plot_peaks(self):
+    def plot_peaks(self, save=False, save_dir=None):
         """Peak times for all embryos.
 
         Embryos are represented as horizontal lines."""
@@ -69,9 +94,15 @@ class PlotWindow(QWidget):
         self.ax.set_xlabel("time (mins)")
         self.ax.set_ylabel("emb")
         self.ax.set_yticks([])
-        self.canvas.draw()
 
-    def plot_AUC(self):
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "peak_times.png")
+
+    def plot_AUC(self, save=False, save_dir=None):
         """Binned area under the curve."""
         self.ax.clear()
         data = {"auc": [], "bin": [], "emb": []}
@@ -97,4 +128,10 @@ class PlotWindow(QWidget):
         self.ax.set_xticks(ticks=list(range(n_bins)), labels=x_labels)
         self.ax.set_title(f"Binned AUC")
         self.ax.set_ylabel("AUC [activity*t]")
-        self.canvas.draw()
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "area_under_curve.png")
