@@ -13,7 +13,7 @@ dependencies:
   - tifffile=2024.12.12
   - pip:
     - ipympl==0.9.4
-    - ipyhton-genutils==0.2.0
+    - ipython-genutils==0.2.0
     - pyqt6==6.8.0
     - pyqt6-qt6==6.8.1
     - pyqt6-sip==13.9.1
