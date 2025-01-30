@@ -129,7 +129,9 @@ class ImageSequenceViewer(QWidget):
         image = self.images[frame_index]
 
         height, width = image.shape
-        q_image = QImage(image.data, width, height, QImage.Format.Format_Grayscale8)
+        q_image = QImage(
+            image.data, width, height, width, QImage.Format.Format_Grayscale8
+        )
         pixmap = QPixmap.fromImage(q_image)
 
         self.image_label.setPixmap(pixmap)
