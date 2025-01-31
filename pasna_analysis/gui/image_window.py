@@ -36,6 +36,16 @@ class ImageWindow(QWidget):
         self.setLayout(layout)
 
 
+def normalize_16bit_to_8bit(img: np.ndarray, lower_p=0.25, upper_p=99.75) -> np.ndarray:
+    """Converts a nparray from 16 bit to 8 bit, clipping outliers in the upper
+    and lower percentiles."""
+    min_val = np.percentile(img, lower_p)
+    max_val = np.percentile(img, upper_p)
+    img = np.clip(img, min_val, max_val)
+    normalized_img = (img - min_val) / (max_val - min_val) * 255
+    return normalized_img.astype(np.uint8)
+
+
 class ImageSequenceViewer(QWidget):
     def __init__(self, directory: Path, exp: Experiment):
         super().__init__()
@@ -75,8 +85,7 @@ class ImageSequenceViewer(QWidget):
         self.data = self.dff_traces[full_path.stem[:-4]]
 
         img = tifffile.imread(full_path)
-        normalized_img = (img - img.min()) / (img.max() - img.min()) * 255
-        self.images = normalized_img.astype(np.uint8)
+        self.images = normalize_16bit_to_8bit(img)
 
         self.clear_file_selector()
 
