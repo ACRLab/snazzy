@@ -10,6 +10,12 @@ from PyQt6.QtWidgets import (
 )
 
 
+def sort_by_emb_number(emb: str):
+    if not emb.startswith("emb"):
+        raise ValueError(f"Emb names must start with 'emb'. Received: {emb}")
+    return int(emb[3:])
+
+
 class FixedSidebar(QWidget):
     def __init__(
         self, exp_to_embs: dict[str, str], callback: Callable[[str, str | None], None]
@@ -26,7 +32,7 @@ class FixedSidebar(QWidget):
 
     def populate_buttons(self, exp_to_embs, layout):
         for exp in exp_to_embs:
-            for emb in exp_to_embs[exp]:
+            for emb in sorted(exp_to_embs[exp], key=sort_by_emb_number):
                 row_layout = QHBoxLayout()
                 row_layout.setSpacing(0)
                 btn = QPushButton(f"{exp} - {emb}")
@@ -73,7 +79,7 @@ class RemovableSidebar(QWidget):
 
     def populate_buttons(self, labels, layout, is_accepted):
         """Populate buttons into the given layout."""
-        for label in labels:
+        for label in sorted(labels, key=sort_by_emb_number):
             row_layout = QHBoxLayout()
             btn = QPushButton(label)
             btn.clicked.connect(lambda checked, name=label: self.callback(name, None))
