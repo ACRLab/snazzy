@@ -84,12 +84,18 @@ class Trace:
 
     @property
     def peak_rise_times(self):
-        start_times = self.peak_bounds_times[:, 0]
+        try:
+            start_times = self.peak_bounds_times[:, 0]
+        except IndexError:
+            return []
         return self.peak_times - start_times
 
     @property
     def peak_decay_times(self):
-        end_times = self.peak_bounds_times[:, 1]
+        try:
+            end_times = self.peak_bounds_times[:, 1]
+        except IndexError:
+            return []
         return end_times - self.peak_times
 
     @property
@@ -324,8 +330,11 @@ class Trace:
         """Returns times at peak boundaries as a 2D nparray of shape (N, 2),
         where the inner dim represents [start_time, end_time] and N is the
         number of peaks."""
-        start_idxs = self.peak_bounds_indices[:, 0]
-        end_idxs = self.peak_bounds_indices[:, 1]
+        try:
+            start_idxs = self.peak_bounds_indices[:, 0]
+            end_idxs = self.peak_bounds_indices[:, 1]
+        except IndexError:
+            return np.array([])
 
         bound_times = np.vstack((self.time[start_idxs], self.time[end_idxs])).T
         return bound_times

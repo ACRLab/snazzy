@@ -47,6 +47,7 @@ class ComparePlotWindow(QWidget):
             "Peak amplitudes by episode": self.peak_amplitudes_by_ep,
             "Dev time by episode": self.dt_by_ep,
             "Episode intervals": self.ep_intervals,
+            "Episode durations": self.ep_durations,
             "Decay times": self.decay_times,
             "Average spectrograms": self.average_spectrogram,
         }
@@ -87,6 +88,8 @@ class ComparePlotWindow(QWidget):
         for group_name, group in self.groups.items():
             for exp in group.values():
                 for emb in exp.embryos.values():
+                    if emb.trace.peak_times.size == 0:
+                        continue
                     time_first_peak = emb.trace.peak_times[0]
                     dev_time_first_peak = emb.get_DT_from_time(time_first_peak)
                     data["dev_fp"].append(dev_time_first_peak)
@@ -310,3 +313,32 @@ class ComparePlotWindow(QWidget):
             if save_dir is None:
                 raise ValueError("Cannot save the image: path to save not provided.")
             self.canvas.print_figure(save_dir / "average_spectrogram.png")
+
+    def ep_durations(self, save=False, save_dir=None):
+        """Duration of each episode."""
+        self.clear_axes()
+        data = {"group": [], "duration": [], "idx": []}
+
+        for group_name, group in self.groups.items():
+            for exp in group.values():
+                for emb in exp.embryos.values():
+                    for i, duration in zip(range(15), emb.trace.peak_durations):
+                        data["group"].append(group_name)
+                        data["duration"].append(duration / 60)
+                        data["idx"].append(i)
+
+        ax = sns.pointplot(
+            data=data, x="idx", y="duration", hue="group", linestyle="None", ax=self.ax
+        )
+
+        ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
+        ax.set_title("Durations by peak")
+        ax.set_xlabel("Peak #")
+        ax.set_ylabel("Duration (min)")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "peak_durations.png")
