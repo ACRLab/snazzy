@@ -71,6 +71,7 @@ class ComparePlotWindow(QWidget):
         notification.exec()
 
     def clear_axes(self, rows=1, cols=1):
+        """Clears the canvas and creates a new axes object for a new plot."""
         self.canvas.figure.clear()
         self.ax = self.canvas.figure.subplots(rows, cols)
 
@@ -96,7 +97,15 @@ class ComparePlotWindow(QWidget):
                     data["dev_fp"].append(dev_time_first_peak)
                     data["group"].append(group_name)
 
-        sns.swarmplot(data=data, x="group", y="dev_fp", hue="group", size=7, ax=self.ax)
+        sns.swarmplot(
+            data=data,
+            x="group",
+            y="dev_fp",
+            hue="group",
+            size=7,
+            legend="brief",
+            ax=self.ax,
+        )
 
         self.ax.set_title("Developmental times at first peak")
         self.ax.set_ylabel("Dev time")
