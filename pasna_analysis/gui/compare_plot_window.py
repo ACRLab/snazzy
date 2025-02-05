@@ -49,6 +49,7 @@ class ComparePlotWindow(QWidget):
             "Episode intervals": self.ep_intervals,
             "Episode durations": self.ep_durations,
             "Decay times": self.decay_times,
+            "Rise times": self.rise_times,
             "Average spectrograms": self.average_spectrogram,
         }
         self.create_buttons()
@@ -231,7 +232,9 @@ class ComparePlotWindow(QWidget):
             self.canvas.print_figure(save_dir / "episode_intervals.png")
 
     def decay_times(self, save=False, save_dir=None):
-        """Decay times"""
+        """Decay times.
+
+        Time between the peak time and end of the peak (right peak width boundary)."""
         self.clear_axes()
         data = {"group": [], "decay_times": [], "idx": []}
 
@@ -240,7 +243,7 @@ class ComparePlotWindow(QWidget):
                 for emb in exp.embryos.values():
                     for i, decay in zip(range(15), emb.trace.peak_decay_times):
                         data["group"].append(group_name)
-                        data["decay_times"].append(decay)
+                        data["decay_times"].append(decay / 60)
                         data["idx"].append(i)
 
         sns.pointplot(
@@ -335,6 +338,37 @@ class ComparePlotWindow(QWidget):
         ax.set_title("Durations by peak")
         ax.set_xlabel("Peak #")
         ax.set_ylabel("Duration (min)")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "peak_durations.png")
+
+    def rise_times(self, save=False, save_dir=None):
+        """Peak rise times.
+
+        Time between the start of the peak (left width boundary) and the peak time."""
+        self.clear_axes()
+        data = {"group": [], "duration": [], "idx": []}
+
+        for group_name, group in self.groups.items():
+            for exp in group.values():
+                for emb in exp.embryos.values():
+                    for i, duration in zip(range(15), emb.trace.peak_rise_times):
+                        data["group"].append(group_name)
+                        data["duration"].append(duration)
+                        data["idx"].append(i)
+
+        ax = sns.pointplot(
+            data=data, x="idx", y="duration", hue="group", linestyle="None", ax=self.ax
+        )
+
+        ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
+        ax.set_title("Rise times")
+        ax.set_xlabel("Peak #")
+        ax.set_ylabel("Duration (s)")
 
         if not save:
             self.canvas.draw()
