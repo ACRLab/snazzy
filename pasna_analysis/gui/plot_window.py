@@ -36,7 +36,7 @@ class PlotWindow(QWidget):
         self.sidebar.setAlignment(Qt.AlignmentFlag.AlignTop)
         plots_container.addLayout(self.sidebar)
 
-        self.canvas = FigureCanvasQTAgg(Figure(figsize=(5, 4)))
+        self.canvas = FigureCanvasQTAgg(Figure(figsize=(10, 6), layout="constrained"))
         self.ax = self.canvas.figure.subplots()
 
         plots_container.addWidget(self.canvas)
@@ -87,9 +87,11 @@ class PlotWindow(QWidget):
             times.append(
                 [t / 60 for t in trace.peak_times if t < trace.time[trace.trim_idx]]
             )
+        emb_names = [emb.name for emb in self.embryos]
         style = {"marker": ".", "linestyle": "dashed", "linewidth": 0.5}
-        for i, time in enumerate(times):
-            self.ax.plot(time, [i] * len(time), **style)
+        for emb_name, (i, time) in zip(emb_names, enumerate(times)):
+            self.ax.plot(time, [i] * len(time), label=emb_name, **style)
+        self.ax.legend()
         self.ax.set_title(f"Peak times")
         self.ax.set_xlabel("time (mins)")
         self.ax.set_ylabel("emb")
