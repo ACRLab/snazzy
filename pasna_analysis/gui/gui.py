@@ -22,7 +22,6 @@ from PyQt6.QtWidgets import (
 )
 import pyqtgraph as pg
 
-from pasna_analysis import Experiment
 from pasna_analysis.gui import (
     ComparePlotWindow,
     FixedSidebar,
@@ -61,6 +60,44 @@ class MainWindow(QMainWindow):
         placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(placeholder)
 
+    def _open_directory(self, is_new_group=True):
+        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        if not directory:
+            return
+        directory = Path(directory)
+
+        group_name = None
+        if is_new_group:
+            group_name, ok = QInputDialog.getText(self, "New Group", "Group Name:")
+            if not ok:
+                return
+            if not group_name:
+                group_name = f"group{len(self.model.groups) + 1}"
+            self.model.add_group(group_name)
+
+        try:
+            self.model.create_experiment(directory, group_name)
+        except (FileNotFoundError, AssertionError):
+            self.show_error_message(f"Could not read data from {directory}")
+            return
+
+        self.clear_layout()
+        self.add_experiment_action.setEnabled(True)
+        self.compare_experiment_action.setEnabled(True)
+        self.paint_main_view()
+        self.render_trace()
+        self.plot_all_traces()
+
+    def open_directory(self):
+        self.model.set_initial_state()
+        self._open_directory()
+
+    def compare_experiments(self):
+        self._open_directory()
+
+    def add_experiment(self):
+        self._open_directory(is_new_group=False)
+
     def change_group(self, i):
         self.model.set_curr_group(self.group_combo_box.itemText(i))
 
@@ -68,40 +105,6 @@ class MainWindow(QMainWindow):
         self.paint_graphs()
         self.render_trace()
         self.plot_all_traces()
-
-    def compare_experiments(self):
-        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if not directory:
-            return
-        directory = Path(directory)
-
-        group_name, ok = QInputDialog.getText(self, "Enter Group Name", "Group Name:")
-        if not ok:
-            return
-        if not group_name:
-            group_name = f"group{len(self.models) + 1}"
-
-        try:
-            exp = Experiment(
-                directory,
-                first_peak_threshold=0,
-                to_exclude=[],
-                dff_strategy="local_minima",
-            )
-        except (FileNotFoundError, AssertionError):
-            self.show_error_message(f"Could not read data from {directory}")
-            return
-
-        self.model.add_group(group_name)
-        self.model.add_experiment(exp, group_name)
-
-        self.clear_layout(self.top_app_bar)
-        self.paint_top_app_bar()
-        self.clear_layout(self.top_layout)
-        self.paint_controls()
-
-    def add_experiment(self):
-        self._open_directory()
 
     def display_plots(self):
         group = self.model.get_filtered_group()
@@ -156,12 +159,7 @@ class MainWindow(QMainWindow):
 
             return select_group
 
-        curr_group = self.model.get_curr_group()
-        if len(curr_group) > 1:
-            label_text = f"Group: {'-'.join(curr_group.keys())}"
-            return QLabel(label_text)
-        curr_exp = self.model.get_curr_experiment()
-        label_text = f"Experiment: {curr_exp.name}"
+        label_text = self.model.curr_group
         return QLabel(label_text)
 
     def paint_top_app_bar(self):
@@ -481,36 +479,6 @@ class MainWindow(QMainWindow):
 
         if pd_params:
             self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
-
-    def open_directory(self):
-        self.model.set_initial_state()
-        self._open_directory()
-
-    def _open_directory(self):
-        directory = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if not directory:
-            return
-        directory = Path(directory)
-        self.clear_layout()
-
-        try:
-            exp = Experiment(
-                directory,
-                first_peak_threshold=0,
-                to_exclude=[],
-                dff_strategy="local_minima",
-            )
-        except (FileNotFoundError, AssertionError):
-            self.show_error_message(f"Could not read data from {directory}")
-            return
-
-        self.model.add_experiment(exp)
-
-        self.add_experiment_action.setEnabled(True)
-        self.compare_experiment_action.setEnabled(True)
-        self.paint_main_view()
-        self.render_trace()
-        self.plot_all_traces()
 
     def plot_all_traces(self):
         self.clear_layout(self.graph_layout)
