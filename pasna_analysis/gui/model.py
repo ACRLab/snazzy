@@ -10,18 +10,24 @@ class Model:
         self.set_initial_state()
 
     def set_initial_state(self):
-        self.groups: dict[str, dict[str, Experiment]] = {"group1": {}}
-        self.curr_group = "group1"
+        self.groups: dict[str, dict[str, Experiment]] = {}
+        self.curr_group = None
         self.to_remove = {}
         self.curr_exp = None
         self.curr_emb_name = None
 
-    def add_experiment(self, experiment: Experiment, group=None):
+    def create_experiment(self, directory, group_name):
+        exp = Experiment(
+            directory,
+            first_peak_threshold=0,
+            to_exclude=[],
+            dff_strategy="local_minima",
+        )
+        self.add_experiment(exp, group_name)
+
+    def add_experiment(self, experiment: Experiment, group: str):
         if group is None:
             group = self.curr_group
-
-        if group not in self.groups:
-            raise ValueError("Group not found.")
 
         if experiment in self.groups[group]:
             raise ValueError("Experiment already added to this group.")
@@ -88,6 +94,8 @@ class Model:
 
     def add_group(self, group):
         self.groups[group] = {}
+        if self.curr_group is None:
+            self.curr_group = group
 
     def has_combined_experiments(self):
         return len(self.get_curr_group()) > 1
