@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 
 import numpy as np
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThreadPool
 from PyQt6.QtGui import QAction, QBrush, QColor, QKeySequence, QPen
 from PyQt6.QtWidgets import (
     QApplication,
@@ -30,6 +30,7 @@ from pasna_analysis.gui import (
     InteractivePlotWidget,
     LabeledSlider,
     Model,
+    Worker,
     PlotWindow,
     RemovableSidebar,
 )
@@ -45,6 +46,7 @@ class MainWindow(QMainWindow):
         self.is_dragging_slider = False
         self.color_mode = False
         self.brushes = [QBrush(pg.mkColor("m"))]
+        self.threadpool = QThreadPool()
 
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
@@ -56,9 +58,11 @@ class MainWindow(QMainWindow):
         self.layout = QVBoxLayout()
         central_widget.setLayout(self.layout)
 
-        placeholder = QLabel("To get started, open a directory with pasnascope output.")
-        placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(placeholder)
+        self.placeholder = QLabel(
+            "To get started, open a directory with pasnascope output."
+        )
+        self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.layout.addWidget(self.placeholder)
 
     def _open_directory(self, is_new_group=True):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -76,11 +80,28 @@ class MainWindow(QMainWindow):
             self.model.add_group(group_name)
 
         try:
-            self.model.create_experiment(directory, group_name)
-        except (FileNotFoundError, AssertionError):
-            self.show_error_message(f"Could not read data from {directory}")
-            return
+            self.placeholder.setText("Loading data..")
+            self.placeholder.repaint()
+        except RuntimeError:
+            pass
 
+        worker = Worker(
+            self.model.create_experiment, directory=directory, group_name=group_name
+        )
+        worker.signals.result.connect(self.update_UI)
+        worker.signals.error.connect(self.handle_open_err)
+        self.threadpool.start(worker)
+
+    def handle_open_err(self, err: Exception):
+        try:
+            self.placeholder.setText(
+                "To get started, open a directory with pasnascope output."
+            )
+        except RuntimeError:
+            pass
+        self.show_error_message(str(err))
+
+    def update_UI(self):
         self.clear_layout()
         self.add_experiment_action.setEnabled(True)
         self.compare_experiment_action.setEnabled(True)
