@@ -23,7 +23,9 @@ class DataLoader:
         required_dirs = ["activity", "lengths"]
         required_files = ["full-length.csv"]
         paths = ((self.path / f) for f in required_dirs + required_files)
-        assert all(path.exists() for path in paths)
+        assert all(
+            path.exists() for path in paths
+        ), "Could not find expected files. Is this really a directory from `pasnascope`?"
 
     def embryos(self) -> list[str]:
         """Returns a list of available embryos."""
