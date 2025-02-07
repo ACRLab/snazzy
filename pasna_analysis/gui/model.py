@@ -1,22 +1,40 @@
 from copy import deepcopy
+import traceback
+import sys
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QObject, QRunnable
 
 from pasna_analysis import Experiment, Trace
 from pasna_analysis.gui.peak_finder import PeakFinder
 
 
-class Worker(QThread):
+class WorkerSignals(QObject):
+    finished = pyqtSignal()
+    error = pyqtSignal(object)
+    result = pyqtSignal(object)
+
+
+class Worker(QRunnable):
     finished = pyqtSignal()
 
-    def run(self, directory):
-        exp = Experiment(
-            directory,
-            first_peak_threshold=0,
-            to_exclude=[],
-            dff_strategy="local_minima",
-        )
-        return exp
+    def __init__(self, fn, *args, **kwargs):
+        super().__init__()
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+
+    def run(self):
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except Exception:
+            traceback.print_exc()
+            value = sys.exc_info()[1]
+            self.signals.error.emit(value)
+        else:
+            self.signals.result.emit(result)
+        finally:
+            self.signals.finished.emit()
 
 
 class Model:
@@ -32,10 +50,14 @@ class Model:
         self.curr_emb_name = None
 
     def create_experiment(self, directory, group_name):
-        self.worker = Worker()
-        exp = self.worker.run(directory)
+        exp = Experiment(
+            directory,
+            first_peak_threshold=0,
+            to_exclude=[],
+            dff_strategy="local_minima",
+        )
         self.add_experiment(exp, group_name)
-        self.worker = None
+        return exp
 
     def add_experiment(self, experiment: Experiment, group: str):
         if group is None:
