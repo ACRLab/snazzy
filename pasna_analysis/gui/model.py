@@ -1,7 +1,22 @@
 from copy import deepcopy
 
+from PyQt6.QtCore import QThread, pyqtSignal
+
 from pasna_analysis import Experiment, Trace
 from pasna_analysis.gui.peak_finder import PeakFinder
+
+
+class Worker(QThread):
+    finished = pyqtSignal()
+
+    def run(self, directory):
+        exp = Experiment(
+            directory,
+            first_peak_threshold=0,
+            to_exclude=[],
+            dff_strategy="local_minima",
+        )
+        return exp
 
 
 class Model:
@@ -17,13 +32,10 @@ class Model:
         self.curr_emb_name = None
 
     def create_experiment(self, directory, group_name):
-        exp = Experiment(
-            directory,
-            first_peak_threshold=0,
-            to_exclude=[],
-            dff_strategy="local_minima",
-        )
+        self.worker = Worker()
+        exp = self.worker.run(directory)
         self.add_experiment(exp, group_name)
+        self.worker = None
 
     def add_experiment(self, experiment: Experiment, group: str):
         if group is None:
