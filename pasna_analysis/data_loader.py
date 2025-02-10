@@ -51,17 +51,6 @@ class DataLoader:
         l = next((e for e in self.lengths() if e.stem == emb), None)
         return a, l
 
-    def peak_detection_props(self) -> None | dict:
-        """Reads peak detection params that were added by the user."""
-        if self.peak_props_path.exists():
-            print("Found peak detection params.json")
-            with open(self.peak_props_path, "r") as f:
-                try:
-                    return json.load(f)
-                except json.JSONDecodeError as e:
-                    print("Could not read `peak_detection_params.json`.")
-                    raise e
-
 
 def emb_id(emb: Path | str) -> int:
     """Assumes that embryos are always named as emb + id, e.g: `emb21`."""
