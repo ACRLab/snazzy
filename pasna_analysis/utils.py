@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+from pathlib import Path
 import scipy as sp
 import seaborn as sns
 
@@ -120,3 +121,12 @@ def time_scale_list(upper_limit):
     if type(upper_limit) is not int:
         upper_limit = int(upper_limit)
     return list(range(0, upper_limit, 60))
+
+
+def emb_id(emb: Path | str) -> int:
+    """Retuns the number that identifies a given embryos.
+
+    Assumes that embryos are always named as emb + id, e.g: `emb21`."""
+    if isinstance(emb, Path):
+        emb = emb.stem
+    return int(emb[3:])
