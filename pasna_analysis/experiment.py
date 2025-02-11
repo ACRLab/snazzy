@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from pasna_analysis import DataLoader, Embryo
+from pasna_analysis import DataLoader, Embryo, utils
 
 
 class Experiment:
@@ -38,7 +38,7 @@ class Experiment:
 
         for act_path, len_path in zip(act_paths, len_paths):
             emb_name = act_path.stem
-            emb_id = int(emb_name[3:])
+            emb_id = utils.emb_id(emb_name)
             if emb_id in to_exclude:
                 continue
 
@@ -51,7 +51,7 @@ class Experiment:
             )
 
             try:
-                if emb.trace.get_first_peak_time() <= self.first_peak_threshold:
+                if emb.trace.get_first_peak_time() <= self.first_peak_threshold * 60:
                     print(
                         f"First peak detected before {self.first_peak_threshold} mins.",
                         f"Skipping {emb.name}..",
