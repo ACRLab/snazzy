@@ -5,7 +5,22 @@ from pasna_analysis import DataLoader, Embryo, utils
 
 
 class Experiment:
-    """Encapsulates data about all embryos for a given experiment."""
+    """Encapsulates data about all embryos for a given experiment.
+
+    Attributes
+    ----------
+    exp_path: Path
+        Path with `pasnascope` output.
+    first_peak_threshold: int
+        Minimum time, in minutes, for the first peak. Embryos with peaks before that
+    will be ignored.
+    to_exclude: Optional[list[int]]
+        List of embryo ids to be excluded. To exclude emb1 pass [1], for example.
+    dff_strategy: baseline | local_minima
+        How to compute the dff baseline.
+    has_transients: boolean
+        If an experiment has transients, early peaks will be skipped.
+    """
 
     def __init__(
         self,
