@@ -6,8 +6,8 @@ from pasna_analysis import utils
 class DataLoader:
     """Used to access data about the current experiment.
 
-    Params:
-    -------
+    Attributes
+    ----------
     path: Path
         The path that contains the `pasnascope` output. Must follow the folder\
         structure described in this project's README.
