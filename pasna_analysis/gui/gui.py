@@ -47,6 +47,7 @@ class MainWindow(QMainWindow):
         self.color_mode = False
         self.brushes = [QBrush(pg.mkColor("m"))]
         self.threadpool = QThreadPool()
+        self.use_dev_time = False
 
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
@@ -212,6 +213,18 @@ class MainWindow(QMainWindow):
         self.clear_manual_data_btn = QPushButton("Clear manual data")
         self.clear_manual_data_btn.clicked.connect(self.clear_manual_data)
         self.top_app_bar.addWidget(self.clear_manual_data_btn)
+
+        self.toggle_dev_time_btn = QPushButton("Dev time")
+        self.toggle_dev_time_btn.clicked.connect(self.toggle_dev_time)
+        self.top_app_bar.addWidget(self.toggle_dev_time_btn)
+
+    def toggle_dev_time(self):
+        self.use_dev_time = not self.use_dev_time
+        if self.use_dev_time:
+            self.toggle_dev_time_btn.setText("Time")
+        else:
+            self.toggle_dev_time_btn.setText("Dev time")
+        self.update_all_embs()
 
     def toggle_color_mode(self):
         self.color_mode = not self.color_mode
@@ -409,7 +422,13 @@ class MainWindow(QMainWindow):
         exp = self.model.get_curr_experiment()
         trace = self.model.get_curr_trace()
         emb_name = self.model.curr_emb_name
-        x = int(x / 6)
+
+        if self.use_dev_time:
+            dev_time = exp.embryos[emb_name].lin_developmental_time()
+            idx = np.searchsorted(dev_time, x) - 1
+            x = int(idx)
+        else:
+            x = int(x / 6)
 
         peak, new_peaks = self.model.pf.add_peak(x, emb_name, exp.pd_params_path, trace)
 
@@ -422,7 +441,13 @@ class MainWindow(QMainWindow):
         exp = self.model.get_curr_experiment()
         trace = self.model.get_curr_trace()
         emb_name = self.model.curr_emb_name
-        x = int(x / 6)
+
+        if self.use_dev_time:
+            dev_time = exp.embryos[emb_name].lin_developmental_time()
+            idx = np.searchsorted(dev_time, x) - 1
+            x = int(idx)
+        else:
+            x = int(x / 6)
 
         removed_peaks, new_peaks = self.model.pf.remove_peak(
             x, emb_name, exp.pd_params_path, trace
@@ -511,11 +536,15 @@ class MainWindow(QMainWindow):
                 plot_widget.setMinimumHeight(200)
 
                 trace = emb.trace
-                time = trace.time[: trace.trim_idx]
+                if self.use_dev_time:
+                    dev_time = emb.lin_developmental_time()
+                    time = dev_time[: trace.trim_idx]
+                else:
+                    time = trace.time[: trace.trim_idx]
                 dff = trace.dff[: trace.trim_idx]
 
                 peak_amps = trace.peak_amplitudes
-                peak_times = trace.peak_times
+                peak_times = time[trace.peak_idxes]
 
                 if trace.to_add or trace.to_remove:
                     ttad = np.array([*trace.to_add, *trace.to_remove])
@@ -607,12 +636,18 @@ class MainWindow(QMainWindow):
         self.plot_widget.clear()
         self.plot_widget.show()
 
-        trace = exp.embryos[emb_name].trace
-        time = trace.time[: trace.trim_idx]
+        embryo = exp.embryos[emb_name]
+        trace = embryo.trace
+        if self.use_dev_time:
+            dev_time = embryo.lin_developmental_time()
+            time = dev_time[: trace.trim_idx]
+        else:
+            time = trace.time[: trace.trim_idx]
         dff = trace.dff[: trace.trim_idx]
 
-        peak_times = trace.peak_times
+        peak_times = time[trace.peak_idxes]
         peak_amps = trace.peak_amplitudes
+
         # paint peaks
         brushes = [self.brushes[i % len(self.brushes)] for i in range(len(peak_times))]
         scatter_plot_item = pg.ScatterPlotItem(
