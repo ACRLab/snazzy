@@ -38,6 +38,13 @@ class Embryo:
             has_transients=has_transients,
             pd_props_path=pd_props_path,
         )
+        self._lin_dev_time = None
+
+    @property
+    def lin_developmental_time(self):
+        if self._lin_dev_time is None:
+            return self.lin_developmental_time()
+        return self._lin_dev_time
 
     def import_data(self, csv_path: Path) -> np.ndarray:
         return np.loadtxt(csv_path, delimiter=",", skiprows=1)
@@ -52,7 +59,8 @@ class Embryo:
         vnc_time = self.vnc_length[:, 0]
         linear_fit = Polynomial.fit(x=vnc_time, y=self.developmental_time(), deg=1)
         activity_time = self.activity[:, 0]
-        return linear_fit(activity_time)
+        self._lin_dev_time = linear_fit(activity_time)
+        return self._lin_dev_time
 
     def get_DT_from_time(self, time: np.ndarray | float) -> np.ndarray | float:
         """Returns the estimated (by linear interpolation) developmental time
