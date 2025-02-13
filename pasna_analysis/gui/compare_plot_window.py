@@ -44,6 +44,7 @@ class ComparePlotWindow(QWidget):
         self.btns = {
             "Dev times at first peak": self.dt_first_peak,
             "Dev times when hatching": self.dt_hatching,
+            "Number of episodes": self.num_episodes,
             "CDF of developmental peak times": self.cdf_dt,
             "Peak amplitudes by episode": self.peak_amplitudes_by_ep,
             "Dev time by episode": self.dt_by_ep,
@@ -153,6 +154,30 @@ class ComparePlotWindow(QWidget):
             if save_dir is None:
                 raise ValueError("Cannot save the image: path to save not provided.")
             self.canvas.print_figure(save_dir / "dt_hatching.png")
+
+    def num_episodes(self, save=False, save_dir=None):
+        """Number of episodes"""
+        self.clear_axes()
+        data = {"group": [], "num_eps": []}
+
+        for group_name, group in self.groups.items():
+            for exp in group.values():
+                for emb in exp.embryos.values():
+                    trace = emb.trace
+                    data["group"].append(group_name)
+                    data["num_eps"].append(len(trace.peak_idxes))
+
+        ax = sns.swarmplot(data=data, x="group", y="num_eps", hue="group", ax=self.ax)
+        ax.set_title("Number of episodes")
+        ax.set_ylabel("# eps")
+        ax.set_xlabel("Group")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "num_episodes.png")
 
     def cdf_dt(self, save=False, save_dir=None):
         """Cummulative distribution function of peak developmental times."""
