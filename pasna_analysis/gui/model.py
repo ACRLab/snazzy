@@ -45,7 +45,7 @@ class Model:
     def set_initial_state(self):
         self.groups: dict[str, dict[str, Experiment]] = {}
         self.curr_group = None
-        self.to_remove = {}
+        self.to_remove: dict[str, set] = {}
         self.curr_exp = None
         self.curr_emb_name = None
 
@@ -57,6 +57,8 @@ class Model:
             dff_strategy="local_minima",
         )
         self.add_experiment(exp, group_name)
+        pd_params = self.pf.get_pd_params(exp.pd_params_path)
+        self.to_remove[exp.name] = set(pd_params.get("to_remove", []))
         return exp
 
     def add_experiment(self, experiment: Experiment, group: str):
