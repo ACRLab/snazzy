@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
 
         self.model = Model()
         self.moveable_width_bars = False
-        self.show_peak_widths = True
+        self.show_peak_widths = False
         self.is_dragging_slider = False
         self.color_mode = False
         self.brushes = [QBrush(pg.mkColor("m"))]
@@ -198,10 +198,12 @@ class MainWindow(QMainWindow):
         self.top_app_bar.addWidget(self.color_mode_btn)
 
         self.moveable_width_btn = QPushButton("Adjust widths")
+        self.moveable_width_btn.setCheckable(True)
         self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
         self.top_app_bar.addWidget(self.moveable_width_btn)
 
         self.toggle_width_view_btn = QPushButton("View widths")
+        self.toggle_width_view_btn.setCheckable(True)
         self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
         self.top_app_bar.addWidget(self.toggle_width_view_btn)
 
@@ -236,8 +238,8 @@ class MainWindow(QMainWindow):
             self.brushes = [QBrush(pg.mkColor("m"))]
         self.render_trace()
 
-    def toggle_moveable_widths(self):
-        self.moveable_width_bars = not self.moveable_width_bars
+    def toggle_moveable_widths(self, check):
+        self.moveable_width_bars = check
         ils = sorted(
             (
                 item
@@ -257,8 +259,8 @@ class MainWindow(QMainWindow):
                 il.setMovable(False)
                 il.clearMarkers()
 
-    def toggle_width_view(self):
-        self.show_peak_widths = not self.show_peak_widths
+    def toggle_width_view(self, checked):
+        self.show_peak_widths = checked
         self.render_trace()
 
     def paint_controls(self):
