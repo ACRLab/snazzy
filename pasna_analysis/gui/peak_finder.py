@@ -16,7 +16,12 @@ class PeakFinder:
 
     def __init__(self):
         self.default_params = dict(
-            order0_min=0.06, order1_min=0.006, mpd=70, prominence=0.2, peak_width=0.92
+            order0_min=0.06,
+            order1_min=0.006,
+            mpd=70,
+            prominence=0.2,
+            peak_width=0.92,
+            to_remove=[],
         )
 
     def initialize_config_file(self, config_path):
@@ -24,7 +29,9 @@ class PeakFinder:
             json.dump(self.default_params, f, indent=4)
 
     def get_pd_params(self, config_path: Path):
-        """Returns peak detection params from config file."""
+        """Returns peak detection params from config file.
+
+        Creates an empty config file with default params if it doesn't exist."""
         if not config_path.exists():
             self.initialize_config_file(config_path)
             return self.default_params
@@ -32,12 +39,16 @@ class PeakFinder:
         with open(config_path, "r") as f:
             data = json.load(f)
 
+        if "to_remove" not in data:
+            data["to_remove"] = []
+
         return {
             "order0_min": float(data["order0_min"]),
             "order1_min": float(data["order1_min"]),
             "mpd": int(data["mpd"]),
             "prominence": float(data["prominence"]),
             "peak_width": float(data["peak_width"]),
+            "to_remove": list(data["to_remove"]),
         }
 
     def save_pd_params(self, config_path: Path, **kwargs):

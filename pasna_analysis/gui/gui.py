@@ -511,6 +511,7 @@ class MainWindow(QMainWindow):
         exp = self.model.get_curr_experiment()
 
         pd_params = self.collect_slider_params()
+        pd_params["to_remove"] = list(self.model.to_remove[exp.name])
 
         if pd_params is None:
             pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
@@ -523,8 +524,7 @@ class MainWindow(QMainWindow):
                 pd_params["prominence"],
             )
 
-        if pd_params:
-            self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
+        self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
 
     def plot_all_traces(self):
         self.clear_layout(self.graph_layout)
