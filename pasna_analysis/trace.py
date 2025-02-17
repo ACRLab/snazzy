@@ -320,9 +320,8 @@ class Trace:
                 for k, v in manual_peak_bounds.items()
             }
 
-            for peak in peaks_to_bounds:
-                if peak in manual_peak_bounds:
-                    peaks_to_bounds[peak] = manual_peak_bounds[peak]
+            for peak in manual_peak_bounds:
+                peaks_to_bounds[peak] = manual_peak_bounds[peak]
 
         self._peak_bounds_indices = np.array(list(peaks_to_bounds.values()))
 

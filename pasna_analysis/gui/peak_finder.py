@@ -69,14 +69,13 @@ class PeakFinder:
         The new peak is calculated as the local maximum near `x`, in a window of 2*wlen points.
         """
         window = slice(x - wlen, x + wlen)
-        peak = local_peak_at(x, trace.order_zero_savgol[window], wlen)
-        # trace.to_add.append(peak)
-        new_arr = np.append(trace.peak_idxes, peak)
+        new_peak = local_peak_at(x, trace.order_zero_savgol[window], wlen)
+        new_arr = np.append(trace.peak_idxes, new_peak)
         new_arr.sort()
 
-        self.write_add_peak(config_path, emb_name, x, wlen)
+        self.write_add_peak(config_path, emb_name, new_peak, wlen)
 
-        return peak, new_arr
+        return new_peak, new_arr
 
     def write_add_peak(self, config_path: Path, emb_name: str, x: int, wlen: int):
         """Writes manually added peaks to `config_path`.
@@ -167,6 +166,7 @@ class PeakFinder:
             json.dump(config, f, indent=4)
 
     def save_peak_widths(self, config_path, emb_name, peak_widths, peak_index):
+        print(f"Inside save_peak_widths, peak index is: {peak_index}")
         with open(config_path, "r") as f:
             config = json.load(f)
         if "embryos" not in config:

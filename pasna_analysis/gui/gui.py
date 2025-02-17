@@ -432,9 +432,11 @@ class MainWindow(QMainWindow):
         else:
             x = int(x / 6)
 
-        peak, new_peaks = self.model.pf.add_peak(x, emb_name, exp.pd_params_path, trace)
+        new_peak, new_peaks = self.model.pf.add_peak(
+            x, emb_name, exp.pd_params_path, trace
+        )
 
-        trace.to_add.append(peak)
+        trace.to_add.append(new_peak)
         trace.peak_idxes = new_peaks
 
         self.render_trace()
