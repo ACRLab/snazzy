@@ -249,7 +249,7 @@ class Trace:
          are stretched out to the right by extend_true_filters_by samples.
         """
         dff = self.dff[: self.trim_idx]
-        savgol = spsig.savgol_filter(dff, 21, 4, deriv=0)
+        savgol = self.order_zero_savgol
         order0_idxes = spsig.find_peaks(
             savgol, height=order0_min, prominence=prominence, distance=mpd
         )[0]
