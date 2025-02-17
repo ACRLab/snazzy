@@ -708,9 +708,20 @@ class MainWindow(QMainWindow):
 
     def change_peak_bounds(self, il_obj):
         trace = self.model.get_curr_trace()
+        exp = self.model.get_curr_experiment()
+        emb_name = self.model.curr_emb_name
+        emb = exp.embryos[emb_name]
 
         row, col = divmod(il_obj.peak_index, 2)
-        trace.peak_bounds_indices[row, col] = il_obj.getXPos() // 6
+
+        if self.use_dev_time:
+            dev_time = emb.lin_developmental_time()
+            idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
+            x = int(idx)
+        else:
+            x = il_obj.getXPos() // 6
+
+        trace.peak_bounds_indices[row, col] = x
         peak_bounds = trace.peak_bounds_indices[row].tolist()
         # cast values to int / str because that will be json dumped
         peak_bounds = [int(pb) for pb in peak_bounds]
