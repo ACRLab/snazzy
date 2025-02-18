@@ -544,7 +544,7 @@ class MainWindow(QMainWindow):
                     dev_time = emb.lin_developmental_time()
                     time = dev_time[: trace.trim_idx]
                 else:
-                    time = trace.time[: trace.trim_idx]
+                    time = trace.time[: trace.trim_idx] / 60
                 dff = trace.dff[: trace.trim_idx]
 
                 peak_amps = trace.peak_amplitudes
@@ -646,7 +646,7 @@ class MainWindow(QMainWindow):
             dev_time = embryo.lin_developmental_time()
             time = dev_time[: trace.trim_idx]
         else:
-            time = trace.time[: trace.trim_idx]
+            time = trace.time[: trace.trim_idx] / 60
         dff = trace.dff[: trace.trim_idx]
 
         peak_times = time[trace.peak_idxes]
