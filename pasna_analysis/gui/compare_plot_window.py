@@ -44,6 +44,7 @@ class ComparePlotWindow(QWidget):
         self.btns = {
             "Dev times at first peak": self.dt_first_peak,
             "Dev times when hatching": self.dt_hatching,
+            "SNA duration": self.sna_duration,
             "Number of episodes": self.num_episodes,
             "CDF of developmental peak times": self.cdf_dt,
             "Peak amplitudes by episode": self.peak_amplitudes_by_ep,
@@ -154,6 +155,31 @@ class ComparePlotWindow(QWidget):
             if save_dir is None:
                 raise ValueError("Cannot save the image: path to save not provided.")
             self.canvas.print_figure(save_dir / "dt_hatching.png")
+
+    def sna_duration(self, save=False, save_dir=None):
+        """Number of episodes"""
+        self.clear_axes()
+        data = {"group": [], "duration": []}
+
+        for group_name, group in self.groups.items():
+            for exp in group.values():
+                for emb in exp.embryos.values():
+                    trace = emb.trace
+                    data["group"].append(group_name)
+                    duration = (trace.time[trace.trim_idx] - trace.peak_times[0]) / 60
+                    data["duration"].append(duration)
+
+        ax = sns.swarmplot(data=data, x="group", y="duration", hue="group", ax=self.ax)
+        ax.set_title("SNA duration")
+        ax.set_ylabel("time (mins)")
+        ax.set_xlabel("Group")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "sna_duration.png")
 
     def num_episodes(self, save=False, save_dir=None):
         """Number of episodes"""
