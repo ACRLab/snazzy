@@ -166,7 +166,6 @@ class PeakFinder:
             json.dump(config, f, indent=4)
 
     def save_peak_widths(self, config_path, emb_name, peak_widths, peak_index):
-        print(f"Inside save_peak_widths, peak index is: {peak_index}")
         with open(config_path, "r") as f:
             config = json.load(f)
         if "embryos" not in config:
