@@ -218,12 +218,15 @@ class ComparePlotWindow(QWidget):
                         data["peak_amp"].append(amp)
                         data["group"].append(group_name)
                         data["peak_idx"].append(i)
+
+        dodge = len(set(data["group"])) > 1
         sns.pointplot(
             data=data,
             x="peak_idx",
             y="peak_amp",
             hue="group",
             errorbar="ci",
+            dodge=dodge,
             ax=self.ax,
         )
 
@@ -253,8 +256,15 @@ class ComparePlotWindow(QWidget):
                         data["dev_time"].append(emb.get_DT_from_time(t))
                         data["idx"].append(i)
 
+        dodge = len(set(data["group"])) > 1
         sns.pointplot(
-            data=data, x="idx", y="dev_time", hue="group", errorbar="ci", ax=self.ax
+            data=data,
+            x="idx",
+            y="dev_time",
+            hue="group",
+            errorbar="ci",
+            dodge=dodge,
+            ax=self.ax,
         )
 
         self.ax.set_xticks(list(range(0, num_of_peaks, 2)))
@@ -285,8 +295,15 @@ class ComparePlotWindow(QWidget):
                         data["interval"].append(interval / 60)
                         data["idx"].append(i)
 
+        dodge = len(set(data["group"])) > 1
         sns.pointplot(
-            data=data, x="idx", y="interval", hue="group", errorbar="ci", ax=self.ax
+            data=data,
+            x="idx",
+            y="interval",
+            hue="group",
+            errorbar="ci",
+            dodge=dodge,
+            ax=self.ax,
         )
 
         self.ax.set_xticks(list(range(0, num_of_peaks, 2)))
@@ -316,12 +333,14 @@ class ComparePlotWindow(QWidget):
                         data["decay_times"].append(decay / 60)
                         data["idx"].append(i)
 
+        dodge = len(set(data["group"])) > 1
         sns.pointplot(
             data=data,
             x="idx",
             y="decay_times",
             hue="group",
             errorbar="ci",
+            dodge=dodge,
             ax=self.ax,
         )
         self.ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
@@ -399,7 +418,10 @@ class ComparePlotWindow(QWidget):
                         data["duration"].append(duration / 60)
                         data["idx"].append(i)
 
-        ax = sns.pointplot(data=data, x="idx", y="duration", hue="group", ax=self.ax)
+        dodge = len(set(data["group"])) > 1
+        ax = sns.pointplot(
+            data=data, x="idx", y="duration", hue="group", dodge=dodge, ax=self.ax
+        )
 
         ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
         ax.set_title("Durations by peak")
@@ -428,7 +450,10 @@ class ComparePlotWindow(QWidget):
                         data["duration"].append(duration)
                         data["idx"].append(i)
 
-        ax = sns.pointplot(data=data, x="idx", y="duration", hue="group", ax=self.ax)
+        dodge = len(set(data["group"])) > 1
+        ax = sns.pointplot(
+            data=data, x="idx", y="duration", hue="group", dodge=dodge, ax=self.ax
+        )
 
         ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
         ax.set_title("Rise times")
