@@ -87,11 +87,9 @@ class PlotWindow(QWidget):
             times.append(
                 [t / 60 for t in trace.peak_times if t < trace.time[trace.trim_idx]]
             )
-        emb_names = [emb.name for emb in self.embryos]
         style = {"marker": ".", "linestyle": "dashed", "linewidth": 0.5}
-        for emb_name, (i, time) in zip(emb_names, enumerate(times)):
-            self.ax.plot(time, [i] * len(time), label=emb_name, **style)
-        self.ax.legend()
+        for i, time in enumerate(times):
+            self.ax.plot(time, [i] * len(time), **style)
         self.ax.set_title(f"Peak times")
         self.ax.set_xlabel("time (mins)")
         self.ax.set_ylabel("emb")
