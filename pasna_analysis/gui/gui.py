@@ -430,7 +430,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
-            x = int(x / 6)
+            x = int(x) * 10
 
         new_peak, new_peaks = self.model.pf.add_peak(
             x, emb_name, exp.pd_params_path, trace
@@ -451,7 +451,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
-            x = int(x / 6)
+            x = int(x) * 10
 
         removed_peaks, new_peaks = self.model.pf.remove_peak(
             x, emb_name, exp.pd_params_path, trace
@@ -719,7 +719,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             x = int(idx)
         else:
-            x = il_obj.getXPos() // 6
+            x = il_obj.getXPos() * 10
 
         trace.peak_bounds_indices[row, col] = x
         peak_bounds = trace.peak_bounds_indices[row].tolist()
