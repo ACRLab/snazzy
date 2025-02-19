@@ -62,6 +62,16 @@ class Embryo:
         self._lin_dev_time = linear_fit(activity_time)
         return self._lin_dev_time
 
+    def get_time_bins(self, bins):
+        """Given an array of bins in developmental time, return the corresponding time bins."""
+        lin_dev_time = self.lin_developmental_time()
+        insert_idxs = np.searchsorted(lin_dev_time, bins)
+        bin_idxs = np.unique(insert_idxs)
+        bin_idxs[-1] -= 1
+        time_bins = self.trace.time[bin_idxs]
+        idx_offset = np.count_nonzero(insert_idxs == 0) - 1
+        return time_bins, idx_offset
+
     def get_DT_from_time(self, time: np.ndarray | float) -> np.ndarray | float:
         """Returns the estimated (by linear interpolation) developmental time
         for a time series."""
