@@ -65,7 +65,7 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
 
-    def _open_directory(self, is_new_group=True):
+    def _open_directory(self, is_new_group):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
             return
@@ -112,10 +112,10 @@ class MainWindow(QMainWindow):
 
     def open_directory(self):
         self.model.set_initial_state()
-        self._open_directory()
+        self._open_directory(is_new_group=True)
 
     def compare_experiments(self):
-        self._open_directory()
+        self._open_directory(is_new_group=True)
 
     def add_experiment(self):
         self._open_directory(is_new_group=False)
@@ -197,24 +197,25 @@ class MainWindow(QMainWindow):
         self.color_mode_btn.clicked.connect(self.toggle_color_mode)
         self.top_app_bar.addWidget(self.color_mode_btn)
 
-        self.moveable_width_btn = QPushButton("Adjust widths")
-        self.moveable_width_btn.setCheckable(True)
-        self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
-        self.top_app_bar.addWidget(self.moveable_width_btn)
-
-        self.toggle_width_view_btn = QPushButton("View widths")
-        self.toggle_width_view_btn.setCheckable(True)
-        self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
-        self.top_app_bar.addWidget(self.toggle_width_view_btn)
-
         self.toggle_graph_btn = QPushButton("View all traces")
         self.toggle_graph_btn.setCheckable(True)
         self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
         self.top_app_bar.addWidget(self.toggle_graph_btn)
 
-        self.clear_manual_data_btn = QPushButton("Clear manual data")
-        self.clear_manual_data_btn.clicked.connect(self.clear_manual_data)
-        self.top_app_bar.addWidget(self.clear_manual_data_btn)
+        if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
+            self.moveable_width_btn = QPushButton("Adjust widths")
+            self.moveable_width_btn.setCheckable(True)
+            self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
+            self.top_app_bar.addWidget(self.moveable_width_btn)
+
+            self.toggle_width_view_btn = QPushButton("View widths")
+            self.toggle_width_view_btn.setCheckable(True)
+            self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
+            self.top_app_bar.addWidget(self.toggle_width_view_btn)
+
+            self.clear_manual_data_btn = QPushButton("Clear manual data")
+            self.clear_manual_data_btn.clicked.connect(self.clear_manual_data)
+            self.top_app_bar.addWidget(self.clear_manual_data_btn)
 
         self.toggle_dev_time_btn = QPushButton("Dev time")
         self.toggle_dev_time_btn.clicked.connect(self.toggle_dev_time)
