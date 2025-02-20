@@ -313,13 +313,13 @@ class MainWindow(QMainWindow):
             group = self.model.get_curr_group()
             exp_to_embs = {}
             for exp_name, exp in group.items():
-                exp_to_embs[exp_name] = exp.embryos.keys()
+                exp_to_embs[exp_name] = self.model.get_filtered_embs(exp_name).keys()
             self.sidebar = FixedSidebar(exp_to_embs, self.render_trace)
 
         scroll_area = QScrollArea()
         scroll_area.setWidget(self.sidebar)
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFixedWidth(200)
+        scroll_area.setFixedWidth(220)
         single_graph_layout.addWidget(scroll_area)
         # Sidebar end
 
