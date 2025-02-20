@@ -165,6 +165,8 @@ class ComparePlotWindow(QWidget):
             for exp in group.values():
                 for emb in exp.embryos.values():
                     trace = emb.trace
+                    if trace.peak_times.size == 0:
+                        continue
                     data["group"].append(group_name)
                     duration = (trace.time[trace.trim_idx] - trace.peak_times[0]) / 60
                     data["duration"].append(duration)
