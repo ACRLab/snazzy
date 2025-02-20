@@ -486,7 +486,6 @@ class MainWindow(QMainWindow):
         """Calculates and paints again all peaks."""
         self.detect_peaks_all()
         self.render_trace()
-        self.repaint_peaks()
         self.plot_all_traces()
 
     def collect_slider_params(self):
@@ -512,28 +511,27 @@ class MainWindow(QMainWindow):
         """Recalculates peak indices for all embryos.
 
         Persists peak detection params in `peak_detection_params.json`."""
-        exp = self.model.get_curr_experiment()
+        for exp_name, exp in self.model.get_curr_group().items():
+            pd_params = self.collect_slider_params()
 
-        pd_params = self.collect_slider_params()
-        pd_params["to_remove"] = list(self.model.to_remove[exp.name])
+            if pd_params is None:
+                pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
 
-        if pd_params is None:
-            pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
+            pd_params["to_remove"] = list(self.model.to_remove[exp_name])
 
-        for emb in exp.embryos.values():
-            emb.trace.detect_peaks(
-                pd_params["mpd"],
-                pd_params["order0_min"],
-                pd_params["order1_min"],
-                pd_params["prominence"],
-            )
+            for emb in exp.embryos.values():
+                emb.trace.detect_peaks(
+                    pd_params["mpd"],
+                    pd_params["order0_min"],
+                    pd_params["order1_min"],
+                    pd_params["prominence"],
+                )
 
-        self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
+            self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
 
     def plot_all_traces(self):
         self.clear_layout(self.graph_layout)
         group = self.model.get_filtered_group()
-        self.scatter_items = {}
         for exp_name, exp in group.items():
             for emb in exp.embryos.values():
                 plot_widget = pg.PlotWidget()
@@ -567,22 +565,12 @@ class MainWindow(QMainWindow):
 
                 plot_widget.addItem(scatter_plot_item)
 
-                self.scatter_items[emb.name] = scatter_plot_item
-
                 plot_widget.plot(time, dff)
                 if self.model.has_combined_experiments():
                     plot_widget.setTitle(f"{exp_name} - {emb.name}")
                 else:
                     plot_widget.setTitle(emb.name)
                 self.graph_layout.addWidget(plot_widget)
-
-    def repaint_peaks(self):
-        """Repaints the scatter items in the multi trace view."""
-        exp = self.model.get_curr_experiment()
-        for emb_name, scatter in self.scatter_items.items():
-            if emb_name not in self.model.to_remove:
-                trace = exp.embryos[emb_name].trace
-                scatter.setData(trace.peak_times, trace.peak_amplitudes)
 
     def calibrate_sliders(self):
         """Adjusts the sliders based on pd_params.json.
