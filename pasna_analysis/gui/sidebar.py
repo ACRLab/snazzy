@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Iterable
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -18,7 +19,9 @@ def sort_by_emb_number(emb: str):
 
 class FixedSidebar(QWidget):
     def __init__(
-        self, exp_to_embs: dict[str, str], callback: Callable[[str, str | None], None]
+        self,
+        exp_to_embs: dict[str, Iterable[str]],
+        callback: Callable[[str, str | None], None],
     ):
         super().__init__()
 
@@ -30,7 +33,7 @@ class FixedSidebar(QWidget):
         main_layout.addStretch()
         self.setLayout(main_layout)
 
-    def populate_buttons(self, exp_to_embs, layout):
+    def populate_buttons(self, exp_to_embs: dict[str, Iterable[str]], layout):
         for exp in exp_to_embs:
             for emb in sorted(exp_to_embs[exp], key=sort_by_emb_number):
                 row_layout = QHBoxLayout()
