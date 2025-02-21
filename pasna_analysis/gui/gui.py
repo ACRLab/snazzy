@@ -203,15 +203,15 @@ class MainWindow(QMainWindow):
         self.top_app_bar.addWidget(self.toggle_graph_btn)
 
         if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
-            self.moveable_width_btn = QPushButton("Adjust widths")
-            self.moveable_width_btn.setCheckable(True)
-            self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
-            self.top_app_bar.addWidget(self.moveable_width_btn)
-
             self.toggle_width_view_btn = QPushButton("View widths")
             self.toggle_width_view_btn.setCheckable(True)
             self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
             self.top_app_bar.addWidget(self.toggle_width_view_btn)
+
+            self.moveable_width_btn = QPushButton("Adjust widths")
+            self.moveable_width_btn.setCheckable(True)
+            self.moveable_width_btn.clicked.connect(self.toggle_moveable_widths)
+            self.top_app_bar.addWidget(self.moveable_width_btn)
 
             self.clear_manual_data_btn = QPushButton("Clear manual data")
             self.clear_manual_data_btn.clicked.connect(self.clear_manual_data)
