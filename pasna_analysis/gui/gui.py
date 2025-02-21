@@ -65,7 +65,7 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
 
-    def _open_directory(self, is_new_group):
+    def _open_directory(self, is_new_group, should_reset_model=False):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
             return
@@ -78,6 +78,11 @@ class MainWindow(QMainWindow):
                 return
             if not group_name:
                 group_name = f"group{len(self.model.groups) + 1}"
+
+        if should_reset_model:
+            self.model.set_initial_state()
+
+        if group_name:
             self.model.add_group(group_name)
 
         try:
@@ -111,8 +116,7 @@ class MainWindow(QMainWindow):
         self.plot_all_traces()
 
     def open_directory(self):
-        self.model.set_initial_state()
-        self._open_directory(is_new_group=True)
+        self._open_directory(is_new_group=True, should_reset_model=True)
 
     def compare_experiments(self):
         self._open_directory(is_new_group=True)
