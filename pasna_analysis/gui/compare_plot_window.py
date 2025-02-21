@@ -50,6 +50,7 @@ class ComparePlotWindow(QWidget):
             "Peak amplitudes by episode": self.peak_amplitudes_by_ep,
             "Dev time by episode": self.dt_by_ep,
             "Episode intervals": self.ep_intervals,
+            "Baseline / burst ratio per episode": self.baseline_ratio,
             "Episode durations": self.ep_durations,
             "Decay times": self.decay_times,
             "Rise times": self.rise_times,
@@ -345,6 +346,43 @@ class ComparePlotWindow(QWidget):
             if save_dir is None:
                 raise ValueError("Cannot save the image: path to save not provided.")
             self.canvas.print_figure(save_dir / "episode_intervals.png")
+
+    def baseline_ratio(self, save=False, save_dir=None):
+        """Quiescent / active ratio per episode"""
+        self.clear_axes()
+        num_of_peaks = 15
+        data = {"group": [], "qa_ratio": [], "idx": []}
+
+        for group_name, group in self.groups.items():
+            for exp in group.values():
+                for emb in exp.embryos.values():
+                    trace = emb.trace
+                    for i, (ps, pe) in zip(
+                        range(num_of_peaks), trace.peak_bounds_times
+                    ):
+                        try:
+                            next_ps = trace.peak_bounds_times[i + 1][0]
+                        except IndexError:
+                            break
+                        qa = (next_ps - pe) / (next_ps - ps)
+                        data["group"].append(group_name)
+                        data["qa_ratio"].append(qa)
+                        data["idx"].append(i)
+
+        sns.pointplot(
+            data=data, x="idx", y="qa_ratio", hue="group", linestyle="None", ax=self.ax
+        )
+        self.ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
+        self.ax.set_title("Baseline ratio per episode")
+        self.ax.set_xlabel("Peak #")
+        self.ax.set_ylabel("t_base / episode")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "baseline_ratio.png")
 
     def decay_times(self, save=False, save_dir=None):
         """Decay times.
