@@ -42,6 +42,19 @@ class Model:
         self.pf = PeakFinder()
         self.set_initial_state()
 
+    def __str__(self):
+        group_names = list(self.groups.keys())
+        to_remove_count = {k: len(v) for k, v in self.to_remove.items()}
+        return (
+            f"Model(\n"
+            f"  groups: {group_names} groups\n"
+            f"  curr_group: {self.curr_group}\n"
+            f"  to_remove: {to_remove_count}\n"
+            f"  curr_exp: {self.curr_exp}\n"
+            f"  curr_emb_name: {self.curr_emb_name}\n"
+            f")"
+        )
+
     def set_initial_state(self):
         self.groups: dict[str, dict[str, Experiment]] = {}
         self.curr_group = None
