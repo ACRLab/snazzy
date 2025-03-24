@@ -18,3 +18,4 @@ dependencies:
     - pyqt6-qt6==6.8.1
     - pyqt6-sip==13.9.1
     - pyqtgraph==0.13.7   
+    - statannotations==0.7.1
