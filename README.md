@@ -13,35 +13,32 @@ Activate the environment:
  
 `conda activate pscope_analysis`
 
-Install the pasnascope package with `pip`:
+Install the pasna_analysis package with `pip`:
 
 `pip install -e .`
  
 ### Organization
  
-* `pasnascope`: contains the core code used in all analysis
-* `scripts`: Python code that combine the different modules in `pasnascope`, primarily for visualizing movies
+* `pasna_analysis`: contains the core code used in all analyses
+* `pasna_analysis/gui`: GUI code
 * `tests`: contains tests for the code
-* `data`: contains the data for the analysis. This folder is kept out of github, and should be populated in your local copy
-* `results`: contains the results of the analyses. It is also kept out of github and will be populated by performing the analyses
-* `notebooks`: contains examples and the front-end for using the `pasnascope` main module
-* `docs`: project documentation
+* `data`: contains the data for the analysis. This folder is not tracked, and should be populated in your local copy
+* `results`: contains the results of the analyses. It is not tracked either and will be populated by performing the analyses
+* `notebooks`: contains examples and the front-end for using the `pasna_analysis` main module
  
 ### Analyses
  
-The analyses can be executed using the provided jupyter notebooks, or running the files in the `scripts` directory.
-The recommended way to analyze your data is to go through the notebooks in the following order:
-
-1. `process-raw-data.ipynb`
-2. `vnc-lengh.ipynb`
-3. `activity.ipynb`
-
-There are details on how to use the code in each one of the notebooks.
+The analyses are primarily executed using the GUI.
+After activating the environment, run `pasna_analysis/gui/gui.py` to start the GUI.
+There are also jupyter notebooks available, which can be used alternatively and allows for image customization.
  
 ### Adding data
  
 Each experiment should have one corresponding folder inside `./data/`.
+The expected data is generated using the `pasnascope` package.
 The file structure inside the `data` folder should look like:
+The `embs` directory is used if you want to inspect movies inside the GUI.
+The files are generated with `pasnascope`, as long as the flag `clean_up_data` in there is set to `False`. 
  
 ```
 |-- project_folder
@@ -53,5 +50,9 @@ The file structure inside the `data` folder should look like:
 |           -- lengths
 |               emb1.csv
 |               ..
+|           -- embs
+|               emb1-ch1.tif
+|               emb1-ch2.tif
 |           full-length.csv
+|           emb_numbers.png
 ```
