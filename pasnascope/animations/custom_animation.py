@@ -3,7 +3,7 @@ from matplotlib import animation
 
 
 class PauseAnimation:
-    '''Creates a plt animation with support to Pause when any key is pressed.'''
+    """Creates a plt animation with support to Pause when any key is pressed."""
 
     def __init__(self, image, interval=200):
         self.image = image
@@ -19,11 +19,15 @@ class PauseAnimation:
         self.img_plot = ax.imshow(initial_frame)
 
         self.ani = animation.FuncAnimation(
-            fig=fig, func=self.update, frames=len(self.image), interval=self.interval, repeat=False
+            fig=fig,
+            func=self.update,
+            frames=len(self.image),
+            interval=self.interval,
+            repeat=False,
         )
 
-        self.frame_num = ax.text(0, 5, str(0), color='w')
-        fig.canvas.mpl_connect('key_press_event', self.toggle_pause)
+        self.frame_num = ax.text(0, 5, str(0), color="w")
+        fig.canvas.mpl_connect("key_press_event", self.toggle_pause)
         return fig, ax
 
     def update(self, frame):
@@ -43,11 +47,11 @@ class PauseAnimation:
 
     def save(self, filename):
         print(f"Saving animation as {filename}.mp4...")
-        self.ani.save(f'{filename}.mp4')
+        self.ani.save(f"{filename}.mp4")
 
 
 class CentroidAnimation(PauseAnimation):
-    '''Overlays centroid positions on top of a movie.'''
+    """Overlays centroid positions on top of a movie."""
 
     def __init__(self, image, centroids, interval=50):
         super().__init__(image, interval)
@@ -56,7 +60,7 @@ class CentroidAnimation(PauseAnimation):
 
     def paint_axes(self):
         y, x = self.centroids[0]
-        self.centroid_plot = self.ax.plot(y, x, marker='o', color='red')[0]
+        self.centroid_plot = self.ax.plot(y, x, marker="o", color="red")[0]
 
     def update(self, frame):
         self.img_plot.set_data(self.image[frame])
@@ -67,7 +71,7 @@ class CentroidAnimation(PauseAnimation):
 
 
 class ContourAnimation(PauseAnimation):
-    '''Overlays ROI contour on top of a movie.'''
+    """Overlays ROI contour on top of a movie."""
 
     def __init__(self, image, contours, interval=50):
         super().__init__(image, interval)
@@ -75,13 +79,13 @@ class ContourAnimation(PauseAnimation):
         self.paint_axes()
         print(image.shape)
         print(len(contours))
-        self.offset = image.shape[0]//len(contours)
+        self.offset = image.shape[0] // len(contours)
         print(f"Offset: {self.offset}")
 
     def paint_axes(self):
         x = self.contours[0][:, 0]
         y = self.contours[0][:, 1]
-        self.contour_plot = self.ax.plot(y, x, color='red')[0]
+        self.contour_plot = self.ax.plot(y, x, color="red")[0]
 
     def update(self, frame):
         self.img_plot.set_data(self.image[frame])
@@ -94,26 +98,26 @@ class ContourAnimation(PauseAnimation):
 
 
 class BoundedContourAnimation(PauseAnimation):
-    '''Overlays ROI contour on top of a masked movie.
+    """Overlays ROI contour on top of a masked movie.
 
     The animation will present the original movie and the contours
-    of the bounding mask.'''
+    of the bounding mask."""
 
     def __init__(self, image, contours, bounding_contour, interval=50):
         super().__init__(image, interval)
         self.contours = contours
         self.second_contour = bounding_contour
         self.paint_axes()
-        self.offset = image.shape[0]//len(contours)
+        self.offset = image.shape[0] // len(contours)
 
     def paint_axes(self):
         xs = self.second_contour[:, 0]
         ys = self.second_contour[:, 1]
-        self.ax.plot(ys, xs, color='orange')[0]
+        self.ax.plot(ys, xs, color="orange")[0]
 
         x = self.contours[0][:, 0]
         y = self.contours[0][:, 1]
-        self.contour_plot = self.ax.plot(y, x, color='red')[0]
+        self.contour_plot = self.ax.plot(y, x, color="red")[0]
 
     def update(self, frame):
         self.img_plot.set_data(self.image[frame])
@@ -126,7 +130,7 @@ class BoundedContourAnimation(PauseAnimation):
 
 
 class FeretAnimation(PauseAnimation):
-    '''Overlays Feret diameter measuments on top of a movie.'''
+    """Overlays Feret diameter measuments on top of a movie."""
 
     def __init__(self, image, feret_coordinates, interval=50):
         super().__init__(image, interval)
@@ -137,13 +141,13 @@ class FeretAnimation(PauseAnimation):
         x1, y1 = self.feret_coordinates[0][0]
         x2, y2 = self.feret_coordinates[0][1]
         self.points = self.ax.plot(
-            (int(y1), int(y2)), (int(x1), int(x2)), marker='o', color='r')[0]
+            (int(y1), int(y2)), (int(x1), int(x2)), marker="o", color="r"
+        )[0]
 
     def update(self, frame):
         x1, y1 = self.feret_coordinates[frame][0]
         x2, y2 = self.feret_coordinates[frame][1]
-        self.points.set_data(
-            (int(y1), int(y2)), (int(x1), int(x2)))
+        self.points.set_data((int(y1), int(y2)), (int(x1), int(x2)))
         self.img_plot.set_data(self.image[frame])
         self.frame_num.set_text(str(frame))
         return self.img_plot

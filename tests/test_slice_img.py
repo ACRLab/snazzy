@@ -2,7 +2,7 @@ from pasnascope import slice_img
 
 
 def test_add_padding_clips_to_shape():
-    '''Adding padding should not result in negative or OutOfBounds indices.'''
+    """Adding padding should not result in negative or OutOfBounds indices."""
     boundaries = [2, 200, 5, 490]
     shape = [300, 500]
     expected_boundaries = [0, 210, 0, 500]
