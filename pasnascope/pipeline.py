@@ -5,21 +5,27 @@ import shutil
 import numpy as np
 from tifffile import imread
 
-from pasnascope import activity, find_hatching, full_embryo_length, roi, utils, vnc_length
+from pasnascope import (
+    activity,
+    find_hatching,
+    full_embryo_length,
+    roi,
+    utils,
+    vnc_length,
+)
 
 
 def measure_vnc_length(embs_src, res_dir, interval):
-    '''Calculates VNC length for all embryos in a directory.'''
-    embs = sorted(embs_src.glob('*ch2.tif'), key=utils.emb_number)
-    output = res_dir.joinpath('lengths')
+    """Calculates VNC length for all embryos in a directory."""
+    embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
+    output = res_dir.joinpath("lengths")
     output.mkdir(parents=True, exist_ok=True)
     embs = [emb for emb in embs if not already_created(emb, output)]
     lengths = []
     ids = []
 
     with ThreadPoolExecutor() as executor:
-        futures = [executor.submit(
-            calculate_length, emb, interval) for emb in embs]
+        futures = [executor.submit(calculate_length, emb, interval) for emb in embs]
         for future in as_completed(futures):
             id, vnc_len = future.result()
             ids.append(id)
@@ -46,13 +52,12 @@ def calculate_length(emb, interval):
 
 
 def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
-    embs = sorted(embs_src.glob('*ch2.tif'), key=utils.emb_number)
-    output = res_dir.joinpath('full-length.csv')
+    embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
+    output = res_dir.joinpath("full-length.csv")
     full_lengths = []
     embryo_names = []
     if output.exists():
-        print(
-            f"The file {output.stem} already exists, and won't be overwritten.")
+        print(f"The file {output.stem} already exists, and won't be overwritten.")
         return 0
 
     for emb in embs:
@@ -61,24 +66,24 @@ def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
 
     # NOTE: temporary fix -> warn when measuments deviate too much from others
     # This happens sparsely due to the VNC position inside the embryo
-    z_scores = np.abs(full_lengths - np.mean(full_lengths)) / \
-        np.std(full_lengths)
+    z_scores = np.abs(full_lengths - np.mean(full_lengths)) / np.std(full_lengths)
     threshold = 2
     outliers = np.where(z_scores > threshold)[0]
     for i in outliers:
         print(
-            f'Embryo {embryo_names[i]} full length measurement should be manually checked.')
+            f"Embryo {embryo_names[i]} full length measurement should be manually checked."
+        )
 
     full_embryo_length.export_csv(full_lengths, embryo_names, output)
     return len(full_lengths)
 
 
 def calc_activities(embs_src, res_dir, window):
-    '''Calculate activity for active and structural channels'''
-    active = sorted(embs_src.glob('*ch1.tif'), key=utils.emb_number)
-    struct = sorted(embs_src.glob('*ch2.tif'), key=utils.emb_number)
+    """Calculate activity for active and structural channels"""
+    active = sorted(embs_src.glob("*ch1.tif"), key=utils.emb_number)
+    struct = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
 
-    output = res_dir.joinpath('activity')
+    output = res_dir.joinpath("activity")
     output.mkdir(parents=True, exist_ok=True)
 
     active = [emb for emb in active if not already_created(emb, output)]
@@ -89,8 +94,10 @@ def calc_activities(embs_src, res_dir, window):
     # NOTE: number of workers is limited here because it was crashing jupyter
     # on a machine with low RAM. Add more workers for better hardware
     with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = [executor.submit(calc_activity, act, stct, window)
-                   for act, stct in zip(active, struct)]
+        futures = [
+            executor.submit(calc_activity, act, stct, window)
+            for act, stct in zip(active, struct)
+        ]
         for future in as_completed(futures):
             id, signal = future.result()
             ids.append(id)
@@ -104,7 +111,8 @@ def calc_activity(act, stct, window):
     id = utils.emb_number(act)
     if id != utils.emb_number(stct):
         raise ValueError(
-            'Active and structural channels must come from the same embryo.')
+            "Active and structural channels must come from the same embryo."
+        )
     active_img = imread(act)
     struct_img = imread(stct)
     mask = roi.get_roi(struct_img, window=window)
@@ -129,9 +137,9 @@ def clean_up_files(embs_src, first_frames_path, tif_path):
 
 
 def log_params(path, **kwargs):
-    with open(path, '+a') as f:
+    with open(path, "+a") as f:
         f.write("Starting a new analysis...\n")
         f.write(f"{datetime.now()}\n")
         for name, value in kwargs.items():
             f.write(f"{name}: {value}\n")
-        f.write("="*79 + "\n")
+        f.write("=" * 79 + "\n")

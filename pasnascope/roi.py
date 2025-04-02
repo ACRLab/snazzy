@@ -9,11 +9,11 @@ from pasnascope.animations.custom_animation import CentroidAnimation, ContourAni
 
 
 def get_single_roi(img):
-    '''Calculates the ROI of a 2D grayscale image.
+    """Calculates the ROI of a 2D grayscale image.
 
-    Values *outside* the ROI are marked as True, values inside are False.'''
+    Values *outside* the ROI are marked as True, values inside are False."""
     if img.ndim != 2:
-        raise ValueError('img should be a 2D matrix.')
+        raise ValueError("img should be a 2D matrix.")
 
     slc = img.copy()
     thres = threshold_otsu(slc)
@@ -35,54 +35,53 @@ def get_single_roi(img):
     # the amount of zeros (background)
     # we get the index where we have the maximum frequency
     # and then compare each element to this maximum
-    largest_label = labels == np.argmax(
-        np.bincount(labels.flat)[1:])+1
+    largest_label = labels == np.argmax(np.bincount(labels.flat)[1:]) + 1
 
     return np.logical_not(largest_label)
 
 
 def get_roi(img, window=10, mask=None):
-    '''The ROI for an image, after downsampling the slices by `window`.'''
+    """The ROI for an image, after downsampling the slices by `window`."""
     if img.ndim != 3:
-        raise ValueError('img should be a 3D array.')
+        raise ValueError("img should be a 3D array.")
 
     num_slices = img.shape[0]
-    rois_length = math.ceil(num_slices/window)
+    rois_length = math.ceil(num_slices / window)
     rois = np.empty((rois_length, *img.shape[1:]), dtype=np.bool_)
 
     # calculates a new ROI in steps of `window`:
-    for i in range(0, num_slices-window, window):
-        avg_slc = np.average(img[i:i+window], axis=0)
+    for i in range(0, num_slices - window, window):
+        avg_slc = np.average(img[i : i + window], axis=0)
         if mask is not None:
             avg_slc[mask] = 0
-        rois[i//window] = get_single_roi(avg_slc)
+        rois[i // window] = get_single_roi(avg_slc)
 
     return rois
 
 
 def global_roi(img):
-    '''Creates a single ROI for all the slices in the image.
+    """Creates a single ROI for all the slices in the image.
 
     It's faster than calculating one ROI for each slice, and can be used if
-    the embryo does not move.'''
+    the embryo does not move."""
     avg_img = np.average(img, axis=0)
     return get_single_roi(avg_img)
 
 
 def cache_rois(img, file_path):
-    '''Saves ROI as a numpy file.'''
+    """Saves ROI as a numpy file."""
     rois = get_roi(img)
 
-    with open(file_path, 'wb+') as f:
+    with open(file_path, "wb+") as f:
         np.save(f, rois)
 
-    print(f'Saved ROIs in `{file_path}`.')
+    print(f"Saved ROIs in `{file_path}`.")
 
 
 def get_initial_mask(img, n):
-    '''Create a mask based on the first n frames of the movies.
+    """Create a mask based on the first n frames of the movies.
 
-    The mask is eroded to give space to account for the embryo flickering.'''
+    The mask is eroded to give space to account for the embryo flickering."""
     init = np.average(img[:n], axis=0)
     first_mask = get_single_roi(init)
     binary_erosion(first_mask, footprint=disk(10), out=first_mask)
@@ -90,7 +89,7 @@ def get_initial_mask(img, n):
 
 
 def get_contours(img, window=10, mask=None):
-    '''Returns the contours of each image, based on their ROI.'''
+    """Returns the contours of each image, based on their ROI."""
     rois = get_roi(img, window=window, mask=mask)
 
     contours = []
@@ -106,19 +105,19 @@ def get_contours(img, window=10, mask=None):
 
 
 def get_contour(img):
-    '''Returns the contour for a single image.'''
+    """Returns the contour for a single image."""
     return find_contours(img)[0]
 
 
 def plot_contours(img):
-    '''Plots image with contours overlayed.'''
+    """Plots image with contours overlayed."""
     contours = get_contours(img)
     pa = ContourAnimation(img[200:400], contours, interval=300)
     pa.display()
 
 
 def get_centroids(img):
-    '''Get the centroid of each slice of a ROI within an image.'''
+    """Get the centroid of each slice of a ROI within an image."""
     centroids = []
 
     for slc in img:

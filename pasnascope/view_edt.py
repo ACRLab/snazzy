@@ -14,7 +14,7 @@ def view_DT_3D_plot(image, metric=None):
     x = np.arange(0, image.shape[1])
     y = np.arange(0, image.shape[0])
     X, Y = np.meshgrid(x, y)
-    fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     ax.plot_surface(X, Y, distance, cmap=plt.cm.plasma)
     plt.show()
 
@@ -40,14 +40,14 @@ def count_markers(image, metric):
 
 def view_count_markers(img):
     edts = count_markers(img, None)
-    edt_chess = count_markers(img, 'chessboard')
-    edt_cab = count_markers(img, 'taxicab')
+    edt_chess = count_markers(img, "chessboard")
+    edt_cab = count_markers(img, "taxicab")
 
     fig, ax = plt.subplots()
-    ax.set_title('Frequency of local maxima')
-    ax.plot(edts, label='EDT')
-    ax.plot(edt_chess, label='chessboard')
-    ax.plot(edt_cab, label='taxicab')
+    ax.set_title("Frequency of local maxima")
+    ax.plot(edts, label="EDT")
+    ax.plot(edt_chess, label="chessboard")
+    ax.plot(edt_cab, label="taxicab")
     ax.legend()
     plt.tight_layout()
     plt.show()
@@ -61,8 +61,8 @@ def view_DT_disk_and_ellipse():
     img[ell_mask] = 1
 
     distance = ndi.distance_transform_edt(img)
-    distance_chess = ndi.distance_transform_cdt(img, metric='chessboard')
-    distance_taxi = ndi.distance_transform_cdt(img, metric='taxicab')
+    distance_chess = ndi.distance_transform_cdt(img, metric="chessboard")
+    distance_taxi = ndi.distance_transform_cdt(img, metric="taxicab")
 
     img[disk_mask] = 3
 
@@ -70,13 +70,13 @@ def view_DT_disk_and_ellipse():
     ax = ax.ravel()
 
     ax[0].imshow(img)
-    ax[0].set_title('Binary image')
+    ax[0].set_title("Binary image")
     ax[1].imshow(distance)
-    ax[1].set_title('Euclidian transform')
+    ax[1].set_title("Euclidian transform")
     ax[2].imshow(distance_chess)
-    ax[2].set_title('Chessboard transform')
+    ax[2].set_title("Chessboard transform")
     ax[3].imshow(distance_taxi)
-    ax[3].set_title('Taxicab transform')
+    ax[3].set_title("Taxicab transform")
 
     for aa in ax:
         aa.set_axis_off()
