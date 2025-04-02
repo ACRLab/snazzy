@@ -120,9 +120,12 @@ def calc_activity(act, stct, window):
 
 
 def clean_up_files(embs_src, first_frames_path, tif_path):
-    shutil.rmtree(embs_src)
-    first_frames_path.unlink(missing_ok=True)
-    tif_path.unlink(missing_ok=True)
+    if embs_src:
+        shutil.rmtree(embs_src)
+    if first_frames_path.exists():
+        first_frames_path.unlink(missing_ok=True)
+    if tif_path.exists():
+        tif_path.unlink(missing_ok=True)
 
 
 def log_params(path, **kwargs):
