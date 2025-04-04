@@ -42,12 +42,16 @@ class PeakFinder:
         if "to_remove" not in data:
             data["to_remove"] = []
 
+        if "max_amp" not in data:
+            data["max_amp"] = 10
+
         return {
             "order0_min": float(data["order0_min"]),
             "order1_min": float(data["order1_min"]),
             "mpd": int(data["mpd"]),
             "prominence": float(data["prominence"]),
             "peak_width": float(data["peak_width"]),
+            "max_amp": float(data["max_amp"]),
             "to_remove": list(data["to_remove"]),
         }
 

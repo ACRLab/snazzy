@@ -192,8 +192,10 @@ class Trace:
 
         return baseline
 
-    def detect_peaks(self, mpd=71, order0_min=0.08, order1_min=0.006, prominence=0.1):
-        self.calculate_peaks(mpd, order0_min, order1_min, prominence)
+    def detect_peaks(
+        self, mpd=71, order0_min=0.08, order1_min=0.006, prominence=0.1, max_amp=10
+    ):
+        self.calculate_peaks(mpd, order0_min, order1_min, prominence, max_amp)
 
         peak_idxes = self.peak_idxes
         peak_times = self.peak_times
@@ -239,6 +241,7 @@ class Trace:
         order0_min=0.08,
         order1_min=0.006,
         prominence=0.1,
+        max_amp=10,
         extend_true_filters_by=30,
     ):
         """
@@ -264,7 +267,10 @@ class Trace:
         order2_filter = savgol2 < 0
         order2_filter = _extend_true_right(order2_filter, extend_true_filters_by)
 
-        joint_filter = np.all([order0_filter, order1_filter, order2_filter], axis=0)
+        within_limit = dff < max_amp
+        joint_filter = np.all(
+            [order0_filter, order1_filter, order2_filter, within_limit], axis=0
+        )
         self._peak_idxes = np.where(joint_filter)[0]
 
     def get_first_peak_time(self):
