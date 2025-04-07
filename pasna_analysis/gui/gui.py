@@ -65,6 +65,17 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
 
+    def render_next_trace(self):
+        if self.model.curr_exp is None:
+            return
+        curr_emb = self.model.curr_emb_name
+        embs = self.model.get_filtered_embs(self.model.curr_exp)
+        emb_names = list(embs.keys())
+        curr_emb_index = emb_names.index(curr_emb)
+        next_idx = (curr_emb_index + 1) % len(emb_names)
+        next_emb = emb_names[next_idx]
+        self.render_trace(next_emb)
+
     def _open_directory(self, is_new_group, should_reset_model=False):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
@@ -276,7 +287,7 @@ class MainWindow(QMainWindow):
             self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
             self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
             self.width_slider = LabeledSlider("Peak width", 0.7, 1, 0.92, 0.005)
-            self.max_amp_slider = LabeledSlider("Max amp slider", 0.1, 5, 1.25, 0.1)
+            self.max_amp_slider = LabeledSlider("Max amplitude", 0.1, 5, 1.25, 0.1)
 
             self.top_layout.addWidget(self.mpd_slider)
             self.top_layout.addWidget(self.order_zero_slider)
@@ -393,6 +404,11 @@ class MainWindow(QMainWindow):
         display_comp_plots_action = QAction("View comparison plots", self)
         display_comp_plots_action.triggered.connect(self.display_compare_plots)
         plot_menu.addAction(display_comp_plots_action)
+
+        next_emb_action = QAction(self)
+        next_emb_action.setShortcut(QKeySequence("Ctrl+N"))
+        next_emb_action.triggered.connect(self.render_next_trace)
+        menu_bar.addAction(next_emb_action)
 
     def paint_main_view(self):
         self.top_app_bar = QHBoxLayout()
