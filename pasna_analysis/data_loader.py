@@ -23,10 +23,13 @@ class DataLoader:
         """Asserts that the expected file structure is found."""
         required_dirs = ["activity", "lengths"]
         required_files = ["full-length.csv"]
+        if not self.path.exists():
+            raise ValueError(f"Path not found: {self.path}")
         paths = ((self.path / f) for f in required_dirs + required_files)
-        assert all(
-            path.exists() for path in paths
-        ), "Could not find expected files. Is this really a directory from `pasnascope`?"
+        if not all(path.exists() for path in paths):
+            raise ValueError(
+                "Could not find expected files. Is this really a directory from `pasnascope`?"
+            )
 
     def embryos(self) -> list[str]:
         """Returns a list of available embryos."""
