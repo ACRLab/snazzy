@@ -30,31 +30,28 @@ class Experiment:
         dff_strategy="baseline",
         has_transients=False,
     ):
-        if to_exclude is None:
-            to_exclude = []
-
+        self.to_exclude = [] if to_exclude is None else to_exclude
         data = DataLoader(exp_path)
         self.directory = exp_path
         self.name = data.name
         self.pd_params_path = data.pd_params_path
+        self.pd_params = None
 
         self.first_peak_threshold = first_peak_threshold
         self.dff_strategy = dff_strategy
         self.has_transients = has_transients
 
-        act_paths = data.activities()
-        len_paths = data.lengths()
-        self.embryos = self._get_embryos(act_paths, len_paths, to_exclude)
+        self.act_paths = data.activities()
+        self.len_paths = data.lengths()
+        self.embryos = self._get_embryos()
 
-    def _get_embryos(
-        self, act_paths: list[Path], len_paths: list[Path], to_exclude: list[int]
-    ) -> dict[str, Embryo]:
+    def _get_embryos(self) -> dict[str, Embryo]:
         embryos = {}
 
-        for act_path, len_path in zip(act_paths, len_paths):
+        for act_path, len_path in zip(self.act_paths, self.len_paths):
             emb_name = act_path.stem
             emb_id = utils.emb_id(emb_name)
-            if emb_id in to_exclude:
+            if emb_id in self.to_exclude:
                 continue
 
             emb = Embryo(
@@ -63,6 +60,7 @@ class Experiment:
                 self.dff_strategy,
                 self.has_transients,
                 self.pd_params_path,
+                self.pd_params,
             )
 
             try:
@@ -77,3 +75,10 @@ class Experiment:
             embryos[emb_name] = emb
 
         return embryos
+
+    def set_pd_params(self, pd_params):
+        pd_params_keys = ["mpd", "order0_min", "order1_min", "prominence"]
+        if any(param not in pd_params_keys for param in pd_params):
+            raise ValueError("Missing params in pd_params file")
+        self.pd_params = pd_params
+        self.embryos = self._get_embryos()

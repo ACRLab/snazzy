@@ -18,6 +18,7 @@ class Embryo:
         dff_strategy: str,
         has_transients: bool,
         pd_props_path: Path,
+        pd_params: dict,
     ):
         if activity_csv.stem != vnc_len_csv.stem:
             raise ValueError(
@@ -37,6 +38,7 @@ class Embryo:
             dff_strategy=dff_strategy,
             has_transients=has_transients,
             pd_props_path=pd_props_path,
+            pd_params=pd_params,
         )
         self._lin_dev_time = None
 

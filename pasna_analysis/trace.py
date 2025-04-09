@@ -17,6 +17,7 @@ class Trace:
         dff_strategy="baseline",
         has_transients=False,
         pd_props_path=None,
+        pd_params=None,
     ):
         self.name = name
         self.time = activity[:, 0]
@@ -25,6 +26,7 @@ class Trace:
         self.dff_strategy = dff_strategy
         self.has_transients = has_transients
         self.pd_props_path = pd_props_path  # peak detection props
+        self.pd_params = pd_params
         self._peak_idxes = None
         self._peak_bounds_indices = None
         self._order_zero_savgol = None
@@ -38,7 +40,9 @@ class Trace:
     @property
     def peak_idxes(self):
         if self._peak_idxes is None:
-            if self.pd_props_path and self.pd_props_path.exists():
+            if self.pd_params:
+                self.detect_peaks(**self.pd_params)
+            elif self.pd_props_path and self.pd_props_path.exists():
                 try:
                     pd_params = self.get_peak_detection_params()
                 except ValueError:
@@ -116,9 +120,10 @@ class Trace:
 
     def get_peak_detection_params(self):
         """Reads peak detection params from config file."""
-        if self.pd_props_path.exists():
-            with open(self.pd_props_path, "r") as f:
-                config = json.load(f)
+        if not self.pd_props_path.exists():
+            raise FileNotFoundError("Could not find peak detection params file.")
+        with open(self.pd_props_path, "r") as f:
+            config = json.load(f)
         pd_params = ["mpd", "order0_min", "order1_min", "prominence"]
         if any(param not in config for param in pd_params):
             raise ValueError("Missing params in pd_params file")
