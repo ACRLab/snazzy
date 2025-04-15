@@ -296,7 +296,7 @@ class MainWindow(QMainWindow):
             self.top_layout.addWidget(self.order_one_slider)
             self.top_layout.addWidget(self.prominence_slider)
             self.top_layout.addWidget(self.width_slider)
-            self.top_layout.addWidget(self.max_amp_slider)
+            self.top_layout.addWidget(self.phase2_slider)
 
             self.button = QPushButton("Apply Changes")
             self.button.clicked.connect(self.update_all_embs)
@@ -504,6 +504,7 @@ class MainWindow(QMainWindow):
             pd_params["order0_min"],
             pd_params["order1_min"],
             pd_params["prominence"],
+            phase2_min_amp=pd_params["phase2_amp"],
         )
         self.render_trace()
 
@@ -523,7 +524,7 @@ class MainWindow(QMainWindow):
         mpd = self.mpd_slider.value()
         prominence = self.prominence_slider.value()
         peak_width = self.width_slider.value()
-        max_amp_slider = self.max_amp_slider.value()
+        phase2_slider = self.phase2_slider.value()
 
         return {
             "order0_min": float(order0_min),
@@ -531,7 +532,7 @@ class MainWindow(QMainWindow):
             "mpd": int(mpd),
             "prominence": float(prominence),
             "peak_width": float(peak_width),
-            "max_amp": float(max_amp_slider),
+            "phase2_amp": float(phase2_slider),
         }
 
     def detect_peaks_all(self):
@@ -552,7 +553,7 @@ class MainWindow(QMainWindow):
                     pd_params["order0_min"],
                     pd_params["order1_min"],
                     pd_params["prominence"],
-                    pd_params["max_amp"],
+                    phase2_min_amp=pd_params["phase2_amp"],
                 )
 
             self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
@@ -615,7 +616,7 @@ class MainWindow(QMainWindow):
             (self.order_zero_slider, "order0_min"),
             (self.order_one_slider, "order1_min"),
             (self.prominence_slider, "prominence"),
-            (self.max_amp_slider, "max_amp"),
+            (self.phase2_slider, "phase2_amp"),
         ):
             sld.setValue(pd_params[name])
             sld.set_custom_slot(self.repaint_curr_emb)
