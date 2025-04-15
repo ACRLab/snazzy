@@ -21,6 +21,7 @@ class PeakFinder:
             mpd=70,
             prominence=0.2,
             peak_width=0.92,
+            phase2_amp=0.06,
             to_remove=[],
         )
 
@@ -42,8 +43,8 @@ class PeakFinder:
         if "to_remove" not in data:
             data["to_remove"] = []
 
-        if "max_amp" not in data:
-            data["max_amp"] = 10
+        if "phase2_amp" not in data:
+            data["phase2_amp"] = 0.06
 
         return {
             "order0_min": float(data["order0_min"]),
@@ -51,7 +52,7 @@ class PeakFinder:
             "mpd": int(data["mpd"]),
             "prominence": float(data["prominence"]),
             "peak_width": float(data["peak_width"]),
-            "max_amp": float(data["max_amp"]),
+            "phase2_amp": float(data["phase2_amp"]),
             "to_remove": list(data["to_remove"]),
         }
 
