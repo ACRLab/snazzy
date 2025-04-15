@@ -283,11 +283,13 @@ class MainWindow(QMainWindow):
         # Sliders are only avaialable if a single experiment is open
         if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
             self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
-            self.order_zero_slider = LabeledSlider("Order 0 min", 0, 0.8, 0.06, 0.005)
-            self.order_one_slider = LabeledSlider("Order 1 min", 0, 0.1, 0.005, 0.0005)
+            self.order_zero_slider = LabeledSlider(
+                "Minimum amplitude", 0, 0.8, 0.06, 0.005
+            )
+            self.order_one_slider = LabeledSlider("Inclination", 0, 0.1, 0.005, 0.0005)
             self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
             self.width_slider = LabeledSlider("Peak width", 0.7, 1, 0.92, 0.005)
-            self.max_amp_slider = LabeledSlider("Max amplitude", 0.1, 5, 1.25, 0.1)
+            self.phase2_slider = LabeledSlider("Phase 2 amplitude", 0, 0.8, 0.06, 0.005)
 
             self.top_layout.addWidget(self.mpd_slider)
             self.top_layout.addWidget(self.order_zero_slider)
