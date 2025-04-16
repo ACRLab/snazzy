@@ -197,48 +197,129 @@ class Trace:
 
         return baseline
 
-    def detect_peaks(
-        self, mpd=71, order0_min=0.08, order1_min=0.006, prominence=0.1, max_amp=10
-    ):
-        self.calculate_peaks(mpd, order0_min, order1_min, prominence, max_amp)
+    def process_peaks(self, stages):
+        """Applies a series of stages to process peak data from ss.find_peaks.
 
-        peak_idxes = self.peak_idxes
-        peak_times = self.peak_times
+        Each stage is a callable that takes a list of peaks and a params dict."""
+        for stage_func, params in stages:
+            stage_func(params)
 
-        if self.has_transients:
-            avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
-            if (peak_times[1] - peak_times[0]) > 2 * avg_ISI:
-                peak_idxes = peak_idxes[1:]
-                peak_times = peak_times[1:]
+    def remove_transients(self, params):
+        """Transients are very early bouts that result in a first peak that
+        happens way before other peaks."""
+        if not self.has_transients:
+            return
+        ISI_factor = params.get("ISI_factor", 2)
+        # average inter-spike interval
+        peak_times = self.time[self._peak_idxes]
+        if len(peak_times) < 2:
+            print("Cannot remove transients, not enough peaks.")
+            return
+        avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
+        if (peak_times[1] - peak_times[0]) > ISI_factor * avg_ISI:
+            self._peak_idxes = self._peak_idxes[1:]
 
-        # reconcile the calculated peaks with manually corrected data:
+    def reconcile_manual_peaks(self, params):
+        """Reconcile the calculated peaks with manually corrected data.
+
+        The manual data is written at `self.pd_props_path`, through the GUI."""
+        if not self.pd_props_path.exists():
+            return
         corrected_peaks = None
-        if self.pd_props_path.exists():
-            with open(self.pd_props_path, "r") as f:
-                config = json.load(f)
-                if self.name in config.get("embryos", {}):
-                    corrected_peaks = config["embryos"][self.name]
-        if corrected_peaks:
-            to_add = corrected_peaks["manual_peaks"]
-            to_remove = corrected_peaks["manual_remove"]
-            wlen = corrected_peaks["wlen"]
-            filtered_peaks = [
-                p for p in peak_idxes if not any(abs(p - rp) < wlen for rp in to_remove)
-            ]
-            filtered_add = [
-                ap
-                for ap in to_add
-                if not any(abs(p - ap) < wlen for p in filtered_peaks)
-            ]
-            peak_idxes = np.array(sorted(filtered_peaks + filtered_add), dtype=np.int64)
-            self.to_add = to_add
-            self.to_remove = to_remove
 
-        self._peak_idxes = peak_idxes
-        peak_times = self.time[peak_idxes]
-        # TODO: this return stmt is here only to support the debouncer in ipynb
-        # should be removed after the ipynb is rewritten
-        return peak_times, peak_idxes
+        with open(self.pd_props_path, "r") as f:
+            config = json.load(f)
+            if self.name in config.get("embryos", {}):
+                corrected_peaks = config["embryos"][self.name]
+            if corrected_peaks:
+                to_add = corrected_peaks["manual_peaks"]
+                to_remove = corrected_peaks["manual_remove"]
+                wlen = corrected_peaks["wlen"]
+                filtered_peaks = [
+                    p
+                    for p in self._peak_idxes
+                    if not any(abs(p - rp) < wlen for rp in to_remove)
+                ]
+                filtered_add = [
+                    ap
+                    for ap in to_add
+                    if not any(abs(p - ap) < wlen for p in filtered_peaks)
+                ]
+                self.to_add = to_add
+                self.to_remove = to_remove
+                self._peaks_idxes = np.array(
+                    sorted(filtered_peaks + filtered_add), dtype=np.int64
+                )
+
+    def phase2_min_amp(self, params):
+        """Recalculates peaks after a given episode number, using new
+        order0_min value."""
+        start_idx = params.get("start_idx", None)
+        min_amp = params.get("min_amp", None)
+        mpd = params.get("mpd")
+        prominence = params.get("prominence")
+        order1_min = params.get("order1_min")
+
+        if not start_idx or not min_amp:
+            return
+
+        if start_idx >= len(self.peak_idxes):
+            return
+
+        start_time = self.time[self.peak_idxes[start_idx]]
+
+        p2_peaks = self.calculate_peaks(mpd, min_amp, order1_min, prominence)
+        p2_peaks = p2_peaks[self.time[p2_peaks] >= start_time]
+
+        self._peak_idxes = np.concatenate([self.peak_idxes[:start_idx], p2_peaks])
+
+    def detect_peaks(
+        self,
+        mpd=71,
+        order0_min=0.08,
+        order1_min=0.006,
+        prominence=0.1,
+        max_amp=10,
+        phase2_min_amp=None,
+    ):
+        self._peak_idxes = self.calculate_peaks(
+            mpd, order0_min, order1_min, prominence, max_amp
+        )
+
+        if phase2_min_amp is None:
+            phase2_min_amp = order0_min
+
+        stages = [
+            (self.remove_transients, {}),
+            (self.reconcile_manual_peaks, {}),
+            (
+                self.phase2_min_amp,
+                {
+                    "start_idx": 4,
+                    "min_amp": phase2_min_amp,
+                    "mpd": mpd,
+                    "prominence": prominence,
+                    "order1_min": order1_min,
+                },
+            ),
+        ]
+        self.process_peaks(stages)
+
+    def detect_oscillations(self, after_ep=2, offset=10):
+        mask = np.zeros_like(self.dff, dtype=np.bool_)
+        peak_bounds = self.peak_bounds_indices
+        for s, e in peak_bounds:
+            mask[s : e + offset] = 1
+        # oscillations only happen in phase 2, which should be at least after ep 2:
+        if len(self.peak_idxes) <= after_ep:
+            return None
+        p2_start = self.peak_idxes[after_ep]
+        dff = self.dff.copy()
+        dff[mask] = 0
+        dff = dff[p2_start : self.trim_idx]
+        order0_idxes = spsig.find_peaks(dff, height=0.1, distance=5)[0]
+
+        return order0_idxes + p2_start
 
     def calculate_peaks(
         self,
@@ -276,7 +357,7 @@ class Trace:
         joint_filter = np.all(
             [order0_filter, order1_filter, order2_filter, within_limit], axis=0
         )
-        self._peak_idxes = np.where(joint_filter)[0]
+        return np.where(joint_filter)[0]
 
     def get_first_peak_time(self):
         """Returns the time when the first peak was detected."""
