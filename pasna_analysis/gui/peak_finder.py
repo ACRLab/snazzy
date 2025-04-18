@@ -40,21 +40,13 @@ class PeakFinder:
         with open(config_path, "r") as f:
             data = json.load(f)
 
-        if "to_remove" not in data:
-            data["to_remove"] = []
+        pd_params = {}
 
-        if "phase2_amp" not in data:
-            data["phase2_amp"] = 0.06
+        for key, default_value in self.default_params.items():
+            value = data.get(key, default_value)
+            pd_params[key] = type(default_value)(value)
 
-        return {
-            "order0_min": float(data["order0_min"]),
-            "order1_min": float(data["order1_min"]),
-            "mpd": int(data["mpd"]),
-            "prominence": float(data["prominence"]),
-            "peak_width": float(data["peak_width"]),
-            "phase2_amp": float(data["phase2_amp"]),
-            "to_remove": list(data["to_remove"]),
-        }
+        return pd_params
 
     def save_pd_params(self, config_path: Path, **kwargs):
         """Writes all keyword arguments to the file at config_path."""
