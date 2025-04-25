@@ -32,6 +32,7 @@ class Trace:
         self._order_zero_savgol = None
         self.to_add = []
         self.to_remove = []
+        self.fs = 1000
 
         self.trim_idx = self.trim_data(trim_zscore)
 
@@ -41,13 +42,13 @@ class Trace:
     def peak_idxes(self):
         if self._peak_idxes is None:
             if self.pd_params:
-                self.detect_peaks(**self.pd_params)
+                self.detect_peaks(pd_params["freq"])
             elif self.pd_props_path and self.pd_props_path.exists():
                 try:
                     pd_params = self.get_peak_detection_params()
                 except ValueError:
                     pd_params = {}
-                self.detect_peaks(**pd_params)
+                self.detect_peaks()
             else:
                 self.detect_peaks()
         return self._peak_idxes
@@ -273,36 +274,14 @@ class Trace:
 
         self._peak_idxes = np.concatenate([self.peak_idxes[:start_idx], p2_peaks])
 
-    def detect_peaks(
-        self,
-        mpd=71,
-        order0_min=0.08,
-        order1_min=0.006,
-        prominence=0.1,
-        max_amp=10,
-        phase2_min_amp=None,
-    ):
-        self._peak_idxes = self.calculate_peaks(
-            mpd, order0_min, order1_min, prominence, max_amp
-        )
-
-        if phase2_min_amp is None:
-            phase2_min_amp = order0_min
+    def detect_peaks(self, freq=71):
+        self._peak_idxes = self.calculate_peaks(freq_cutoff=freq)
 
         stages = [
             (self.remove_transients, {}),
             (self.reconcile_manual_peaks, {}),
-            (
-                self.phase2_min_amp,
-                {
-                    "start_idx": 4,
-                    "min_amp": phase2_min_amp,
-                    "mpd": mpd,
-                    "prominence": prominence,
-                    "order1_min": order1_min,
-                },
-            ),
         ]
+
         self.process_peaks(stages)
 
     def detect_oscillations(self, after_ep=2, offset=10):
@@ -321,43 +300,79 @@ class Trace:
 
         return order0_idxes + p2_start
 
-    def calculate_peaks(
-        self,
-        mpd=71,
-        order0_min=0.08,
-        order1_min=0.006,
-        prominence=0.1,
-        max_amp=10,
-        extend_true_filters_by=30,
-    ):
+    def get_filtered_signal(self, freq_cutoff):
+        N = len(self.dff[: self.trim_idx])
+        freqs = np.fft.rfftfreq(N, 1 / self.fs)
+        fft = np.fft.rfft(self.dff[: self.trim_idx])
+        mask = freqs < freq_cutoff
+        filtered_fft = fft * mask
+        filtered_signal = np.fft.irfft(filtered_fft, n=N)
+
+        return filtered_signal
+
+    def filter_peaks_by_local_context(self, signal, peak_indices):
         """
-        Detects peaks using Savitzky-Golay-filtered signal and its derivatives, computed in __init__.
-        Partly relies on spsig.find_peaks called on the signal, with parameters mpd (minimum peak distance)
-         and order0_min (minimum peak height).
-        order1_min sets the minimum first-derivative value, and the second derivative must be <0. These filters
-         are stretched out to the right by extend_true_filters_by samples.
+        Filter pre-detected peaks by comparing their height to a local threshold.
+
+        Parameters:
+            signal (np.ndarray): Original signal.
+            peak_indices (np.ndarray): Indices of peaks (e.g., from find_peaks).
+
+        Returns:
+            filtered_peaks (np.ndarray): Indices of peaks that passed local thresholding.
         """
-        dff = self.dff[: self.trim_idx]
-        savgol = self.order_zero_savgol
-        order0_idxes = spsig.find_peaks(
-            savgol, height=order0_min, prominence=prominence, distance=mpd
-        )[0]
-        order0_filter = np.zeros(len(savgol), dtype=bool)
-        order0_filter[order0_idxes] = True
+        window_size = 600
+        method = "percentile"
+        value = 75
+        half_win = window_size // 2
 
-        savgol1 = spsig.savgol_filter(dff, 21, 4, deriv=1)
-        order1_filter = savgol1 > order1_min
-        order1_filter = _extend_true_right(order1_filter, extend_true_filters_by)
+        filtered_peaks = []
 
-        savgol2 = spsig.savgol_filter(dff, 21, 4, deriv=2)
-        order2_filter = savgol2 < 0
-        order2_filter = _extend_true_right(order2_filter, extend_true_filters_by)
+        for i in peak_indices:
+            start = max(0, i - half_win)
+            end = min(len(signal), i + half_win)
+            window = signal[start:end]
 
-        within_limit = dff < max_amp
-        joint_filter = np.all(
-            [order0_filter, order1_filter, order2_filter, within_limit], axis=0
-        )
-        return np.where(joint_filter)[0]
+            if method == "mean":
+                local_thresh = value * np.mean(np.abs(window))
+            elif method == "median":
+                local_thresh = value * np.median(np.abs(window))
+            elif method == "percentile":
+                local_thresh = np.percentile(np.abs(window), value)
+            else:
+                raise ValueError("Method must be 'mean', 'median', or 'percentile'.")
+
+            if signal[i] >= local_thresh:
+                filtered_peaks.append(i)
+
+        return np.array(filtered_peaks)
+
+    def calculate_peaks(self, freq_cutoff):
+        """
+        Detect peaks based on the low-passed iFFT signal. Peaks found in the
+        freq domain are used as anchor points in the actual signal to determine
+        peak indices.
+        """
+        dff = self.get_filtered_signal(freq_cutoff)
+
+        peak_indices, _ = spsig.find_peaks(dff, height=0.05, prominence=0.05)
+
+        peaks = self.filter_peaks_by_local_context(dff, peak_indices)
+
+        local_peak_indices = []
+        search_window = 35
+
+        for idx in peaks:
+            left = max(0, idx - search_window)
+            right = min(len(dff), idx + search_window)
+            local_window = dff[left:right]
+            if len(local_window) == 0:
+                continue
+            local_peak_offset = np.argmax(local_window)
+            local_peak = left + local_peak_offset
+            local_peak_indices.append(local_peak)
+
+        return np.array(local_peak_indices)
 
     def get_first_peak_time(self):
         """Returns the time when the first peak was detected."""
@@ -380,11 +395,10 @@ class Trace:
             trim_idx = trim_points[0] - 5
         return trim_idx
 
-    def compute_peak_bounds(self, rel_height=0.92):
+    def compute_peak_bounds(self, rel_height=0.9):
         """Computes properties of each dff peak using spsig.peak_widths."""
-        _, _, start_idxs, end_idxs = spsig.peak_widths(
-            self.order_zero_savgol, self.peak_idxes, rel_height
-        )
+        dff = self.dff[: self.trim_idx]
+        _, _, start_idxs, end_idxs = spsig.peak_widths(dff, self.peak_idxes, rel_height)
 
         start_idxs = start_idxs.astype(np.int64)
         end_idxs = end_idxs.astype(np.int64)
@@ -433,8 +447,7 @@ class Trace:
     def get_peak_slices_from_bounds(self):
         dff = self.dff[: self.trim_idx]
         peak_bounds = self.peak_bounds_indices
-        savgol = spsig.savgol_filter(dff, 21, 4, deriv=0)
-        peak_slices = [savgol[x[0] : x[1]] for x in peak_bounds]
+        peak_slices = [dff[x[0] : x[1]] for x in peak_bounds]
         time_slices = [self.time[x[0] : x[1]] for x in peak_bounds]
         return list(zip(peak_slices, time_slices))
 
