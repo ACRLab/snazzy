@@ -22,6 +22,7 @@ class PeakFinder:
             prominence=0.2,
             peak_width=0.92,
             phase2_amp=0.06,
+            freq=15,
             to_remove=[],
         )
 
