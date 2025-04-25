@@ -282,21 +282,9 @@ class MainWindow(QMainWindow):
     def paint_controls(self):
         # Sliders are only avaialable if a single experiment is open
         if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
-            self.mpd_slider = LabeledSlider("Minimum peak distance", 10, 300, 70)
-            self.order_zero_slider = LabeledSlider(
-                "Minimum amplitude", 0, 0.8, 0.06, 0.005
-            )
-            self.order_one_slider = LabeledSlider("Inclination", 0, 0.1, 0.005, 0.0005)
-            self.prominence_slider = LabeledSlider("Prominence", 0, 1, 0.06, 0.005)
-            self.width_slider = LabeledSlider("Peak width", 0.7, 1, 0.92, 0.005)
-            self.phase2_slider = LabeledSlider("Phase 2 amplitude", 0, 0.8, 0.06, 0.005)
+            self.freq_slider = LabeledSlider("Frequency cutoff", 10, 50, 25)
 
-            self.top_layout.addWidget(self.mpd_slider)
-            self.top_layout.addWidget(self.order_zero_slider)
-            self.top_layout.addWidget(self.order_one_slider)
-            self.top_layout.addWidget(self.prominence_slider)
-            self.top_layout.addWidget(self.width_slider)
-            self.top_layout.addWidget(self.phase2_slider)
+            self.top_layout.addWidget(self.freq_slider)
 
             self.button = QPushButton("Apply Changes")
             self.button.clicked.connect(self.update_all_embs)
@@ -499,13 +487,7 @@ class MainWindow(QMainWindow):
             pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
 
         trace = self.model.get_curr_trace()
-        trace.detect_peaks(
-            pd_params["mpd"],
-            pd_params["order0_min"],
-            pd_params["order1_min"],
-            pd_params["prominence"],
-            phase2_min_amp=pd_params["phase2_amp"],
-        )
+        trace.detect_peaks(pd_params["freq"])
         self.render_trace()
 
     def update_all_embs(self):
@@ -519,21 +501,9 @@ class MainWindow(QMainWindow):
         if not self.top_layout:
             return None
 
-        order0_min = self.order_zero_slider.value()
-        order1_min = self.order_one_slider.value()
-        mpd = self.mpd_slider.value()
-        prominence = self.prominence_slider.value()
-        peak_width = self.width_slider.value()
-        phase2_slider = self.phase2_slider.value()
+        freq = self.freq_slider.value()
 
-        return {
-            "order0_min": float(order0_min),
-            "order1_min": float(order1_min),
-            "mpd": int(mpd),
-            "prominence": float(prominence),
-            "peak_width": float(peak_width),
-            "phase2_amp": float(phase2_slider),
-        }
+        return {"freq": int(freq)}
 
     def detect_peaks_all(self):
         """Recalculates peak indices for all embryos.
@@ -548,13 +518,7 @@ class MainWindow(QMainWindow):
             pd_params["to_remove"] = list(self.model.to_remove[exp_name])
 
             for emb in exp.embryos.values():
-                emb.trace.detect_peaks(
-                    pd_params["mpd"],
-                    pd_params["order0_min"],
-                    pd_params["order1_min"],
-                    pd_params["prominence"],
-                    phase2_min_amp=pd_params["phase2_amp"],
-                )
+                emb.trace.detect_peaks(pd_params["freq"])
 
             self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
 
@@ -611,13 +575,7 @@ class MainWindow(QMainWindow):
         exp = self.model.get_curr_experiment()
         pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
 
-        for sld, name in (
-            (self.mpd_slider, "mpd"),
-            (self.order_zero_slider, "order0_min"),
-            (self.order_one_slider, "order1_min"),
-            (self.prominence_slider, "prominence"),
-            (self.phase2_slider, "phase2_amp"),
-        ):
+        for sld, name in ((self.freq_slider, "freq"),):
             sld.setValue(pd_params[name])
             sld.set_custom_slot(self.repaint_curr_emb)
             sld.slider.sliderPressed.connect(self.started_dragging)
@@ -625,7 +583,7 @@ class MainWindow(QMainWindow):
 
         # it's too costly to repaint all peak widths, so I wont update them as we drag
         # the width_slider
-        self.width_slider.setValue(pd_params["peak_width"])
+        # self.width_slider.setValue(pd_params["peak_width"])
 
     def started_dragging(self):
         self.is_dragging_slider = True
@@ -700,13 +658,13 @@ class MainWindow(QMainWindow):
         if peak_bounds.size == 0:
             return
 
-        op = trace.detect_oscillations()
-        op_amps = trace.dff[op]
-        op_times = time[op]
-        op_plot_items = pg.ScatterPlotItem(
-            op_times, op_amps, size=8, brush=QColor("orange")
-        )
-        self.plot_widget.addItem(op_plot_items)
+        # op = trace.detect_oscillations()
+        # op_amps = trace.dff[op]
+        # op_times = time[op]
+        # op_plot_items = pg.ScatterPlotItem(
+        #     op_times, op_amps, size=8, brush=QColor("orange")
+        # )
+        # self.plot_widget.addItem(op_plot_items)
 
         if not self.show_peak_widths or self.is_dragging_slider:
             return
