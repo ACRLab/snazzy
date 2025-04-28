@@ -326,7 +326,7 @@ class Trace:
         value = 75
         half_win = window_size // 2
 
-        filtered_peaks = []
+        filtered_peaks = set()
 
         for i in peak_indices:
             start = max(0, i - half_win)
@@ -343,9 +343,9 @@ class Trace:
                 raise ValueError("Method must be 'mean', 'median', or 'percentile'.")
 
             if signal[i] >= local_thresh:
-                filtered_peaks.append(i)
+                filtered_peaks.add(i)
 
-        return np.array(filtered_peaks)
+        return np.array(sorted(filtered_peaks))
 
     def calculate_peaks(self, freq_cutoff):
         """
