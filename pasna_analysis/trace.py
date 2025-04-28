@@ -353,14 +353,16 @@ class Trace:
         freq domain are used as anchor points in the actual signal to determine
         peak indices.
         """
-        dff = self.get_filtered_signal(freq_cutoff)
+        filtered_dff = self.get_filtered_signal(freq_cutoff)
 
-        peak_indices, _ = spsig.find_peaks(dff, height=0.05, prominence=0.05)
+        peak_indices, _ = spsig.find_peaks(filtered_dff, height=0.05, prominence=0.05)
 
-        peaks = self.filter_peaks_by_local_context(dff, peak_indices)
+        peaks = self.filter_peaks_by_local_context(filtered_dff, peak_indices)
 
         local_peak_indices = []
         search_window = 35
+
+        dff = self.dff[: self.trim_idx]
 
         for idx in peaks:
             left = max(0, idx - search_window)
