@@ -15,7 +15,7 @@ class Trace:
         activity,
         trim_zscore=0.35,
         dff_strategy="baseline",
-        has_transients=False,
+        has_transients=True,
         pd_props_path=None,
         pd_params=None,
         fs=1 / 6,
