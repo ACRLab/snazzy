@@ -275,7 +275,7 @@ class Trace:
 
         self._peak_idxes = np.concatenate([self.peak_idxes[:start_idx], p2_peaks])
 
-    def detect_peaks(self, freq=0.025):
+    def detect_peaks(self, freq=0.0025):
         self._peak_idxes = self.calculate_peaks(freq_cutoff=freq)
 
         stages = [
