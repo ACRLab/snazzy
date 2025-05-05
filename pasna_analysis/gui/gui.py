@@ -286,7 +286,7 @@ class MainWindow(QMainWindow):
                 "Frequency cutoff",
                 min_value=0.0001,
                 max_value=0.005,
-                initial_value=0.0005,
+                initial_value=0.0025,
                 step_size=0.0001,
             )
 
