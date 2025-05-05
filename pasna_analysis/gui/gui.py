@@ -48,6 +48,8 @@ class MainWindow(QMainWindow):
         self.brushes = [QBrush(pg.mkColor("m"))]
         self.threadpool = QThreadPool()
         self.use_dev_time = False
+        self.filtered_dff = None
+        self.display_filtered_dff = False
 
         self.setWindowTitle("Pasna Analysis")
         self.setGeometry(100, 100, 1200, 600)
@@ -208,6 +210,10 @@ class MainWindow(QMainWindow):
         self.top_app_bar.addWidget(top_app_bar_content)
         self.top_app_bar.addStretch()
 
+        self.show_ifft_btn = QPushButton("Show filtered dff")
+        self.show_ifft_btn.clicked.connect(self.toggle_display_filtered_dff)
+        self.top_app_bar.addWidget(self.show_ifft_btn)
+
         self.color_mode_btn = QPushButton("Colored Peaks")
         self.color_mode_btn.clicked.connect(self.toggle_color_mode)
         self.top_app_bar.addWidget(self.color_mode_btn)
@@ -243,6 +249,14 @@ class MainWindow(QMainWindow):
         else:
             self.toggle_dev_time_btn.setText("Dev time")
         self.update_all_embs()
+
+    def toggle_display_filtered_dff(self):
+        self.display_filtered_dff = not self.display_filtered_dff
+        if self.display_filtered_dff:
+            self.show_ifft_btn.setText("Hide filtered dff")
+        else:
+            self.show_ifft_btn.setText("Show filtered dff")
+        self.render_trace()
 
     def toggle_color_mode(self):
         self.color_mode = not self.color_mode
@@ -651,6 +665,9 @@ class MainWindow(QMainWindow):
         # paint trace
         self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
+
+        if self.display_filtered_dff and trace.filtered_dff is not None:
+            self.plot_widget.plot(time, trace.filtered_dff, pen=pg.mkPen("palegreen"))
 
         if self.model.has_combined_experiments():
             self.plot_widget.setTitle(f"{exp.name} - {emb_name}")
