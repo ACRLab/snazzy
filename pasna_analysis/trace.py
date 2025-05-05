@@ -18,6 +18,7 @@ class Trace:
         has_transients=False,
         pd_props_path=None,
         pd_params=None,
+        fs=1 / 6,
     ):
         self.name = name
         self.time = activity[:, 0]
@@ -32,7 +33,7 @@ class Trace:
         self._order_zero_savgol = None
         self.to_add = []
         self.to_remove = []
-        self.fs = 1000
+        self.fs = fs
 
         self.trim_idx = self.trim_data(trim_zscore)
 
@@ -274,7 +275,7 @@ class Trace:
 
         self._peak_idxes = np.concatenate([self.peak_idxes[:start_idx], p2_peaks])
 
-    def detect_peaks(self, freq=71):
+    def detect_peaks(self, freq=0.025):
         self._peak_idxes = self.calculate_peaks(freq_cutoff=freq)
 
         stages = [

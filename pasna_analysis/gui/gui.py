@@ -282,7 +282,13 @@ class MainWindow(QMainWindow):
     def paint_controls(self):
         # Sliders are only avaialable if a single experiment is open
         if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
-            self.freq_slider = LabeledSlider("Frequency cutoff", 10, 50, 25)
+            self.freq_slider = LabeledSlider(
+                "Frequency cutoff",
+                min_value=0.0001,
+                max_value=0.005,
+                initial_value=0.0005,
+                step_size=0.0001,
+            )
 
             self.top_layout.addWidget(self.freq_slider)
 
@@ -503,7 +509,7 @@ class MainWindow(QMainWindow):
 
         freq = self.freq_slider.value()
 
-        return {"freq": int(freq)}
+        return {"freq": float(freq)}
 
     def detect_peaks_all(self):
         """Recalculates peak indices for all embryos.
