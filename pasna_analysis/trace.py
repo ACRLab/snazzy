@@ -322,42 +322,65 @@ class Trace:
 
         return filtered_signal
 
-    def filter_peaks_by_local_context(self, signal, peak_indices):
+    def filter_peaks_by_local_context(
+        self, signal, peak_indices, window_size=300, value=75, method="percentile"
+    ):
         """
         Filter pre-detected peaks by comparing their height to a local threshold.
 
         Parameters:
             signal (np.ndarray): Original signal.
             peak_indices (np.ndarray): Indices of peaks (e.g., from find_peaks).
+            window_size (int): Size of the window to determine local threshold.
+            value (int): Factor to determine local threshold.
+            method ('mean' | 'median' | 'percentile'): How to calculate the threshold.
 
         Returns:
             filtered_peaks (np.ndarray): Indices of peaks that passed local thresholding.
         """
-        window_size = 600
-        method = "percentile"
-        value = 75
-        half_win = window_size // 2
-
-        filtered_peaks = set()
+        filtered_peaks = []
 
         for i in peak_indices:
-            start = max(0, i - half_win)
-            end = min(len(signal), i + half_win)
-            window = signal[start:end]
-
-            if method == "mean":
-                local_thresh = value * np.mean(np.abs(window))
-            elif method == "median":
-                local_thresh = value * np.median(np.abs(window))
-            elif method == "percentile":
-                local_thresh = np.percentile(np.abs(window), value)
-            else:
-                raise ValueError("Method must be 'mean', 'median', or 'percentile'.")
-
-            if signal[i] >= local_thresh:
-                filtered_peaks.add(i)
+            if signal[i] > self.local_threshold(signal, i, window_size, value, method):
+                filtered_peaks.append(i)
 
         return np.array(sorted(filtered_peaks))
+
+    def local_threshold(self, signal, idx, window_size, value, method):
+        half_win = window_size // 2
+
+        start = max(0, idx - half_win)
+        end = min(len(signal), idx + half_win)
+        window = signal[start:end]
+
+        if method == "mean":
+            local_thresh = value * np.mean(np.abs(window))
+        elif method == "median":
+            local_thresh = value * np.median(np.abs(window))
+        elif method == "percentile":
+            local_thresh = np.percentile(np.abs(window), value)
+        else:
+            raise ValueError("Method must be 'mean', 'median', or 'percentile'.")
+
+        return local_thresh
+
+    def port_peaks(self, peaks, target_signal, search_window=35):
+        """Changes peaks index to the highest peak amplitude on a target signal."""
+        local_peak_indices = []
+
+        for idx in peaks:
+            left = max(0, idx - search_window)
+            right = min(len(target_signal), idx + search_window)
+            local_window = target_signal[left:right]
+            if len(local_window) == 0:
+                continue
+            local_peaks, peak_data = spsig.find_peaks(local_window, height=(None, None))
+            local_peak_heights = peak_data["peak_heights"]
+            max_peak_idx = np.argmax(local_peak_heights)
+
+            local_peak_indices.append(left + local_peaks[max_peak_idx])
+
+        return np.array(local_peak_indices)
 
     def calculate_peaks(self, freq_cutoff):
         """
@@ -371,20 +394,7 @@ class Trace:
 
         peaks = self.filter_peaks_by_local_context(filtered_dff, peak_indices)
 
-        local_peak_indices = []
-        search_window = 35
-
-        dff = self.dff[: self.trim_idx]
-
-        for idx in peaks:
-            left = max(0, idx - search_window)
-            right = min(len(dff), idx + search_window)
-            local_window = dff[left:right]
-            if len(local_window) == 0:
-                continue
-            local_peak_offset = np.argmax(local_window)
-            local_peak = left + local_peak_offset
-            local_peak_indices.append(local_peak)
+        local_peak_indices = self.port_peaks(peaks, self.dff[: self.trim_idx])
 
         return np.array(local_peak_indices), filtered_dff
 
