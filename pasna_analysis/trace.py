@@ -31,6 +31,7 @@ class Trace:
         self._peak_idxes = None
         self._peak_bounds_indices = None
         self._order_zero_savgol = None
+        self.filtered_dff = None
         self.to_add = []
         self.to_remove = []
         self.fs = fs
@@ -270,13 +271,14 @@ class Trace:
 
         start_time = self.time[self.peak_idxes[start_idx]]
 
-        p2_peaks = self.calculate_peaks(mpd, min_amp, order1_min, prominence)
+        p2_peaks, _ = self.calculate_peaks(mpd, min_amp, order1_min, prominence)
         p2_peaks = p2_peaks[self.time[p2_peaks] >= start_time]
 
         self._peak_idxes = np.concatenate([self.peak_idxes[:start_idx], p2_peaks])
 
     def detect_peaks(self, freq=0.0025):
-        self._peak_idxes = self.calculate_peaks(freq_cutoff=freq)
+        self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
+        self.filtered_dff = filtered_dff
 
         stages = [
             (self.remove_transients, {}),
@@ -375,7 +377,7 @@ class Trace:
             local_peak = left + local_peak_offset
             local_peak_indices.append(local_peak)
 
-        return np.array(local_peak_indices)
+        return np.array(local_peak_indices), filtered_dff
 
     def get_first_peak_time(self):
         """Returns the time when the first peak was detected."""
