@@ -304,7 +304,16 @@ class MainWindow(QMainWindow):
                 step_size=0.0001,
             )
 
+            self.rel_h_slider = LabeledSlider(
+                "Relative height",
+                min_value=0.3,
+                max_value=1,
+                initial_value=0.9,
+                step_size=0.01,
+            )
+
             self.top_layout.addWidget(self.freq_slider)
+            self.top_layout.addWidget(self.rel_h_slider)
 
             self.button = QPushButton("Apply Changes")
             self.button.clicked.connect(self.update_all_embs)
@@ -522,8 +531,9 @@ class MainWindow(QMainWindow):
             return None
 
         freq = self.freq_slider.value()
+        peak_width = self.rel_h_slider.value()
 
-        return {"freq": float(freq)}
+        return {"freq": float(freq), "peak_width": float(peak_width)}
 
     def detect_peaks_all(self):
         """Recalculates peak indices for all embryos.
@@ -595,7 +605,10 @@ class MainWindow(QMainWindow):
         exp = self.model.get_curr_experiment()
         pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
 
-        for sld, name in ((self.freq_slider, "freq"),):
+        for sld, name in (
+            (self.freq_slider, "freq"),
+            (self.rel_h_slider, "peak_width"),
+        ):
             sld.setValue(pd_params[name])
             sld.set_custom_slot(self.repaint_curr_emb)
             sld.slider.sliderPressed.connect(self.started_dragging)
@@ -603,7 +616,7 @@ class MainWindow(QMainWindow):
 
         # it's too costly to repaint all peak widths, so I wont update them as we drag
         # the width_slider
-        # self.width_slider.setValue(pd_params["peak_width"])
+        self.rel_h_slider.setValue(pd_params["peak_width"])
 
     def started_dragging(self):
         self.is_dragging_slider = True
@@ -680,14 +693,6 @@ class MainWindow(QMainWindow):
         peak_bounds = trace.peak_bounds_indices.flatten()
         if peak_bounds.size == 0:
             return
-
-        # op = trace.detect_oscillations()
-        # op_amps = trace.dff[op]
-        # op_times = time[op]
-        # op_plot_items = pg.ScatterPlotItem(
-        #     op_times, op_amps, size=8, brush=QColor("orange")
-        # )
-        # self.plot_widget.addItem(op_plot_items)
 
         if not self.show_peak_widths or self.is_dragging_slider:
             return
