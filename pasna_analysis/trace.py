@@ -364,21 +364,27 @@ class Trace:
 
         return local_thresh
 
-    def port_peaks(self, peaks, target_signal, search_window=35):
+    def port_peaks(self, peaks, target_signal, search_window=30, peak_height_thres=0.7):
         """Changes peaks index to the highest peak amplitude on a target signal."""
         local_peak_indices = []
 
         for idx in peaks:
             left = max(0, idx - search_window)
             right = min(len(target_signal), idx + search_window)
-            local_window = target_signal[left:right]
-            if len(local_window) == 0:
+            window = target_signal[left:right]
+            if len(window) == 0:
                 continue
-            local_peaks, peak_data = spsig.find_peaks(local_window, height=(None, None))
-            local_peak_heights = peak_data["peak_heights"]
-            max_peak_idx = np.argmax(local_peak_heights)
 
-            local_peak_indices.append(left + local_peaks[max_peak_idx])
+            local_peaks, peak_data = spsig.find_peaks(window, height=(None, None))
+            local_peak_heights = peak_data["peak_heights"]
+            max_peak = np.max(local_peak_heights)
+
+            leftmost_peak = next(
+                p
+                for (p, ph) in zip(local_peaks, local_peak_heights)
+                if ph >= peak_height_thres * max_peak
+            )
+            local_peak_indices.append(left + leftmost_peak)
 
         return np.array(local_peak_indices)
 
@@ -421,8 +427,12 @@ class Trace:
 
     def compute_peak_bounds(self, rel_height=0.9):
         """Computes properties of each dff peak using spsig.peak_widths."""
-        dff = self.dff[: self.trim_idx]
-        _, _, start_idxs, end_idxs = spsig.peak_widths(dff, self.peak_idxes, rel_height)
+        dff = self.dff[: self.trim_idx].copy()
+        # make sure that the peak we pass is not bound by local points
+        dff[self.peak_idxes] += 0.3
+        _, _, start_idxs, end_idxs = spsig.peak_widths(
+            dff, self.peak_idxes, rel_height, wlen=50
+        )
 
         start_idxs = start_idxs.astype(np.int64)
         end_idxs = end_idxs.astype(np.int64)
