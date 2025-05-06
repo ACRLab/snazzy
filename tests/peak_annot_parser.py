@@ -11,7 +11,7 @@ class AnnotationData:
     exp_date: str
     fly_line: str
     emb_name: str
-    episode_idexes: list
+    episode_idxes: list
     oscillation_idxes: list
 
 
@@ -43,9 +43,13 @@ class PeakAnnotationParser:
                     if label == "Episode":
                         episode_idxes.append(int(idx))
                     elif label == "Oscillation":
-                        episode_idxes.append(int(idx))
+                        oscillation_idxes.append(int(idx))
+                    elif label == "dSNA":
+                        continue
                     else:
-                        print(f"WARN: got an unexpected label: {label}")
+                        print(
+                            f"WARN: got an unexpected label: {label}. File: {csv_path.name}"
+                        )
             annotation = AnnotationData(
                 exp_date, fly_line, emb_name, episode_idxes, oscillation_idxes
             )
@@ -54,7 +58,7 @@ class PeakAnnotationParser:
 
         return annotations
 
-    def get_annotation_by_exp_name(self, exp_name):
+    def get_annotation_by_exp_name(self, exp_name) -> list[AnnotationData]:
         """Returns all AnnotationData relative to an `exp_name`.
 
         Parameters:
@@ -69,3 +73,12 @@ class PeakAnnotationParser:
             if f"{exp_date}_{fly_line}" == exp_name:
                 annotations.append(annot)
         return annotations
+
+    def get_exp_names(self):
+        exp_names = set()
+
+        for k in self.annotations.keys():
+            name, _ = k.split("_emb")
+            exp_names.add(name)
+
+        return list(exp_names)
