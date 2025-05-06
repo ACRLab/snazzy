@@ -28,7 +28,7 @@ class Experiment:
         first_peak_threshold=30,
         to_exclude: Optional[list[int]] = None,
         dff_strategy="baseline",
-        has_transients=False,
+        has_transients=True,
     ):
         self.to_exclude = [] if to_exclude is None else to_exclude
         data = DataLoader(exp_path)
