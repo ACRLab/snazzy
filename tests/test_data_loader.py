@@ -17,7 +17,7 @@ def test_creates_instance_when_dir_matches_expected_structure():
 
 
 def test_raises_when_missing_files():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         DataLoader(MISSING_DATA_DIR)
 
 
