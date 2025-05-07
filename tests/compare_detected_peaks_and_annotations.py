@@ -4,14 +4,32 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from pasna_analysis import Experiment
-from peak_annot_parser import PeakAnnotationParser
+from pasna_analysis import Experiment, Trace
+from peak_annot_parser import (
+    PeakAnnotationParser,
+    GroundTruthPointData,
+    GroundTruthWindowData,
+)
 
 ANNOT_DIR = "./tests/assets/annotated_data/"
 
 
-def load_data(annotated_path, exp_dir):
-    annotated_data = PeakAnnotationParser(annotated_path)
+def load_data(annotated_path, exp_dir, annot_type):
+    """Generates ground truth and calculated data in pairs.
+
+    Parameters:
+        annotated_path (Path):
+            Path to annotated csv file.
+        exp_dir (Path):
+            Path to experiment dir.
+        annot_type ('point' | 'window'):
+            Type of GT data.
+
+    Yields:
+        comparison_data (tuple):
+            (annotations, peak_idxes, exp_name, trace)
+    """
+    annotated_data = PeakAnnotationParser(annotated_path, annot_type)
     exp_names = annotated_data.get_exp_names()
     for exp_name in exp_names:
         annotations = annotated_data.get_annotation_by_exp_name(exp_name)
@@ -28,6 +46,39 @@ def load_data(annotated_path, exp_dir):
             trace = exp.embryos[emb_name].trace
             calc_idxes = get_peak_idxes(exp, emb_name)
             yield (annot, calc_idxes, exp_name, trace)
+
+
+def abs_bound_distance(bound1, bound2):
+    s1, e1 = bound1
+    s2, e2 = bound2
+    return abs(s1 - s2) + abs(e1 - e2)
+
+
+def evaluate_bounds_detection(annot_bounds, calc_bounds, tolerance):
+    matched = []
+    unmatched_annotated = set(annot_bounds)
+    unmatched_calculated = set(calc_bounds)
+    visited = set()
+
+    for ann in annot_bounds:
+        close_candidates = [
+            calc
+            for calc in calc_bounds
+            if abs_bound_distance(calc, ann) <= tolerance and calc not in visited
+        ]
+        if close_candidates:
+            best_match = min(close_candidates, key=lambda c: abs_bound_distance(c, ann))
+            matched.append((ann, best_match, abs_bound_distance(best_match, ann)))
+            visited.add(best_match)
+            unmatched_annotated.discard(ann)
+            unmatched_calculated.discard(best_match)
+
+    return {
+        "matches": matched,
+        "mean_error": sum(e[-1] for e in matched) / len(matched) if matched else None,
+        "misses": list(unmatched_annotated),
+        "false_positives": list(unmatched_calculated),
+    }
 
 
 def evaluate_peak_detection(annotated_peaks, calculated_peaks, tolerance):
@@ -57,16 +108,29 @@ def evaluate_peak_detection(annotated_peaks, calculated_peaks, tolerance):
     }
 
 
-def get_comparison_results(annot_to_exp):
+def get_comparison_results(annot_to_exp, annot_type):
     results = []
-    for annot_path, exp_path in annot_to_exp.items():
-        for annot, calc_idxes, exp_name, _ in load_data(
-            ANNOT_DIR + annot_path, "./" + exp_path
-        ):
-            annot_idxes = annot.episode_idxes
-            res = evaluate_peak_detection(annot_idxes, calc_idxes, tolerance=30)
-            res["exp_name"] = exp_name
-            results.append(res)
+    for annot_file, exp_file in annot_to_exp.items():
+        annot_path = ANNOT_DIR + annot_file
+        exp_path = "./" + exp_file
+        if annot_type == "point":
+            for annot, calc_idxes, exp_name, _ in load_data(
+                annot_path, exp_path, annot_type
+            ):
+                annot_idxes = annot.episode_idxes
+                res = evaluate_peak_detection(annot_idxes, calc_idxes, tolerance=30)
+                res["exp_name"] = exp_name
+                results.append(res)
+        elif annot_type == "window":
+            for annot, _, exp_name, trace in load_data(
+                annot_path, exp_path, annot_type
+            ):
+                annot_bounds = annot.episode_bounds
+                trace.compute_peak_bounds(rel_height=0.99)
+                calc_bounds = [tuple(b.tolist()) for b in trace.peak_bounds_indices]
+                res = evaluate_bounds_detection(annot_bounds, calc_bounds, tolerance=90)
+                res["exp_name"] = exp_name
+                results.append(res)
 
     return results
 
@@ -76,7 +140,7 @@ def get_peak_idxes(exp: Experiment, emb_name):
     return [int(idx) for idx in idxs]
 
 
-def plot_single_trace(trace, annot):
+def plot_single_trace(trace: Trace, annot: GroundTruthPointData):
     annot_peaks = annot.episode_idxes
     dff = trace.dff[: trace.trim_idx]
     annot_amps = [dff[p] for p in annot_peaks]
@@ -90,12 +154,33 @@ def plot_single_trace(trace, annot):
     plt.show()
 
 
-def plot_all_traces(annot_to_exp):
+def plot_single_trace_bounds(trace: Trace, annot: GroundTruthWindowData):
+    annot_bounds = annot.episode_bounds
+    dff = trace.dff[: trace.trim_idx]
+    trace.compute_peak_bounds(rel_height=0.99)
+    calc_bounds = trace.peak_bounds_indices
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(dff)
+    for s, e in annot_bounds:
+        ax.axvline(s, ls=":", color="b", alpha=0.5)
+        ax.axvline(e, ls=":", color="b", alpha=0.5)
+    for s, e in calc_bounds:
+        ax.axvspan(s, e, facecolor="r", alpha=0.3)
+    ax.set_title(annot.emb_name)
+    plt.show()
+
+
+def plot_all_traces(annot_to_exp, annot_type):
     for annot_file, exp_file in annot_to_exp.items():
         annot_path = ANNOT_DIR + annot_file
         exp_path = "./" + exp_file
-        for annot, _, _, trace in load_data(annot_path, exp_path):
-            plot_single_trace(trace, annot)
+        if annot_type == "point":
+            for annot, _, _, trace in load_data(annot_path, exp_path, annot_type):
+                plot_single_trace(trace, annot)
+        elif annot_type == "window":
+            for annot, _, _, trace in load_data(annot_path, exp_path, annot_type):
+                plot_single_trace_bounds(trace, annot)
 
 
 def plot_mean_error(results):
@@ -155,6 +240,57 @@ def plot_eval_results(results):
     plt.show()
 
 
+def plot_eval_results_bounds(results):
+    rows = []
+    for res in results:
+        for ann, calc, d in res["matches"]:
+            rows.append(
+                {
+                    "group_name": group_name(res["exp_name"]),
+                    "exp_name": res["exp_name"],
+                    "left_match": ann[0] - calc[0],
+                    "right_match": ann[1] - calc[1],
+                    "distance": d,
+                }
+            )
+
+    df = pd.DataFrame(rows)
+    df_long = df.melt(
+        id_vars=["group_name", "exp_name"],
+        value_vars=["left_match", "right_match", "distance"],
+        var_name="metric",
+        value_name="value",
+    )
+
+    sns.set_theme(style="darkgrid")
+    ax = sns.stripplot(
+        data=df_long,
+        x="metric",
+        y="value",
+        hue="group_name",
+        dodge=True,
+        alpha=0.7,
+        zorder=1,
+    )
+
+    sns.pointplot(
+        data=df_long,
+        x="metric",
+        y="value",
+        hue="group_name",
+        dodge=0.532,
+        errorbar=None,
+        linewidth=0,
+        color="k",
+        markers=".",
+        markersize=8,
+        ax=ax,
+        legend=False,
+    )
+    ax.figure.suptitle("Calc vs GT width positions")
+    plt.show()
+
+
 def group_name(exp_name):
     if exp_name.endswith("vglutdf"):
         return "vglutdf"
@@ -170,15 +306,3 @@ def write_results(res_path, results):
             for k, v in res.items():
                 f.write(f"{k}: {v}" + "\n")
     print(f"Wrote data at {res_path}")
-
-
-if __name__ == "__main__":
-    annot_to_exp = {"WT": "data", "VGAT-": "data/vgat", "VGluT-": "data/vglut"}
-
-    results = get_comparison_results(annot_to_exp)
-    plot_eval_results(results)
-
-    # plot_all_traces(annot_to_exp)
-
-    # results = get_comparison_results(annot_to_exp)
-    # plot_mean_error(results)
