@@ -225,7 +225,7 @@ class Trace:
     def apply_low_threshold(self, params):
         """Removes all peaks below a percentage of the max amplitude."""
         max_peak = max(self.peak_amplitudes)
-        threshold = params.get("low_amp_threshold", 0.1)
+        threshold = params.get("low_amp_threshold", 0.05)
         self._peak_idxes = [
             p for p in self._peak_idxes if self.dff[p] > threshold * max_peak
         ]
@@ -290,7 +290,7 @@ class Trace:
 
         stages = [
             (self.remove_transients, {}),
-            (self.apply_low_threshold, {"low_amp_threshold": 0.1}),
+            (self.apply_low_threshold, {"low_amp_threshold": 0.05}),
             (self.reconcile_manual_peaks, {}),
         ]
 
@@ -396,7 +396,7 @@ class Trace:
         """
         filtered_dff = self.get_filtered_signal(freq_cutoff)
 
-        peak_indices, _ = spsig.find_peaks(filtered_dff, height=0.05, prominence=0.05)
+        peak_indices, _ = spsig.find_peaks(filtered_dff, height=0.03, prominence=0.02)
 
         peaks = self.filter_peaks_by_local_context(filtered_dff, peak_indices)
 
@@ -425,13 +425,13 @@ class Trace:
             trim_idx = trim_points[0] - 5
         return trim_idx
 
-    def compute_peak_bounds(self, rel_height=0.9):
+    def compute_peak_bounds(self, rel_height=0.92):
         """Computes properties of each dff peak using spsig.peak_widths."""
         dff = self.dff[: self.trim_idx].copy()
         # make sure that the peak we pass is not bound by local points
-        dff[self.peak_idxes] += 0.3
+        dff[self.peak_idxes] += 3
         _, _, start_idxs, end_idxs = spsig.peak_widths(
-            dff, self.peak_idxes, rel_height, wlen=50
+            dff, self.peak_idxes, rel_height, wlen=150
         )
 
         start_idxs = start_idxs.astype(np.int64)
