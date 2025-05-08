@@ -694,6 +694,14 @@ class MainWindow(QMainWindow):
         if peak_bounds.size == 0:
             return
 
+        op = trace.detect_oscillations()
+        op_amps = trace.dff[op]
+        op_times = time[op]
+        op_plot_items = pg.ScatterPlotItem(
+            op_times, op_amps, size=8, brush=QColor("orange")
+        )
+        self.plot_widget.addItem(op_plot_items)
+
         if not self.show_peak_widths or self.is_dragging_slider:
             return
 
