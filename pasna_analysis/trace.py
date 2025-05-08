@@ -308,7 +308,7 @@ class Trace:
         dff = self.dff.copy()
         dff[mask] = 0
         dff = dff[p2_start : self.trim_idx]
-        order0_idxes = spsig.find_peaks(dff, height=0.1, distance=5, prominence=0.05)[0]
+        order0_idxes = spsig.find_peaks(dff, height=0.1, distance=5, prominence=0.07)[0]
 
         return order0_idxes + p2_start
 
