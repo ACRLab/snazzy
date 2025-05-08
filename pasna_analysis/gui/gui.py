@@ -147,7 +147,8 @@ class MainWindow(QMainWindow):
 
     def display_plots(self):
         group = self.model.get_filtered_group()
-        self.pw = PlotWindow(group, self.model.curr_group)
+        curr_trace = self.model.get_curr_trace()
+        self.pw = PlotWindow(group, self.model.curr_group, curr_trace)
         self.pw.show()
 
     def display_compare_plots(self):

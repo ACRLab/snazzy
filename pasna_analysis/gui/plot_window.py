@@ -9,17 +9,20 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
-from pasna_analysis import Experiment, utils
+from pasna_analysis import Experiment, Trace, utils
 
 
 matplotlib.use("QtAgg")
 
 
 class PlotWindow(QWidget):
-    def __init__(self, group: dict[str, Experiment], group_name: str):
+    def __init__(
+        self, group: dict[str, Experiment], group_name: str, curr_trace: Trace
+    ):
         super().__init__()
 
         self.group = group
+        self.curr_trace = curr_trace
         self.embryos = [emb for exp in group.values() for emb in exp.embryos.values()]
 
         self.setWindowTitle(f"Plots - {group_name}")
@@ -45,6 +48,7 @@ class PlotWindow(QWidget):
         self.btns = {
             "Peaks": self.plot_peaks,
             "Area Under the Curve": self.plot_AUC,
+            "Burst correlogram": self.plot_burst_correlogram,
         }
 
         self.create_buttons()
@@ -128,6 +132,49 @@ class PlotWindow(QWidget):
         self.ax.set_xticks(ticks=list(range(n_bins)), labels=x_labels)
         self.ax.set_title(f"Binned AUC")
         self.ax.set_ylabel("AUC [activity*t]")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "area_under_curve.png")
+
+    def get_normalized_interval(self, signal, peak_index):
+        left_interval = 10
+        right_interval = 40
+        s = peak_index - left_interval
+        e = peak_index + right_interval
+
+        window = signal[s:e]
+        return (window - np.mean(window)) / (np.std(window) + 1e-6)
+
+    def plot_burst_correlogram(self, save=False, save_dir=None):
+        self.ax.clear()
+
+        dff = self.curr_trace.dff.copy()
+        peak_indices = self.curr_trace.peak_idxes
+
+        n = len(peak_indices)
+        corr_matrix = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                norm_signal_i = self.get_normalized_interval(dff, peak_indices[i])
+                norm_signal_j = self.get_normalized_interval(dff, peak_indices[j])
+
+                corr_matrix[i][j] = np.corrcoef(norm_signal_i, norm_signal_j)[0, 1]
+
+        sns.heatmap(
+            corr_matrix,
+            cmap="viridis",
+            square=True,
+            xticklabels=False,
+            yticklabels=False,
+            ax=self.ax,
+        )
+        self.ax.set_title("Correlogram of Burst Similarities")
+        self.ax.set_xlabel("Burst Index")
+        self.ax.set_ylabel("Burst Index")
 
         if not save:
             self.canvas.draw()
