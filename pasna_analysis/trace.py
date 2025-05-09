@@ -220,15 +220,15 @@ class Trace:
             return
         avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
         if (peak_times[1] - peak_times[0]) > ISI_factor * avg_ISI:
-            self._peak_idxes = self._peak_idxes[1:]
+            self._peak_idxes = np.array(self._peak_idxes[1:])
 
     def apply_low_threshold(self, params):
         """Removes all peaks below a percentage of the max amplitude."""
         max_peak = max(self.peak_amplitudes)
-        threshold = params.get("low_amp_threshold", 0.05)
-        self._peak_idxes = [
-            p for p in self._peak_idxes if self.dff[p] > threshold * max_peak
-        ]
+        threshold = params.get("low_amp_threshold", 0.1)
+        self._peak_idxes = np.array(
+            [p for p in self._peak_idxes if self.dff[p] > threshold * max_peak]
+        )
 
     def reconcile_manual_peaks(self, params):
         """Reconcile the calculated peaks with manually corrected data.
