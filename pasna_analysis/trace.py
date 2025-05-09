@@ -374,13 +374,13 @@ class Trace:
         """
         filtered_dff = self.get_filtered_signal(freq_cutoff)
 
-        peak_indices, _ = spsig.find_peaks(filtered_dff, height=0.03, prominence=0.02)
+        peak_indices, _ = spsig.find_peaks(filtered_dff, height=0.04, prominence=0.03)
 
-        peaks = self.filter_peaks_by_local_context(filtered_dff, peak_indices)
+        local_peak_indices = self.port_peaks(peak_indices, self.dff[: self.trim_idx])
 
-        local_peak_indices = self.port_peaks(peaks, self.dff[: self.trim_idx])
+        peaks = self.filter_peaks_by_local_context(self.dff, local_peak_indices)
 
-        return np.array(local_peak_indices), filtered_dff
+        return np.array(peaks), filtered_dff
 
     def get_first_peak_time(self):
         """Returns the time when the first peak was detected."""
