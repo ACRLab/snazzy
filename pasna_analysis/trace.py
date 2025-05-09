@@ -262,28 +262,6 @@ class Trace:
                     sorted(filtered_peaks + filtered_add), dtype=np.int64
                 )
 
-    def phase2_min_amp(self, params):
-        """Recalculates peaks after a given episode number, using new
-        order0_min value."""
-        start_idx = params.get("start_idx", None)
-        min_amp = params.get("min_amp", None)
-        mpd = params.get("mpd")
-        prominence = params.get("prominence")
-        order1_min = params.get("order1_min")
-
-        if not start_idx or not min_amp:
-            return
-
-        if start_idx >= len(self.peak_idxes):
-            return
-
-        start_time = self.time[self.peak_idxes[start_idx]]
-
-        p2_peaks, _ = self.calculate_peaks(mpd, min_amp, order1_min, prominence)
-        p2_peaks = p2_peaks[self.time[p2_peaks] >= start_time]
-
-        self._peak_idxes = np.concatenate([self.peak_idxes[:start_idx], p2_peaks])
-
     def detect_peaks(self, freq=0.0025):
         self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
         self.filtered_dff = filtered_dff
