@@ -212,7 +212,7 @@ class Trace:
         happens way before other peaks."""
         if not self.has_transients:
             return
-        ISI_factor = params.get("ISI_factor", 2)
+        ISI_factor = params.get("ISI_factor", 4)
         # average inter-spike interval
         peak_times = self.time[self._peak_idxes]
         if len(peak_times) < 2:
