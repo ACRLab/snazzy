@@ -130,3 +130,27 @@ def emb_id(emb: Path | str) -> int:
     if isinstance(emb, Path):
         emb = emb.stem
     return int(emb[3:])
+
+
+def convert_to_relative_path(path: Path, rel_root_name: str) -> Path:
+    """Returns a relative path, based on a dir name.
+
+    Parameters:
+        path (Path):
+            The path that will be reduced to the relative form.
+        rel_root_name (str):
+            The name of the dir that will be used as the relative root.
+
+    Returns:
+        rel_path (Path):
+        The relative Path.
+    """
+    path = path.resolve()
+    current = path if path.is_dir() else path.parent
+
+    while current != current.parent:
+        if current.name == rel_root_name:
+            return Path("./") / path.relative_to(current.parent)
+        current = current.parent
+
+    raise ValueError(f"No {rel_root_name} directory found in path hierarchy.")
