@@ -306,3 +306,18 @@ def write_results(res_path, results):
             for k, v in res.items():
                 f.write(f"{k}: {v}" + "\n")
     print(f"Wrote data at {res_path}")
+
+
+if __name__ == "__main__":
+
+    annot_to_exp = {"VGAT-": "./data/vgat", "VGluT-": "./data/vglut", "WT": "./data"}
+
+    # view results for peak boundaries:
+    # results = get_comparison_results(annot_to_exp, "window")
+    # plot_eval_results_bounds(results)
+    # plot_all_traces(annot_to_exp, "window")
+
+    # view results for peak data:
+    # results = get_comparison_results(annot_to_exp, "point")
+    # plot_eval_results(results)
+    # plot_all_traces(annot_to_exp, "point")
