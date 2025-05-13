@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from PyQt6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -9,40 +7,35 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from pasna_analysis import utils
 
-
-def convert_value(value: str, target_type: type | str):
-    """Convert string input to the specified type, or raise ValueError.
-
-    If target_type is a list, will parse value as a list of integers."""
-    if target_type == bool:
+def convert_value(value: str, field_name: str):
+    """Convert fields for the corresponding type based on field name."""
+    if field_name == "has_transients":
         val = value.strip().lower()
-        if val not in ["true", "false"]:
-            raise ValueError(f"Expected a boolean value, got: {val}")
         return True if val == "true" else False
-    elif target_type == int:
+    elif field_name == "first_peak_threshold":
         return int(value)
-    elif target_type == float:
-        return float(value)
-    elif target_type == Path:
-        return utils.convert_to_relative_path(Path(value), "data")
-    elif target_type == "emb_list":
-        return [f"emb{x.strip()}" for x in value.strip("[]").split(",") if x.strip()]
+    elif field_name == "dff_strategy":
+        return value
+    elif field_name == "to_exclude" or field_name == "to_remove":
+        return [int(x) for x in value.strip("[]").split(",") if x.strip()]
     else:
         return value
 
 
 class ExperimentParamsDialog(QDialog):
-    def __init__(self, properties, types, parent=None):
+    def __init__(self, properties, exp_path, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Experiment parameters")
         self.setFixedWidth(480)
         self.properties = properties
-        self.types = types
         self.inputs = {}
 
         layout = QVBoxLayout()
+        exp_path_row = QHBoxLayout()
+        path_label = QLabel(f"Experiment path: {exp_path}")
+        exp_path_row.addWidget(path_label)
+        layout.addLayout(exp_path_row)
         for key, value in properties.items():
             row = QHBoxLayout()
             label = QLabel(key)
@@ -75,6 +68,5 @@ class ExperimentParamsDialog(QDialog):
         result = {}
         for k, field in self.inputs.items():
             raw = field.text().strip()
-            expected_type = self.types.get(k, str)
-            result[k] = convert_value(raw, expected_type)
+            result[k] = convert_value(raw, k)
         return result
