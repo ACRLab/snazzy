@@ -16,7 +16,6 @@ class DataLoader:
     def __init__(self, path: Path):
         self.path = Path(path)
         self.name = path.stem
-        self.pd_params_path = self.path.joinpath("peak_detection_params.json")
         self.check_files()
 
     def check_files(self):
