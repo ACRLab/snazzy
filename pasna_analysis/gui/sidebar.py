@@ -47,19 +47,17 @@ class FixedSidebar(QWidget):
 
 
 class RemovableSidebar(QWidget):
-    emb_visibility_toggled = pyqtSignal(str)
+    emb_visibility_toggled = pyqtSignal(int)
 
     def __init__(
         self,
         callback: Callable[[str, str | None], None],
-        accepted_embs: set[str],
-        removed_embs: set[str],
-        pd_path: str,
+        accepted_embs: set[int],
+        removed_embs: set[int],
     ):
         super().__init__()
 
         self.callback = callback
-        self.pd_path = pd_path
 
         main_layout = QVBoxLayout()
 
@@ -82,10 +80,14 @@ class RemovableSidebar(QWidget):
 
     def populate_buttons(self, labels, layout, is_accepted):
         """Populate buttons into the given layout."""
-        for label in sorted(labels, key=sort_by_emb_number):
+        # for label in sorted(labels, key=sort_by_emb_number):
+        for label in sorted(labels):
+            emb_name = f"emb{label}"
             row_layout = QHBoxLayout()
-            btn = QPushButton(label)
-            btn.clicked.connect(lambda checked, name=label: self.callback(name, None))
+            btn = QPushButton(emb_name)
+            btn.clicked.connect(
+                lambda checked, name=emb_name: self.callback(name, None)
+            )
             row_layout.addWidget(btn)
 
             btn2 = QPushButton("Remove" if is_accepted else "Accept")
