@@ -1,8 +1,8 @@
-import json
 from pathlib import Path
 import sys
 
 import numpy as np
+import pyqtgraph as pg
 from PyQt6.QtCore import Qt, QThreadPool
 from PyQt6.QtGui import QAction, QBrush, QColor, QKeySequence, QPen
 from PyQt6.QtWidgets import (
@@ -20,20 +20,22 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-import pyqtgraph as pg
 
 from pasna_analysis.gui import (
     ComparePlotWindow,
+    ExperimentParamsDialog,
     FixedSidebar,
     ImageSequenceViewer,
     ImageWindow,
     InteractivePlotWidget,
     LabeledSlider,
     Model,
-    Worker,
     PlotWindow,
     RemovableSidebar,
+    Worker,
 )
+
+from pasna_analysis import Config
 
 
 class MainWindow(QMainWindow):
@@ -84,6 +86,11 @@ class MainWindow(QMainWindow):
             return
         directory = Path(directory)
 
+        config = Config(directory)
+        exp_params = config.get_exp_params()
+        dff_strategy = config.data["pd_params"].get("dff_strategy", "")
+        # exp_params["dff_strategy"] = dff_strategy
+
         group_name = None
         if is_new_group:
             group_name, ok = QInputDialog.getText(self, "New Group", "Group Name:")
@@ -91,6 +98,21 @@ class MainWindow(QMainWindow):
                 return
             if not group_name:
                 group_name = f"group{len(self.model.groups) + 1}"
+
+        dialog_params = {**exp_params, "dff_strategy": dff_strategy}
+        dialog = ExperimentParamsDialog(
+            dialog_params, exp_path=config.exp_path, parent=self
+        )
+        if not dialog.exec():
+            return
+
+        dialog_values = dialog.get_values()
+        exp_params = {k: v for k, v in dialog_values.items() if k in exp_params}
+        pd_params = {"dff_strategy": dialog_values["dff_strategy"]}
+        config.update_params(exp_params, "exp_params")
+        config.update_params(pd_params, "pd_params")
+
+        config.save_params()
 
         if should_reset_model:
             self.model.set_initial_state()
@@ -105,7 +127,9 @@ class MainWindow(QMainWindow):
             pass
 
         worker = Worker(
-            self.model.create_experiment, directory=directory, group_name=group_name
+            self.model.create_experiment,
+            config=config,
+            group_name=group_name,
         )
         worker.signals.result.connect(self.update_UI)
         worker.signals.error.connect(self.handle_open_err)
@@ -344,7 +368,6 @@ class MainWindow(QMainWindow):
                 self.render_trace,
                 accepted_embs,
                 removed_embs,
-                exp.pd_params_path,
             )
             self.sidebar.emb_visibility_toggled.connect(self.toggle_emb_visibility)
         else:
@@ -457,11 +480,8 @@ class MainWindow(QMainWindow):
             self.single_graph_frame.show()
 
     def save_peak_pos(self, peak_widths, peak_index):
-        exp = self.model.get_curr_experiment()
         emb_name = self.model.curr_emb_name
-        config_path = exp.pd_params_path
-
-        self.model.pf.save_peak_widths(config_path, emb_name, peak_widths, peak_index)
+        self.model.save_peak_widths(emb_name, peak_widths, peak_index)
 
     def add_peak(self, x, y):
         exp = self.model.get_curr_experiment()
@@ -475,9 +495,7 @@ class MainWindow(QMainWindow):
         else:
             x = int(x) * 10
 
-        new_peak, new_peaks = self.model.pf.add_peak(
-            x, emb_name, exp.pd_params_path, trace
-        )
+        new_peak, new_peaks = self.model.add_peak(x, emb_name, trace)
 
         trace.to_add.append(new_peak)
         trace.peak_idxes = new_peaks
@@ -496,9 +514,7 @@ class MainWindow(QMainWindow):
         else:
             x = int(x) * 10
 
-        removed_peaks, new_peaks = self.model.pf.remove_peak(
-            x, emb_name, exp.pd_params_path, trace
-        )
+        removed_peaks, new_peaks = self.model.remove_peak(x, emb_name, trace)
 
         trace.to_remove.extend(removed_peaks)
         trace.peak_idxes = new_peaks
@@ -513,8 +529,7 @@ class MainWindow(QMainWindow):
         pd_params = self.collect_slider_params()
 
         if pd_params is None:
-            exp = self.model.get_curr_experiment()
-            pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
+            pd_params = self.model.config.get_pd_params()
 
         trace = self.model.get_curr_trace()
         trace.detect_peaks(pd_params["freq"])
@@ -534,7 +549,7 @@ class MainWindow(QMainWindow):
         freq = self.freq_slider.value()
         peak_width = self.rel_h_slider.value()
 
-        return {"freq": float(freq), "peak_width": float(peak_width)}
+        return {"freq": freq, "peak_width": peak_width}
 
     def detect_peaks_all(self):
         """Recalculates peak indices for all embryos.
@@ -544,14 +559,15 @@ class MainWindow(QMainWindow):
             pd_params = self.collect_slider_params()
 
             if pd_params is None:
-                pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
+                pd_params = self.model.config.get_pd_params()
 
-            pd_params["to_remove"] = list(self.model.to_remove[exp_name])
+            to_remove = list(self.model.to_remove[exp_name])
 
             for emb in exp.embryos.values():
                 emb.trace.detect_peaks(pd_params["freq"])
 
-            self.model.pf.save_pd_params(exp.pd_params_path, **pd_params)
+            new_data = {"pd_params": pd_params, "exp_params": {"to_remove": to_remove}}
+            self.model.update_config(new_data)
 
     def plot_all_traces(self):
         self.clear_layout(self.graph_layout)
@@ -603,8 +619,7 @@ class MainWindow(QMainWindow):
         if self.model.has_combined_experiments():
             return
 
-        exp = self.model.get_curr_experiment()
-        pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
+        pd_params = self.model.config.get_pd_params()
 
         for sld, name in (
             (self.freq_slider, "freq"),
@@ -689,8 +704,8 @@ class MainWindow(QMainWindow):
             self.plot_widget.setTitle(emb_name)
 
         # paint peak widths
-        pd_params = self.model.pf.get_pd_params(exp.pd_params_path)
-        trace.compute_peak_bounds(pd_params["peak_width"])
+        rel_height = self.rel_h_slider.value()
+        trace.compute_peak_bounds(rel_height)
         peak_bounds = trace.peak_bounds_indices.flatten()
         if peak_bounds.size == 0:
             return
@@ -766,20 +781,7 @@ class MainWindow(QMainWindow):
         """Removes all manual data from pd_params.json file.
 
         All manual data is stored under the 'embryos' key."""
-        exp = self.model.get_curr_experiment()
-
-        for emb in exp.embryos.values():
-            emb.trace.to_add = []
-            emb.trace.to_remove = []
-
-        with open(exp.pd_params_path, "r") as f:
-            config = json.load(f)
-
-        if "embryos" in config:
-            del config["embryos"]
-
-        with open(exp.pd_params_path, "w") as f:
-            json.dump(config, f, indent=4)
+        self.model.clear_manual_data()
 
         self.update_all_embs()
         self.show_notification("Clear manual data", "Manually added data was removed.")

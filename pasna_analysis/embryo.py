@@ -5,7 +5,7 @@ from numpy.polynomial import Polynomial
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
-from pasna_analysis import Trace
+from pasna_analysis import Config, Trace
 
 
 class Embryo:
@@ -15,10 +15,7 @@ class Embryo:
         self,
         activity_csv: Path,
         vnc_len_csv: Path,
-        dff_strategy: str,
-        has_transients: bool,
-        pd_props_path: Path,
-        pd_params: dict,
+        config: Config,
     ):
         if activity_csv.stem != vnc_len_csv.stem:
             raise ValueError(
@@ -35,10 +32,7 @@ class Embryo:
         self.trace = Trace(
             self.name,
             self.activity,
-            dff_strategy=dff_strategy,
-            has_transients=has_transients,
-            pd_props_path=pd_props_path,
-            pd_params=pd_params,
+            config=config,
         )
         self._lin_dev_time = None
 
