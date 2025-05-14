@@ -1,4 +1,6 @@
 from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -30,6 +32,7 @@ class ExperimentParamsDialog(QDialog):
         self.setFixedWidth(480)
         self.properties = properties
         self.inputs = {}
+        self.combo_keys = {"dff_strategy": ["baseline", "local_minima"]}
 
         layout = QVBoxLayout()
         exp_path_row = QHBoxLayout()
@@ -39,7 +42,16 @@ class ExperimentParamsDialog(QDialog):
         for key, value in properties.items():
             row = QHBoxLayout()
             label = QLabel(key)
-            input_field = QLineEdit(str(value))
+            if isinstance(value, bool):
+                input_field = QCheckBox()
+                input_field.setChecked(value)
+            elif key in self.combo_keys:
+                input_field = QComboBox()
+                input_field.addItems(self.combo_keys[key])
+                if value in self.combo_keys[key]:
+                    input_field.setCurrentText(value)
+            else:
+                input_field = QLineEdit(str(value))
             self.inputs[key] = input_field
             row.addWidget(label)
             row.addWidget(input_field)
@@ -67,6 +79,11 @@ class ExperimentParamsDialog(QDialog):
     def get_values(self):
         result = {}
         for k, field in self.inputs.items():
-            raw = field.text().strip()
-            result[k] = convert_value(raw, k)
+            if isinstance(field, QCheckBox):
+                result[k] = field.isChecked()
+            elif isinstance(field, QComboBox):
+                result[k] = field.currentText()
+            else:
+                raw = field.text().strip()
+                result[k] = convert_value(raw, k)
         return result
