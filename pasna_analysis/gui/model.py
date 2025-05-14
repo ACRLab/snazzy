@@ -1,11 +1,11 @@
 from copy import deepcopy
-import traceback
 import sys
+import traceback
 
 from PyQt6.QtCore import pyqtSignal, QObject, QRunnable
 
-from pasna_analysis import Experiment, Trace
-from pasna_analysis.gui.peak_finder import PeakFinder
+from pasna_analysis import Config, Experiment, Trace, utils
+from pasna_analysis.gui import PeakMatcher
 
 
 class WorkerSignals(QObject):
@@ -39,7 +39,7 @@ class Worker(QRunnable):
 
 class Model:
     def __init__(self):
-        self.pf = PeakFinder()
+        self.pm = PeakMatcher()
         self.set_initial_state()
 
     def __str__(self):
@@ -55,6 +55,84 @@ class Model:
             f")"
         )
 
+    def update_config(self, new_data):
+        """Updates the config data for the current experiment."""
+        exp = self.get_curr_experiment()
+        for k, v in new_data.items():
+            exp.config.update_params(v, k)
+        exp.config.save_params()
+
+    def save_peak_widths(self, emb_name, peak_widths, peak_index):
+        corrected_peaks = self.config.get_corrected_peaks(emb_name)
+        peak_key = str(peak_index)
+
+        if corrected_peaks:
+            manual_widths = corrected_peaks["manual_widths"]
+            manual_widths[peak_key] = peak_widths
+        else:
+            manual_widths = {peak_key: peak_widths}
+
+        self.config.save_manual_peak_data(emb_name, manual_widths=manual_widths)
+
+    def add_peak(self, x, emb_name, trace, wlen=10):
+        # load corrected data to reconcile with the new add
+        corrected_peaks = self.config.get_corrected_peaks(emb_name)
+        manual_remove = [] if not corrected_peaks else corrected_peaks["manual_remove"]
+
+        new_peak, new_peaks, removed_peaks = self.pm.add_peak(
+            x, trace, manual_remove, wlen
+        )
+        # update corrected peaks
+        if corrected_peaks:
+            corrected_peaks["manual_peaks"].append(new_peak)
+            added_peaks = list(set(corrected_peaks["manual_peaks"]))
+        else:
+            added_peaks = [new_peak]
+
+        self.config.save_manual_peak_data(
+            emb_name, added_peaks=added_peaks, removed_peaks=removed_peaks, wlen=wlen
+        )
+        return new_peak, new_peaks
+
+    def remove_peak(self, x, emb_name, trace, wlen=10):
+        # load corrected data to reconcile with the new add
+        corrected_peaks = self.config.get_corrected_peaks(emb_name)
+        manual_add = [] if not corrected_peaks else corrected_peaks["manual_peaks"]
+        manual_widths = (
+            None if not corrected_peaks else corrected_peaks["manual_widths"]
+        )
+
+        removed, new_arr, added_peaks, peak_width_to_remove = self.pm.remove_peak(
+            x, trace, manual_add, manual_widths
+        )
+        # update corrected peaks
+        if corrected_peaks:
+            to_remove = corrected_peaks["manual_remove"]
+            removed = list(set(to_remove + removed))
+            corrected_peaks["manual_remove"] = removed
+        if manual_widths and peak_width_to_remove:
+            del manual_widths[str(peak_width_to_remove)]
+
+        self.config.save_manual_peak_data(
+            emb_name,
+            added_peaks=added_peaks,
+            removed_peaks=removed,
+            manual_widths=manual_widths,
+        )
+        return removed, new_arr
+
+    def clear_manual_data(self):
+        exp = self.get_curr_experiment()
+
+        for emb in exp.embryos.values():
+            emb.trace.to_add = []
+            emb.trace.to_remove = []
+
+        if "embryos" in self.config.data:
+            self.config.data["embryos"] = {}
+
+        self.config.save_params()
+
     def set_initial_state(self):
         self.groups: dict[str, dict[str, Experiment]] = {}
         self.curr_group = None
@@ -62,16 +140,14 @@ class Model:
         self.curr_exp = None
         self.curr_emb_name = None
 
-    def create_experiment(self, directory, group_name):
-        exp = Experiment(
-            directory,
-            first_peak_threshold=0,
-            to_exclude=[],
-            dff_strategy="local_minima",
-        )
+    def create_experiment(self, config, group_name):
+        self.config: Config = config
+        exp = Experiment(config.data["exp_path"], config)
+
         self.add_experiment(exp, group_name)
-        pd_params = self.pf.get_pd_params(exp.pd_params_path)
-        self.to_remove[exp.name] = set(pd_params.get("to_remove", []))
+        exp_params = self.config.get_exp_params()
+        self.to_remove[exp.name] = set(exp_params.get("to_remove", []))
+
         return exp
 
     def add_experiment(self, experiment: Experiment, group: str):
@@ -105,8 +181,12 @@ class Model:
         return {
             emb_name: emb
             for emb_name, emb in exp.embryos.items()
-            if emb_name not in self.to_remove[exp_name]
+            if utils.emb_id(emb_name) not in self.to_remove[exp_name]
         }
+
+    def get_filtered_emb_numbers(self, exp_name, group_name=None):
+        embs = self.get_filtered_embs(exp_name, group_name)
+        return [utils.emb_id(emb_name) for emb_name in embs.keys()]
 
     def get_filtered_group(self):
         group = deepcopy(self.groups[self.curr_group])

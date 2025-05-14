@@ -1,9 +1,9 @@
-import json
-
 import numpy as np
 import scipy.signal as spsig
 from scipy.ndimage import minimum_filter1d
 from scipy.stats import zscore
+
+from pasna_analysis import Config
 
 
 class Trace:
@@ -13,28 +13,26 @@ class Trace:
         self,
         name,
         activity,
+        config: Config,
         trim_zscore=0.35,
-        dff_strategy="baseline",
-        has_transients=True,
-        pd_props_path=None,
-        pd_params=None,
         fs=1 / 6,
     ):
         self.name = name
         self.time = activity[:, 0]
         self.active = activity[:, 1]
         self.struct = activity[:, 2]
-        self.dff_strategy = dff_strategy
-        self.has_transients = has_transients
-        self.pd_props_path = pd_props_path  # peak detection props
-        self.pd_params = pd_params
+        self.config = config
+        self.pd_params = config.get_pd_params()
+
+        # list of peaks that were manually added / removed:
+        self.to_add = []
+        self.to_remove = []
+        self.fs = fs
+
         self._peak_idxes = None
         self._peak_bounds_indices = None
         self._order_zero_savgol = None
         self.filtered_dff = None
-        self.to_add = []
-        self.to_remove = []
-        self.fs = fs
 
         self.trim_idx = self.trim_data(trim_zscore)
 
@@ -43,14 +41,8 @@ class Trace:
     @property
     def peak_idxes(self):
         if self._peak_idxes is None:
-            if self.pd_params:
-                self.detect_peaks(pd_params["freq"])
-            elif self.pd_props_path and self.pd_props_path.exists():
-                try:
-                    pd_params = self.get_peak_detection_params()
-                except ValueError:
-                    pd_params = {}
-                self.detect_peaks()
+            if "freq" in self.pd_params:
+                self.detect_peaks(self.pd_params["freq"])
             else:
                 self.detect_peaks()
         return self._peak_idxes
@@ -121,27 +113,17 @@ class Trace:
             )
         return self._order_zero_savgol
 
-    def get_peak_detection_params(self):
-        """Reads peak detection params from config file."""
-        if not self.pd_props_path.exists():
-            raise FileNotFoundError("Could not find peak detection params file.")
-        with open(self.pd_props_path, "r") as f:
-            config = json.load(f)
-        pd_params = ["mpd", "order0_min", "order1_min", "prominence"]
-        if any(param not in config for param in pd_params):
-            raise ValueError("Missing params in pd_params file")
-        return {param: config[param] for param in pd_params}
-
     def compute_dff(self, window_size=80):
         """Compute dff for the ratiometric active channel signal."""
         ratiom_signal = self.compute_ratiom_gcamp()
-        if self.dff_strategy == "baseline":
+        dff_strategy = self.pd_params.get("dff_strategy", "")
+        if dff_strategy == "baseline":
             baseline = self.compute_baseline(ratiom_signal, window_size)
-        elif self.dff_strategy == "local_minima":
+        elif dff_strategy == "local_minima":
             baseline = minimum_filter1d(ratiom_signal, size=window_size)
         else:
             raise ValueError(
-                f"Could not apply the dff_strategy specified: {self.dff_strategy}."
+                f"Could not apply the dff_strategy specified: {dff_strategy}."
             )
         return (ratiom_signal - baseline) / baseline
 
@@ -210,7 +192,7 @@ class Trace:
     def remove_transients(self, params):
         """Transients are very early bouts that result in a first peak that
         happens way before other peaks."""
-        if not self.has_transients:
+        if not self.pd_params.get("has_transients", False):
             return
         ISI_factor = params.get("ISI_factor", 4)
         # average inter-spike interval
@@ -234,33 +216,30 @@ class Trace:
         """Reconcile the calculated peaks with manually corrected data.
 
         The manual data is written at `self.pd_props_path`, through the GUI."""
-        if not self.pd_props_path.exists():
+        if not self.config:
             return
         corrected_peaks = None
 
-        with open(self.pd_props_path, "r") as f:
-            config = json.load(f)
-            if self.name in config.get("embryos", {}):
-                corrected_peaks = config["embryos"][self.name]
-            if corrected_peaks:
-                to_add = corrected_peaks["manual_peaks"]
-                to_remove = corrected_peaks["manual_remove"]
-                wlen = corrected_peaks["wlen"]
-                filtered_peaks = [
-                    p
-                    for p in self._peak_idxes
-                    if not any(abs(p - rp) < wlen for rp in to_remove)
-                ]
-                filtered_add = [
-                    ap
-                    for ap in to_add
-                    if not any(abs(p - ap) < wlen for p in filtered_peaks)
-                ]
-                self.to_add = to_add
-                self.to_remove = to_remove
-                self._peaks_idxes = np.array(
-                    sorted(filtered_peaks + filtered_add), dtype=np.int64
-                )
+        corrected_peaks = self.config.get_corrected_peaks(self.name)
+        if corrected_peaks:
+            to_add = corrected_peaks["manual_peaks"]
+            to_remove = corrected_peaks["manual_remove"]
+            wlen = corrected_peaks["wlen"]
+            filtered_peaks = [
+                p
+                for p in self._peak_idxes
+                if not any(abs(p - rp) < wlen for rp in to_remove)
+            ]
+            filtered_add = [
+                ap
+                for ap in to_add
+                if not any(abs(p - ap) < wlen for p in filtered_peaks)
+            ]
+            self.to_add = to_add
+            self.to_remove = to_remove
+            self._peak_idxes = np.array(
+                sorted(filtered_peaks + filtered_add), dtype=np.int64
+            )
 
     def detect_peaks(self, freq=0.0025):
         self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
@@ -422,24 +401,20 @@ class Trace:
 
         # reconcile the peak_bounds with manually changed peak widths here:
         # if a peak has associated manual width data, overwrite that peak's bounds
-        manual_peak_bounds = None
-        if self.pd_props_path.exists():
-            with open(self.pd_props_path, "r") as f:
-                config = json.load(f)
-                if self.name in config.get("embryos", {}):
-                    manual_peak_bounds = config["embryos"][self.name].get(
-                        "manual_widths", None
-                    )
+        corrected_peaks = self.config.get_corrected_peaks(self.name)
 
-        if manual_peak_bounds:
-            # must convert the data from json file to np types:
-            manual_peak_bounds = {
-                np.int64(k): [np.int64(n) for n in v]
-                for k, v in manual_peak_bounds.items()
-            }
+        if corrected_peaks:
+            manual_peak_bounds = corrected_peaks.get("manual_widths", None)
 
-            for peak in manual_peak_bounds:
-                peaks_to_bounds[peak] = manual_peak_bounds[peak]
+            if manual_peak_bounds:
+                # must convert the data from json file to np type:
+                manual_peak_bounds = {
+                    np.int64(k): [np.int64(n) for n in v]
+                    for k, v in manual_peak_bounds.items()
+                }
+
+                for peak in manual_peak_bounds:
+                    peaks_to_bounds[peak] = manual_peak_bounds[peak]
 
         self._peak_bounds_indices = np.array(list(peaks_to_bounds.values()))
 
