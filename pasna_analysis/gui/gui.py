@@ -338,7 +338,7 @@ class MainWindow(QMainWindow):
         # Sidebar start
         if not self.model.has_combined_experiments():
             exp = self.model.get_curr_experiment()
-            accepted_embs = set(self.model.get_filtered_embs(exp.name).keys())
+            accepted_embs = set(self.model.get_filtered_emb_numbers(exp.name))
             removed_embs = set(self.model.to_remove[exp.name])
             self.sidebar = RemovableSidebar(
                 self.render_trace,
