@@ -95,15 +95,17 @@ class Config:
 
         self.data = self.load_data()
 
-    def update_params(self, new_data, key):
-        config_keys = ["exp_path", "exp_params", "pd_params", "embryos"]
-        if key not in config_keys:
-            raise KeyError()
-        if isinstance(new_data, dict):
-            for k, v in new_data.items():
-                self.data[key][k] = v
-        else:
-            self.data[key] = new_data
+    def update_params(self, new_data: dict):
+        valid_keys = self.default_params.keys()
+
+        for key, value in new_data.items():
+            if key not in valid_keys:
+                raise KeyError(f"Invalid config key: {key}")
+
+            if isinstance(value, dict) and isinstance(self.data.get(key), dict):
+                self.data[key].update(value)
+            else:
+                self.data[key] = value
 
     def save_params(self):
         with open(self.config_path, "w") as f:

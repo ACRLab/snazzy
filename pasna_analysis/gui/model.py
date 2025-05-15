@@ -40,6 +40,7 @@ class Worker(QRunnable):
 class Model:
     def __init__(self):
         self.pm = PeakMatcher()
+        self.config: Config | None = None
         self.set_initial_state()
 
     def __str__(self):
@@ -58,8 +59,7 @@ class Model:
     def update_config(self, new_data):
         """Updates the config data for the current experiment."""
         exp = self.get_curr_experiment()
-        for k, v in new_data.items():
-            exp.config.update_params(v, k)
+        exp.config.update_params(new_data)
         exp.config.save_params()
 
     def save_peak_widths(self, emb_name, peak_widths, peak_index):
@@ -140,8 +140,8 @@ class Model:
         self.curr_exp = None
         self.curr_emb_name = None
 
-    def create_experiment(self, config, group_name):
-        self.config: Config = config
+    def create_experiment(self, config: Config, group_name: str):
+        self.config = config
         exp = Experiment(config.data["exp_path"], config)
 
         self.add_experiment(exp, group_name)
