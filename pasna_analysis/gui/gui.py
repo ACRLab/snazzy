@@ -1,3 +1,4 @@
+from functools import partial
 from pathlib import Path
 import sys
 
@@ -69,14 +70,17 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
 
-    def render_next_trace(self):
+    def render_next_trace(self, forward):
         if self.model.curr_exp is None:
             return
         curr_emb = self.model.curr_emb_name
         embs = self.model.get_filtered_embs(self.model.curr_exp)
         emb_names = list(embs.keys())
         curr_emb_index = emb_names.index(curr_emb)
-        next_idx = (curr_emb_index + 1) % len(emb_names)
+        if forward:
+            next_idx = (curr_emb_index + 1) % len(emb_names)
+        else:
+            next_idx = (curr_emb_index - 1) % len(emb_names)
         next_emb = emb_names[next_idx]
         self.render_trace(next_emb)
 
@@ -450,8 +454,15 @@ class MainWindow(QMainWindow):
 
         next_emb_action = QAction(self)
         next_emb_action.setShortcut(QKeySequence("Ctrl+N"))
-        next_emb_action.triggered.connect(self.render_next_trace)
+        next_emb_action.triggered.connect(partial(self.render_next_trace, forward=True))
         menu_bar.addAction(next_emb_action)
+
+        prev_emb_action = QAction(self)
+        prev_emb_action.setShortcut(QKeySequence("Ctrl+P"))
+        prev_emb_action.triggered.connect(
+            partial(self.render_next_trace, forward=False)
+        )
+        menu_bar.addAction(prev_emb_action)
 
     def paint_main_view(self):
         self.top_app_bar = QHBoxLayout()
