@@ -93,7 +93,6 @@ class MainWindow(QMainWindow):
         config = Config(directory)
         exp_params = config.get_exp_params()
         dff_strategy = config.data["pd_params"].get("dff_strategy", "")
-        # exp_params["dff_strategy"] = dff_strategy
 
         group_name = None
         if is_new_group:
@@ -113,8 +112,8 @@ class MainWindow(QMainWindow):
         dialog_values = dialog.get_values()
         exp_params = {k: v for k, v in dialog_values.items() if k in exp_params}
         pd_params = {"dff_strategy": dialog_values["dff_strategy"]}
-        config.update_params(exp_params, "exp_params")
-        config.update_params(pd_params, "pd_params")
+        new_config = {"exp_params": exp_params, "pd_params": pd_params}
+        config.update_params(new_config)
 
         config.save_params()
 
