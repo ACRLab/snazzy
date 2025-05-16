@@ -140,6 +140,19 @@ class Model:
         self.curr_exp = None
         self.curr_emb_name = None
 
+    def reset_current_experiment(self):
+        exp_path = self.config.data["exp_path"]
+        del self.groups[self.curr_group][self.curr_exp]
+
+        new_exp = Experiment(exp_path=exp_path)
+
+        self.config = new_exp.config
+        self.curr_exp = None
+        self.curr_emb_name = None
+        self.add_experiment(new_exp, group=self.curr_group)
+        exp_params = self.config.get_exp_params()
+        self.to_remove[new_exp.name] = set(exp_params.get("to_remove", []))
+
     def create_experiment(self, config: Config, group_name: str):
         self.config = config
         exp = Experiment(config.data["exp_path"], config)

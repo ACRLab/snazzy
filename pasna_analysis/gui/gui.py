@@ -28,6 +28,7 @@ from pasna_analysis.gui import (
     FixedSidebar,
     ImageSequenceViewer,
     ImageWindow,
+    JsonViewer,
     InteractivePlotWidget,
     LabeledSlider,
     Model,
@@ -429,6 +430,10 @@ class MainWindow(QMainWindow):
         self.compare_experiment_action.setEnabled(False)
         file_menu.addAction(self.compare_experiment_action)
 
+        self.view_pd_action = QAction("View pd_params data", self)
+        self.view_pd_action.triggered.connect(self.view_json_data)
+        file_menu.addAction(self.view_pd_action)
+
         exit_action = QAction("Exit", self)
         exit_action.setShortcut(QKeySequence("Ctrl+Q"))
         exit_action.triggered.connect(self.close)
@@ -462,6 +467,20 @@ class MainWindow(QMainWindow):
             partial(self.render_next_trace, forward=False)
         )
         menu_bar.addAction(prev_emb_action)
+
+    def view_json_data(self):
+        if self.model.config is None:
+            return
+        config_data = self.model.config.data
+        self.json_window = JsonViewer(config_data)
+        self.json_window.update_config_signal.connect(self.update_from_json_viewer)
+        self.json_window.show()
+
+    def update_from_json_viewer(self, new_data):
+        self.model.update_config(new_data)
+        # reset the current experiment to use the new config data
+        self.model.reset_current_experiment()
+        self.update_UI()
 
     def paint_main_view(self):
         self.top_app_bar = QHBoxLayout()
