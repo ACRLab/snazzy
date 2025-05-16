@@ -26,6 +26,7 @@ from pasna_analysis.gui import (
     ComparePlotWindow,
     ExperimentParamsDialog,
     FixedSidebar,
+    GraphSwitcher,
     ImageSequenceViewer,
     ImageWindow,
     JsonViewer,
@@ -390,8 +391,9 @@ class MainWindow(QMainWindow):
 
         # Graph start
         self.plot_widget = InteractivePlotWidget()
-        single_graph_layout.addWidget(self.plot_widget)
-        self.plot_widget.hide()
+        self.plot_channels = pg.PlotWidget()
+        self.graph_switcher = GraphSwitcher([self.plot_widget, self.plot_channels])
+        single_graph_layout.addWidget(self.graph_switcher)
 
         self.plot_widget.add_peak_fired.connect(self.add_peak)
         self.plot_widget.remove_peak_fired.connect(self.remove_peak)
@@ -692,7 +694,7 @@ class MainWindow(QMainWindow):
             self.model.curr_emb_name = emb_name
 
         self.plot_widget.clear()
-        self.plot_widget.show()
+        self.plot_channels.clear()
 
         embryo = exp.embryos[emb_name]
         trace = embryo.trace
@@ -723,6 +725,21 @@ class MainWindow(QMainWindow):
         # paint trace
         self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
+
+        self.plot_channels.plot(
+            time,
+            trace.active[: trace.trim_idx],
+            name="Active channel",
+            pen=pg.mkPen("limegreen"),
+        )
+        self.plot_channels.plot(
+            time,
+            trace.struct[: trace.trim_idx],
+            name="Structural channel",
+            pen=pg.mkPen("firebrick"),
+        )
+        self.plot_channels.setTitle(emb_name)
+        self.plot_channels.addLegend()
 
         if self.display_filtered_dff and trace.filtered_dff is not None:
             self.plot_widget.plot(time, trace.filtered_dff, pen=pg.mkPen("palegreen"))
