@@ -14,7 +14,6 @@ class Trace:
         name,
         activity,
         config: Config,
-        trim_zscore=0.35,
         fs=1 / 6,
     ):
         self.name = name
@@ -34,6 +33,7 @@ class Trace:
         self._order_zero_savgol = None
         self.filtered_dff = None
 
+        trim_zscore = self.pd_params.get("trim_zscore", 0.35)
         self.trim_idx = self.trim_data(trim_zscore)
 
         self.dff = self.compute_dff()
