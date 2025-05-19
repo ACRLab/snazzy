@@ -17,6 +17,7 @@ KEY_TYPES = {
     "has_transients": bool,
     "pd_params": dict,
     "freq": float,
+    "trim_zscore": float,
     "dff_strategy": str,
     "peak_width": float,
     "manual_peaks": list,

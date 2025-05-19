@@ -34,6 +34,7 @@ class PDParams:
     peak_width: float
     freq: float
     dff_strategy: str
+    trim_zscore: float = 0.35
 
 
 @dataclass
@@ -88,6 +89,7 @@ class Config:
                 "dff_strategy": "baseline",
                 "peak_width": 0.92,
                 "freq": 0.0025,
+                "trim_zscore": 0.35,
             },
             "embryos": {},
         }
