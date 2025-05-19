@@ -726,18 +726,24 @@ class MainWindow(QMainWindow):
         self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
 
+        trace_time = trace.time / 60
+
         self.plot_channels.plot(
-            time,
-            trace.active[: trace.trim_idx],
+            trace_time,
+            trace.active,
             name="Active channel",
             pen=pg.mkPen("limegreen"),
         )
         self.plot_channels.plot(
-            time,
-            trace.struct[: trace.trim_idx],
+            trace_time,
+            trace.struct,
             name="Structural channel",
             pen=pg.mkPen("firebrick"),
         )
+        trim_line = pg.InfiniteLine(
+            trace.trim_idx / 10, pen=pg.mkPen(color="teal", cosmetic=True)
+        )
+        self.plot_channels.addItem(trim_line)
         self.plot_channels.setTitle(emb_name)
         self.plot_channels.addLegend()
 
