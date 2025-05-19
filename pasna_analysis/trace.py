@@ -367,19 +367,17 @@ class Trace:
 
     def trim_data(self, trim_zscore):
         """
-        Computes the z score for each Savitzky-Golay-filtered sample, and removes the data 5 samples prior to the
-        first sample whose absolute value is greater than the threshold trim_zscore.
+        Computes the z score for each Savitzky-Golay-filtered sample, and removes all points after reaching `trim_zscore`.
         """
-        tomato_savgol = spsig.savgol_filter(self.struct, 251, 2, deriv=0)
+        tomato_savgol = spsig.savgol_filter(self.struct, 21, 2, deriv=0)
         zscored_tomato = zscore(tomato_savgol)
-        zscored_tomato -= self.compute_baseline(zscored_tomato, window_size=51)
+        zscored_tomato -= self.compute_baseline(zscored_tomato, window_size=10)
 
-        trim_points = np.where(np.abs(zscored_tomato) > trim_zscore)[0]
-        # Trim 5 timepoints before
+        trim_points = np.where(np.abs(self.zscored_tomato) > trim_zscore)[0]
         if len(trim_points) == 0:
-            trim_idx = len(self.time) - 5
+            trim_idx = len(self.time)
         else:
-            trim_idx = trim_points[0] - 5
+            trim_idx = trim_points[0]
         return trim_idx
 
     def compute_peak_bounds(self, rel_height=0.92):
