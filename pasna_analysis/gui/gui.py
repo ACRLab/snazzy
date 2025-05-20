@@ -726,7 +726,10 @@ class MainWindow(QMainWindow):
         self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
 
-        trace_time = trace.time / 60
+        if self.use_dev_time:
+            trace_time = dev_time
+        else:
+            trace_time = trace.time / 60
 
         self.plot_channels.plot(
             trace_time,
@@ -741,8 +744,12 @@ class MainWindow(QMainWindow):
             pen=pg.mkPen("firebrick"),
         )
         trim_line = pg.InfiniteLine(
-            trace.trim_idx / 10, pen=pg.mkPen(color="teal", cosmetic=True)
+            trace_time[trace.trim_idx],
+            movable=True,
+            pen=pg.mkPen(color="darkorange", cosmetic=True),
         )
+        trim_line.addMarker("<|>")
+        trim_line.sigPositionChangeFinished.connect(self.change_trim_idx)
         self.plot_channels.addItem(trim_line)
         self.plot_channels.setTitle(emb_name)
         self.plot_channels.addLegend()
@@ -794,6 +801,41 @@ class MainWindow(QMainWindow):
                     il.addMarker("|>")
             il.sigPositionChangeFinished.connect(self.change_peak_bounds)
             self.plot_widget.addItem(il)
+
+    def change_trim_idx(self, il_obj):
+        trace = self.model.get_curr_trace()
+        emb = self.model.get_curr_embryo()
+
+        if self.use_dev_time:
+            dev_time = emb.lin_developmental_time()
+            idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
+            x = int(idx)
+        else:
+            x = int(il_obj.getXPos() * 10)
+
+        res = QMessageBox.question(
+            self,
+            "Confirm Update",
+            "Update trim index?",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+        )
+
+        if res == QMessageBox.StandardButton.Cancel:
+            if self.use_dev_time:
+                prev_value = dev_time[trace.trim_idx]
+            else:
+                prev_value = trace.trim_idx / 10
+            il_obj.setValue(prev_value)
+            return
+
+        trace.trim_idx = x
+
+        self.model.save_trim_idx(x)
+
+        pd_params = self.model.config.get_pd_params()
+        trace.detect_peaks(pd_params["freq"])
+
+        self.render_trace()
 
     def change_peak_bounds(self, il_obj):
         trace = self.model.get_curr_trace()

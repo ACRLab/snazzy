@@ -4,7 +4,7 @@ import traceback
 
 from PyQt6.QtCore import pyqtSignal, QObject, QRunnable
 
-from pasna_analysis import Config, Experiment, Trace, utils
+from pasna_analysis import Config, Embryo, Experiment, Trace, utils
 from pasna_analysis.gui import PeakMatcher
 
 
@@ -61,6 +61,11 @@ class Model:
         exp = self.get_curr_experiment()
         exp.config.update_params(new_data)
         exp.config.save_params()
+
+    def save_trim_idx(self, idx):
+        """Updates trim index of the current embryo."""
+        emb_name = self.curr_emb_name
+        self.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
 
     def save_peak_widths(self, emb_name, peak_widths, peak_index):
         corrected_peaks = self.config.get_corrected_peaks(emb_name)
@@ -229,6 +234,10 @@ class Model:
 
     def get_curr_group(self) -> dict[str, Experiment]:
         return self.groups[self.curr_group]
+
+    def get_curr_embryo(self) -> Embryo:
+        exp = self.get_curr_experiment()
+        return exp.embryos[self.curr_emb_name]
 
     def get_curr_trace(self) -> Trace:
         exp = self.get_curr_experiment()
