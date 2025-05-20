@@ -43,6 +43,7 @@ class EmbryoParams:
     manual_peaks: List[int]
     manual_remove: List[int]
     manual_widths: Dict[str, Any]
+    manual_trim_idx: int
 
 
 @dataclass
@@ -144,10 +145,11 @@ class Config:
     def save_manual_peak_data(
         self,
         emb_name,
+        wlen=None,
         added_peaks=None,
         removed_peaks=None,
         manual_widths=None,
-        wlen=None,
+        manual_trim_idx=None,
     ):
         if "embryos" not in self.data:
             self.data["embryos"] = {}
@@ -158,15 +160,18 @@ class Config:
                 "manual_peaks": [],
                 "manual_remove": [],
                 "manual_widths": {},
+                "manual_trim_idx": None,
             }
 
+        if wlen is not None:
+            self.data["embryos"][emb_name]["wlen"] = wlen
         if added_peaks is not None:
             self.data["embryos"][emb_name]["manual_peaks"] = added_peaks
         if removed_peaks is not None:
             self.data["embryos"][emb_name]["manual_remove"] = removed_peaks
         if manual_widths is not None:
             self.data["embryos"][emb_name]["manual_widths"] = manual_widths
-        if wlen is not None:
-            self.data["embryos"][emb_name]["wlen"] = wlen
+        if manual_trim_idx is not None:
+            self.data["embryos"][emb_name]["manual_trim_idx"] = manual_trim_idx
 
         self.save_params()

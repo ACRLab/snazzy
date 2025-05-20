@@ -33,9 +33,7 @@ class Trace:
         self._order_zero_savgol = None
         self.filtered_dff = None
 
-        trim_zscore = self.pd_params.get("trim_zscore", 0.35)
-        self.trim_idx = self.trim_data(trim_zscore)
-
+        self.trim_idx = self.get_trim_index()
         self.dff = self.compute_dff()
 
     @property
@@ -365,15 +363,22 @@ class Trace:
         """Returns the time when the first peak was detected."""
         return self.peak_times[0]
 
+    def get_trim_index(self):
+        """Try to return the trim index from config, otherwise calculates it."""
+        corrected_data = self.config.get_corrected_peaks(self.name)
+        if corrected_data and "manual_trim_idx" in corrected_data:
+            return corrected_data.get("manual_trim_idx")
+        else:
+            trim_zscore = self.pd_params.get("trim_zscore", 0.35)
+            return self.trim_data(trim_zscore)
+
     def trim_data(self, trim_zscore):
-        """
-        Computes the z score for each Savitzky-Golay-filtered sample, and removes all points after reaching `trim_zscore`.
-        """
+        """Computes the z score for each Savitzky-Golay-filtered sample, and removes all points after reaching `trim_zscore`."""
         tomato_savgol = spsig.savgol_filter(self.struct, 21, 2, deriv=0)
         zscored_tomato = zscore(tomato_savgol)
         zscored_tomato -= self.compute_baseline(zscored_tomato, window_size=10)
 
-        trim_points = np.where(np.abs(self.zscored_tomato) > trim_zscore)[0]
+        trim_points = np.where(np.abs(zscored_tomato) > trim_zscore)[0]
         if len(trim_points) == 0:
             trim_idx = len(self.time)
         else:
