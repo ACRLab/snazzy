@@ -26,11 +26,11 @@ class Experiment:
         self.directory = exp_path
         self.config = config if config is not None else Config(exp_path)
 
+        self.exp_params = self.config.get_exp_params()
+
         if kwargs:
             to_update = {k: v for k, v in kwargs.items() if k in self.exp_params}
             self.config.update_params(to_update, "exp_params")
-
-        self.exp_params = self.config.get_exp_params()
 
         data = DataLoader(exp_path)
         self.name = data.name
