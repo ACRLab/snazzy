@@ -366,11 +366,12 @@ class Trace:
     def get_trim_index(self):
         """Try to return the trim index from config, otherwise calculates it."""
         corrected_data = self.config.get_corrected_peaks(self.name)
-        if corrected_data and "manual_trim_idx" in corrected_data:
-            return corrected_data.get("manual_trim_idx")
-        else:
-            trim_zscore = self.pd_params.get("trim_zscore", 0.35)
-            return self.trim_data(trim_zscore)
+        if corrected_data:
+            manual_trim_idx = corrected_data.get("manual_trim_idx", -1)
+            if manual_trim_idx != -1:
+                return corrected_data.get("manual_trim_idx")
+        trim_zscore = self.pd_params.get("trim_zscore", 0.35)
+        return self.trim_data(trim_zscore)
 
     def trim_data(self, trim_zscore):
         """Computes the z score for each Savitzky-Golay-filtered sample, and removes all points after reaching `trim_zscore`."""
