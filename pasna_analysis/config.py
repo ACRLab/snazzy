@@ -43,7 +43,7 @@ class EmbryoParams:
     manual_peaks: List[int]
     manual_remove: List[int]
     manual_widths: Dict[str, Any]
-    manual_trim_idx: int
+    manual_trim_idx: int = -1
 
 
 @dataclass
@@ -160,7 +160,7 @@ class Config:
                 "manual_peaks": [],
                 "manual_remove": [],
                 "manual_widths": {},
-                "manual_trim_idx": None,
+                "manual_trim_idx": -1,
             }
 
         if wlen is not None:
