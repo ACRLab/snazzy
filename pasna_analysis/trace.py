@@ -64,7 +64,10 @@ class Trace:
     @property
     def peak_bounds_indices(self):
         if self._peak_bounds_indices is None:
-            self.compute_peak_bounds()
+            if "peak_width" in self.pd_params:
+                self.compute_peak_bounds(self.pd_params["peak_width"])
+            else:
+                self.compute_peak_bounds()
         return self._peak_bounds_indices
 
     @peak_bounds_indices.setter
