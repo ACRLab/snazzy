@@ -1,8 +1,10 @@
 from datetime import datetime
 
-import matplotlib
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from scipy.spatial.distance import pdist, squareform
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib
 import numpy as np
 import seaborn as sns
 
@@ -40,7 +42,6 @@ class PlotWindow(QWidget):
         plots_container.addLayout(self.sidebar)
 
         self.canvas = FigureCanvasQTAgg(Figure(figsize=(10, 6), layout="constrained"))
-        self.ax = self.canvas.figure.subplots()
 
         plots_container.addWidget(self.canvas)
         self.setLayout(layout)
@@ -49,6 +50,7 @@ class PlotWindow(QWidget):
             "Peaks": self.plot_peaks,
             "Area Under the Curve": self.plot_AUC,
             "Burst correlogram": self.plot_burst_correlogram,
+            "Burst high freq content": self.plot_high_frequency_distances,
         }
 
         self.create_buttons()
@@ -179,6 +181,42 @@ class PlotWindow(QWidget):
             ax=self.ax,
         )
         self.ax.set_title("Correlogram of Burst Similarities")
+        self.ax.set_xlabel("Burst Index")
+        self.ax.set_ylabel("Burst Index")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            if save_dir is None:
+                raise ValueError("Cannot save the image: path to save not provided.")
+            self.canvas.print_figure(save_dir / "area_under_curve.png")
+
+    def plot_high_frequency_distances(self, save=False, save_dir=None):
+        self.clear_plot()
+
+        hi_pass = self.curr_trace.get_filtered_signal(0.02, low_pass=False)
+
+        features = []
+        for s, e in self.curr_trace.peak_bounds_indices:
+            feature = []
+            rms = np.sqrt(np.mean(np.power(hi_pass[s:e], 2)))
+            feature.append(rms)
+            features.append(feature)
+
+        scaler = MinMaxScaler()
+        features_scaled = scaler.fit_transform(features)
+
+        dist_matrix = squareform(pdist(features_scaled, metric="euclidean"))
+
+        sns.heatmap(
+            dist_matrix,
+            cmap="viridis",
+            square=True,
+            xticklabels=False,
+            yticklabels=False,
+            ax=self.ax,
+        )
+        self.ax.set_title("Frequency content by burst")
         self.ax.set_xlabel("Burst Index")
         self.ax.set_ylabel("Burst Index")
 
