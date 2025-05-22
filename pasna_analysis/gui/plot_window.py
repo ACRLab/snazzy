@@ -53,6 +53,10 @@ class PlotWindow(QWidget):
 
         self.create_buttons()
 
+    def clear_plot(self):
+        self.canvas.figure.clear()
+        self.ax = self.canvas.figure.add_subplot(111)
+
     def save_all_plots(self):
         for exp in self.group.values():
             exp_dir = exp.pd_params_path.parent
@@ -84,7 +88,8 @@ class PlotWindow(QWidget):
         """Peak times for all embryos.
 
         Embryos are represented as horizontal lines."""
-        self.ax.clear()
+        self.clear_plot()
+
         times = []
         for emb in self.embryos:
             trace = emb.trace
@@ -108,7 +113,8 @@ class PlotWindow(QWidget):
 
     def plot_AUC(self, save=False, save_dir=None):
         """Binned area under the curve."""
-        self.ax.clear()
+        self.clear_plot()
+
         data = {"auc": [], "bin": [], "emb": []}
         n_bins = 5
         first_bin = 2
@@ -150,7 +156,7 @@ class PlotWindow(QWidget):
         return (window - np.mean(window)) / (np.std(window) + 1e-6)
 
     def plot_burst_correlogram(self, save=False, save_dir=None):
-        self.ax.clear()
+        self.clear_plot()
 
         dff = self.curr_trace.dff.copy()
         peak_indices = self.curr_trace.peak_idxes
