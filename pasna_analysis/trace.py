@@ -270,11 +270,15 @@ class Trace:
 
         return order0_idxes + p2_start
 
-    def get_filtered_signal(self, freq_cutoff):
+    def get_filtered_signal(self, freq_cutoff, low_pass=True):
+        """Applies a low or high pass filter and returns the inverse result."""
         N = len(self.dff[: self.trim_idx])
         freqs = np.fft.rfftfreq(N, 1 / self.fs)
         fft = np.fft.rfft(self.dff[: self.trim_idx])
-        mask = freqs < freq_cutoff
+        if low_pass:
+            mask = freqs < freq_cutoff
+        else:
+            mask = freqs > freq_cutoff
         filtered_fft = fft * mask
         filtered_signal = np.fft.irfft(filtered_fft, n=N)
 
