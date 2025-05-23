@@ -22,6 +22,8 @@ class Trace:
         self.struct = activity[:, 2]
         self.config = config
         self.pd_params = config.get_pd_params()
+        exp_params = config.get_exp_params()
+        self.has_transients = exp_params["has_transients"]
 
         # list of peaks that were manually added / removed:
         self.to_add = []
@@ -193,7 +195,8 @@ class Trace:
     def remove_transients(self, params):
         """Transients are very early bouts that result in a first peak that
         happens way before other peaks."""
-        if not self.pd_params.get("has_transients", False):
+        has_transients = params.get("has_transients", self.has_transients)
+        if not has_transients:
             return
         ISI_factor = params.get("ISI_factor", 4)
         # average inter-spike interval
