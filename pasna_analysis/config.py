@@ -35,6 +35,15 @@ class PDParams:
     freq: float
     dff_strategy: str
     trim_zscore: float = 0.35
+    ISI_factor: float = 4
+    low_amp_threshold: float = 0.1
+    fft_height: float = 0.01
+    fft_prominence: float = 0.005
+    local_thres_window_size: int = 300
+    local_thres_value: float = 75
+    local_thres_method: str = "percentile"
+    port_peaks_window_size: int = 30
+    port_peaks_thres: float = 70
 
 
 @dataclass
@@ -88,9 +97,18 @@ class Config:
             },
             "pd_params": {
                 "dff_strategy": "baseline",
-                "peak_width": 0.92,
+                "peak_width": 0.98,
                 "freq": 0.0025,
                 "trim_zscore": 0.35,
+                "ISI_factor": 4,
+                "low_amp_threshold": 0.1,
+                "fft_height": 0.04,
+                "fft_prominence": 0.03,
+                "local_thres_window_size": 300,
+                "local_thres_value": 75,
+                "local_thres_method": "percentile",
+                "port_peaks_window_size": 30,
+                "port_peaks_thres": 7,
             },
             "embryos": {},
         }
@@ -122,6 +140,8 @@ class Config:
             return self.read_from_file()
 
     def read_from_file(self):
+        """Reads Config data from file. When decoding, missing values will receive
+        the same default params values, defined in each dataclass."""
         with open(self.config_path, "r") as f:
             data = json.load(f, object_hook=config_decoder)
         return data

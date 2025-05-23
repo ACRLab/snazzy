@@ -642,8 +642,8 @@ class MainWindow(QMainWindow):
                     size=8,
                     brush=pg.mkColor("m"),
                 )
-                scatter_plot_item.setData(peak_times, peak_amps)
                 peak_amps = trace.peak_amplitudes
+                scatter_plot_item.setData(peak_times, peak_amps)
 
                 plot_widget.addItem(scatter_plot_item)
 
@@ -782,6 +782,8 @@ class MainWindow(QMainWindow):
         peak_bounds = trace.peak_bounds_indices.flatten()
 
         op = trace.detect_oscillations()
+        if op is None:
+            return
         op_amps = trace.dff[op]
         op_times = time[op]
         op_plot_items = pg.ScatterPlotItem(
