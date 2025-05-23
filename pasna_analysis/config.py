@@ -37,8 +37,8 @@ class PDParams:
     trim_zscore: float = 0.35
     ISI_factor: float = 4
     low_amp_threshold: float = 0.1
-    fft_height: float = 0.01
-    fft_prominence: float = 0.005
+    fft_height: float = 0.04
+    fft_prominence: float = 0.03
     local_thres_window_size: int = 300
     local_thres_value: float = 75
     local_thres_method: str = "percentile"
@@ -108,7 +108,7 @@ class Config:
                 "local_thres_value": 75,
                 "local_thres_method": "percentile",
                 "port_peaks_window_size": 30,
-                "port_peaks_thres": 7,
+                "port_peaks_thres": 70,
             },
             "embryos": {},
         }
