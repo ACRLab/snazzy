@@ -213,6 +213,17 @@ class Trace:
         if (peak_times[1] - peak_times[0]) > ISI_factor * avg_ISI:
             self._peak_idxes = np.array(self._peak_idxes[1:])
 
+    def remove_by_width(self, params):
+        min_width = params.get("min_width", 4)
+
+        filtered_peaks = []
+
+        for p, (s, e) in zip(self._peak_idxes, self.peak_bounds_indices):
+            if e - s > min_width:
+                filtered_peaks.append(p)
+
+        self._peak_idxes = np.array(filtered_peaks)
+
     def apply_low_threshold(self, params):
         """Removes all peaks below a percentage of the max amplitude."""
         threshold = params.get("low_amp_threshold", self.pd_params["low_amp_threshold"])
@@ -257,6 +268,7 @@ class Trace:
         stages = [
             (self.remove_transients, {}),
             (self.apply_low_threshold, {}),
+            (self.remove_by_width, {}),
             (self.reconcile_manual_peaks, {}),
         ]
 
