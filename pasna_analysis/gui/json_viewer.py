@@ -23,8 +23,18 @@ KEY_TYPES = {
     "manual_peaks": list,
     "manual_remove": list,
     "manual_widths": dict,
+    "manual_trim_idx": int,
     "wlen": int,
     "embryos": dict,
+    "ISI_factor": float,
+    "low_amp_threshold": float,
+    "fft_height": float,
+    "fft_prominence": float,
+    "local_thres_window_size": int,
+    "local_thres_value": float,
+    "local_thres_method": str,
+    "port_peaks_window_size": int,
+    "port_peaks_thres": float,
 }
 
 

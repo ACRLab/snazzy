@@ -202,20 +202,22 @@ class Trace:
         has_transients = params.get("has_transients", self.has_transients)
         if not has_transients:
             return
-        ISI_factor = params.get("ISI_factor", 4)
-        # average inter-spike interval
+        ISI_factor = params.get("ISI_factor", self.pd_params["ISI_factor"])
+
         peak_times = self.time[self._peak_idxes]
         if len(peak_times) < 2:
             print("Cannot remove transients, not enough peaks.")
             return
+
         avg_ISI = np.average(peak_times[1:] - peak_times[:-1])
         if (peak_times[1] - peak_times[0]) > ISI_factor * avg_ISI:
             self._peak_idxes = np.array(self._peak_idxes[1:])
 
     def apply_low_threshold(self, params):
         """Removes all peaks below a percentage of the max amplitude."""
+        threshold = params.get("low_amp_threshold", self.pd_params["low_amp_threshold"])
+
         max_peak = max(self.peak_amplitudes)
-        threshold = params.get("low_amp_threshold", 0.1)
         self._peak_idxes = np.array(
             [p for p in self._peak_idxes if self.dff[p] > threshold * max_peak]
         )
@@ -223,12 +225,11 @@ class Trace:
     def reconcile_manual_peaks(self, params):
         """Reconcile the calculated peaks with manually corrected data.
 
-        The manual data is written at `self.pd_props_path`, through the GUI."""
-        if not self.config:
-            return
-        corrected_peaks = None
+        The manual data is written through the GUI."""
+        corrected_peaks = params.get(
+            "corrected_peaks", self.config.get_corrected_peaks(self.name)
+        )
 
-        corrected_peaks = self.config.get_corrected_peaks(self.name)
         if corrected_peaks:
             to_add = corrected_peaks["manual_peaks"]
             to_remove = corrected_peaks["manual_remove"]
@@ -255,7 +256,7 @@ class Trace:
 
         stages = [
             (self.remove_transients, {}),
-            (self.apply_low_threshold, {"low_amp_threshold": 0.05}),
+            (self.apply_low_threshold, {}),
             (self.reconcile_manual_peaks, {}),
         ]
 
@@ -333,8 +334,20 @@ class Trace:
 
         return local_thresh
 
-    def port_peaks(self, peaks, target_signal, search_window=30, peak_height_thres=0.7):
-        """Changes peaks index to the highest peak amplitude on a target signal."""
+    def port_peaks(self, peaks, target_signal, search_window=30, peak_height_thres=70):
+        """Changes peaks index to the highest peak amplitude on a target signal.
+
+        Parameters:
+            peaks (list[int]):
+                list of peak indices.
+            target_signal (list):
+                Signal that will be used to determine final peak position.
+            search_window (int):
+                Half the size of the window used to look for the peak in the target signal.
+            peak_height_thres (int):
+                Should be within 0 ~ 100. Minimum percentage necessary for the
+                ported peak relative to the local maximum.
+        """
         local_peak_indices = []
 
         for idx in peaks:
@@ -351,7 +364,7 @@ class Trace:
             leftmost_peak = next(
                 p
                 for (p, ph) in zip(local_peaks, local_peak_heights)
-                if ph >= peak_height_thres * max_peak
+                if ph >= (peak_height_thres / 100) * max_peak
             )
             local_peak_indices.append(left + leftmost_peak)
 
@@ -365,11 +378,31 @@ class Trace:
         """
         filtered_dff = self.get_filtered_signal(freq_cutoff)
 
-        peak_indices, _ = spsig.find_peaks(filtered_dff, height=0.04, prominence=0.03)
+        fft_height = self.pd_params["fft_height"]
+        fft_prominence = self.pd_params["fft_prominence"]
+        peak_indices, _ = spsig.find_peaks(
+            filtered_dff, height=fft_height, prominence=fft_prominence
+        )
 
-        local_peak_indices = self.port_peaks(peak_indices, self.dff[: self.trim_idx])
+        pp_ws = self.pd_params["port_peaks_window_size"]
+        pp_thres = self.pd_params["port_peaks_thres"]
+        local_peak_indices = self.port_peaks(
+            peak_indices,
+            self.dff[: self.trim_idx],
+            search_window=pp_ws,
+            peak_height_thres=pp_thres,
+        )
 
-        peaks = self.filter_peaks_by_local_context(self.dff, local_peak_indices)
+        local_ws = self.pd_params["local_thres_window_size"]
+        local_value = self.pd_params["local_thres_value"]
+        local_method = self.pd_params["local_thres_method"]
+        peaks = self.filter_peaks_by_local_context(
+            self.dff,
+            local_peak_indices,
+            window_size=local_ws,
+            value=local_value,
+            method=local_method,
+        )
 
         return np.array(peaks), filtered_dff
 
