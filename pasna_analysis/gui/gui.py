@@ -616,8 +616,14 @@ class MainWindow(QMainWindow):
                     time = trace.time[: trace.trim_idx] / 60
                 dff = trace.dff[: trace.trim_idx]
 
-                peak_amps = trace.peak_amplitudes
-                peak_times = time[trace.peak_idxes]
+                plot_widget.plot(time, dff)
+
+                if self.model.has_combined_experiments():
+                    plot_widget.setTitle(f"{exp_name} - {emb.name}")
+                else:
+                    plot_widget.setTitle(emb.name)
+
+                self.graph_layout.addWidget(plot_widget)
 
                 if trace.to_add or trace.to_remove:
                     ttad = np.array([*trace.to_add, *trace.to_remove])
@@ -628,20 +634,18 @@ class MainWindow(QMainWindow):
                     )
                     plot_widget.addItem(manual_scatter)
 
+                if len(trace.peak_idxes) == 0:
+                    return
+                peak_times = time[trace.peak_idxes]
+
                 scatter_plot_item = pg.ScatterPlotItem(
                     size=8,
                     brush=pg.mkColor("m"),
                 )
                 scatter_plot_item.setData(peak_times, peak_amps)
+                peak_amps = trace.peak_amplitudes
 
                 plot_widget.addItem(scatter_plot_item)
-
-                plot_widget.plot(time, dff)
-                if self.model.has_combined_experiments():
-                    plot_widget.setTitle(f"{exp_name} - {emb.name}")
-                else:
-                    plot_widget.setTitle(emb.name)
-                self.graph_layout.addWidget(plot_widget)
 
     def calibrate_sliders(self):
         """Adjusts the sliders based on pd_params.json.
@@ -705,26 +709,34 @@ class MainWindow(QMainWindow):
             time = trace.time[: trace.trim_idx] / 60
         dff = trace.dff[: trace.trim_idx]
 
-        peak_times = time[trace.peak_idxes]
-        peak_amps = trace.peak_amplitudes
-
-        # paint peaks
-        brushes = [self.brushes[i % len(self.brushes)] for i in range(len(peak_times))]
-        scatter_plot_item = pg.ScatterPlotItem(
-            peak_times, peak_amps, size=8, brush=brushes, pen=QPen(Qt.PenStyle.NoPen)
-        )
-        # paint manual data
-        if trace.to_add or trace.to_remove:
-            ttad = np.array([*trace.to_add, *trace.to_remove])
-            manual_times = time[ttad]
-            manual_amps = dff[ttad]
-            manual_scatter = pg.ScatterPlotItem(
-                manual_times, manual_amps, size=10, brush=QColor("cyan")
-            )
-            self.plot_widget.addItem(manual_scatter)
-        # paint trace
-        self.plot_widget.addItem(scatter_plot_item)
         self.plot_widget.plot(time, dff)
+
+        if len(trace.peak_idxes) > 0:
+            peak_times = time[trace.peak_idxes]
+            peak_amps = trace.peak_amplitudes
+
+            # paint peaks
+            brushes = [
+                self.brushes[i % len(self.brushes)] for i in range(len(peak_times))
+            ]
+            scatter_plot_item = pg.ScatterPlotItem(
+                peak_times,
+                peak_amps,
+                size=8,
+                brush=brushes,
+                pen=QPen(Qt.PenStyle.NoPen),
+            )
+            # paint manual data
+            if trace.to_add or trace.to_remove:
+                ttad = np.array([*trace.to_add, *trace.to_remove])
+                manual_times = time[ttad]
+                manual_amps = dff[ttad]
+                manual_scatter = pg.ScatterPlotItem(
+                    manual_times, manual_amps, size=10, brush=QColor("cyan")
+                )
+                self.plot_widget.addItem(manual_scatter)
+            # paint trace
+            self.plot_widget.addItem(scatter_plot_item)
 
         if self.use_dev_time:
             trace_time = dev_time
@@ -765,9 +777,9 @@ class MainWindow(QMainWindow):
         # paint peak widths
         rel_height = self.rel_h_slider.value()
         trace.compute_peak_bounds(rel_height)
-        peak_bounds = trace.peak_bounds_indices.flatten()
-        if peak_bounds.size == 0:
+        if trace.peak_bounds_indices.size == 0:
             return
+        peak_bounds = trace.peak_bounds_indices.flatten()
 
         op = trace.detect_oscillations()
         op_amps = trace.dff[op]
