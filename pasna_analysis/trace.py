@@ -53,6 +53,8 @@ class Trace:
 
     @property
     def peak_times(self):
+        if len(self.peak_idxes) == 0:
+            return []
         return self.time[self.peak_idxes]
 
     @property
@@ -61,6 +63,8 @@ class Trace:
 
     @property
     def peak_amplitudes(self):
+        if len(self.peak_idxes) == 0:
+            return []
         return self.dff[self.peak_idxes]
 
     @property
@@ -398,6 +402,9 @@ class Trace:
 
     def compute_peak_bounds(self, rel_height=0.92):
         """Computes properties of each dff peak using spsig.peak_widths."""
+        if len(self.peak_idxes) == 0:
+            self._peak_bounds_indices = np.array([])
+            return
         dff = self.dff[: self.trim_idx].copy()
         # make sure that the peak we pass is not bound by local points
         dff[self.peak_idxes] += 3
