@@ -635,7 +635,7 @@ class MainWindow(QMainWindow):
                     plot_widget.addItem(manual_scatter)
 
                 if len(trace.peak_idxes) == 0:
-                    return
+                    continue
                 peak_times = time[trace.peak_idxes]
 
                 scatter_plot_item = pg.ScatterPlotItem(
