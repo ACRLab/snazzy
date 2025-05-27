@@ -33,6 +33,9 @@ class Experiment:
             self.config.update_params(to_update, "exp_params")
 
         data = DataLoader(exp_path)
+        if not self.config.config_path.exists():
+            self.config.initialize_config_file()
+
         self.name = data.name
         self.act_paths = data.activities()
         self.len_paths = data.lengths()
