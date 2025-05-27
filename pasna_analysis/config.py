@@ -134,7 +134,6 @@ class Config:
 
     def load_data(self):
         if not self.config_path.exists():
-            self.initialize_config_file()
             return self.default_params
         else:
             return self.read_from_file()
