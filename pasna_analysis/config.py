@@ -83,9 +83,19 @@ def config_decoder(d):
 
 
 class Config:
+    """
+    Configuration data from Experiment class.
 
-    def __init__(self, exp_path: Path):
-        self.exp_path = utils.convert_to_relative_path(exp_path, "data")
+    Attributes:
+        exp_path (Path):
+            Path to the peak_detection_params.json file.
+            If not found, will hold the default params in memory.
+        rel_root_path (str):
+            Name of the directory used to determine the relative path.
+    """
+
+    def __init__(self, exp_path: Path, rel_root_path="data"):
+        self.exp_path = utils.convert_to_relative_path(exp_path, rel_root_path)
         self.config_path = self.exp_path / "peak_detection_params.json"
 
         self.default_params = {
