@@ -253,6 +253,8 @@ class Model:
         return exp.embryos[self.curr_emb_name].trace
 
     def add_group(self, group):
+        if group in self.groups:
+            raise ValueError("Group already exists.")
         self.groups[group] = {}
         if self.curr_group is None:
             self.curr_group = group
