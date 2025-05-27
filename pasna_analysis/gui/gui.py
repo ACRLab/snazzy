@@ -86,51 +86,45 @@ class MainWindow(QMainWindow):
         next_emb = emb_names[next_idx]
         self.render_trace(next_emb)
 
-    def _open_directory(self, is_new_group, should_reset_model=False):
+    def _get_directory(self) -> Path | None:
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
             return
-        directory = Path(directory)
+        return Path(directory)
 
-        config = Config(directory)
+    def _get_group_name(self, is_new_group: bool) -> str:
+        return (
+            f"group{len(self.model.groups) + 1}"
+            if is_new_group
+            else self.model.curr_group
+        )
+
+    def _show_experiment_dialog(self, config: Config, group_name: str):
         exp_params = config.get_exp_params()
         dff_strategy = config.data["pd_params"].get("dff_strategy", "")
 
-        group_name = None
-        if is_new_group:
-            group_name, ok = QInputDialog.getText(self, "New Group", "Group Name:")
-            if not ok:
-                return
-            if not group_name:
-                group_name = f"group{len(self.model.groups) + 1}"
-
-        dialog_params = {**exp_params, "dff_strategy": dff_strategy}
+        dialog_params = {
+            "group_name": group_name,
+            **exp_params,
+            "dff_strategy": dff_strategy,
+        }
         dialog = ExperimentParamsDialog(
             dialog_params, exp_path=config.exp_path, parent=self
         )
         if not dialog.exec():
             return
+        return dialog.get_values()
 
-        dialog_values = dialog.get_values()
-        exp_params = {k: v for k, v in dialog_values.items() if k in exp_params}
+    def _update_config(self, config: Config, dialog_values):
+        exp_params = config.get_exp_params()
+        new_exp_params = {k: v for k, v in dialog_values.items() if k in exp_params}
         pd_params = {"dff_strategy": dialog_values["dff_strategy"]}
-        new_config = {"exp_params": exp_params, "pd_params": pd_params}
+        new_config = {"exp_params": new_exp_params, "pd_params": pd_params}
         config.update_params(new_config)
 
         config.save_params()
 
-        if should_reset_model:
-            self.model.set_initial_state()
-
-        if group_name:
-            self.model.add_group(group_name)
-
-        try:
-            self.placeholder.setText("Loading data..")
-            self.placeholder.repaint()
-        except RuntimeError:
-            pass
-
+    def _start_experiment_worker(self, config: Config, group_name: str):
         worker = Worker(
             self.model.create_experiment,
             config=config,
@@ -139,6 +133,40 @@ class MainWindow(QMainWindow):
         worker.signals.result.connect(self.update_UI)
         worker.signals.error.connect(self.handle_open_err)
         self.threadpool.start(worker)
+
+    def _present_loading(self):
+        try:
+            self.placeholder.setText("Loading data..")
+            self.placeholder.repaint()
+        except RuntimeError:
+            pass
+
+    def _open_directory(self, is_new_group: bool, should_reset_model: bool = False):
+        directory = self._get_directory()
+        if not directory:
+            return
+
+        try:
+            config = Config(directory)
+            group_name = self._get_group_name(is_new_group)
+
+            dialog_values = self._show_experiment_dialog(config, group_name)
+            if not dialog_values:
+                return
+
+            self._update_config(config, dialog_values)
+
+            if should_reset_model:
+                self.model.set_initial_state()
+
+            if is_new_group and group_name:
+                self.model.add_group(group_name)
+
+            self._present_loading()
+
+            self._start_experiment_worker(config, group_name)
+        except Exception as e:
+            self.show_error_message(str(e))
 
     def handle_open_err(self, err: Exception):
         try:
