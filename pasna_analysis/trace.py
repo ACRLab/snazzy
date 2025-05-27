@@ -268,7 +268,6 @@ class Trace:
         stages = [
             (self.remove_transients, {}),
             (self.apply_low_threshold, {}),
-            (self.remove_by_width, {}),
             (self.reconcile_manual_peaks, {}),
         ]
 
@@ -445,7 +444,7 @@ class Trace:
             trim_idx = trim_points[0]
         return trim_idx
 
-    def compute_peak_bounds(self, rel_height=0.92):
+    def compute_peak_bounds(self, rel_height=0.97):
         """Computes properties of each dff peak using spsig.peak_widths."""
         if len(self.peak_idxes) == 0:
             self._peak_bounds_indices = np.array([])
