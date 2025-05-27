@@ -162,6 +162,12 @@ class Model:
         self.config = config
         exp = Experiment(config.data["exp_path"], config)
 
+        if not exp.embryos:
+            first_peak_threshold = config.get_exp_params()["first_peak_threshold"]
+            raise AttributeError(
+                f"Could not find any embryos with first peak after {first_peak_threshold} minutes."
+            )
+
         self.add_experiment(exp, group_name)
         exp_params = self.config.get_exp_params()
         self.to_remove[exp.name] = set(exp_params.get("to_remove", []))
@@ -178,12 +184,15 @@ class Model:
         self.groups[group][experiment.name] = experiment
         self.to_remove[experiment.name] = set()
 
+        if self.curr_emb_name is None:
+            try:
+                emb_name = next(iter(experiment.embryos))
+            except StopIteration:
+                return
+            self.curr_emb_name = emb_name
+
         if self.curr_exp is None:
             self.curr_exp = experiment.name
-
-        if self.curr_emb_name is None:
-            emb_name = next(iter(experiment.embryos))
-            self.curr_emb_name = emb_name
 
     def get_filtered_groups(self):
         groups = deepcopy(self.groups)
