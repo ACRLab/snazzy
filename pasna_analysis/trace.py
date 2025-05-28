@@ -76,10 +76,6 @@ class Trace:
                 self.compute_peak_bounds()
         return self._peak_bounds_indices
 
-    @peak_bounds_indices.setter
-    def peak_bounds_indices(self, peak_bounds):
-        self._peak_bounds_indices = peak_bounds
-
     @property
     def peak_bounds_times(self):
         return self.get_peak_bounds_times()
@@ -200,7 +196,7 @@ class Trace:
         """Transients are very early bouts that result in a first peak that
         happens way before other peaks."""
         has_transients = params.get("has_transients", self.has_transients)
-        if not has_transients:
+        if not has_transients or len(self._peak_idxes) == 0:
             return
         ISI_factor = params.get("ISI_factor", self.pd_params["ISI_factor"])
 
@@ -226,6 +222,8 @@ class Trace:
 
     def apply_low_threshold(self, params):
         """Removes all peaks below a percentage of the max amplitude."""
+        if len(self.peak_amplitudes) == 0:
+            return
         threshold = params.get("low_amp_threshold", self.pd_params["low_amp_threshold"])
 
         max_peak = max(self.peak_amplitudes)
@@ -274,13 +272,14 @@ class Trace:
         self.process_peaks(stages)
 
     def detect_oscillations(self, after_ep=2, offset=10):
+        # oscillations only happen in phase 2, which should be at least after ep 2:
+        if len(self.peak_idxes) <= after_ep:
+            return None
+
         mask = np.zeros_like(self.dff, dtype=np.bool_)
         peak_bounds = self.peak_bounds_indices
         for s, e in peak_bounds:
             mask[s : e + offset] = 1
-        # oscillations only happen in phase 2, which should be at least after ep 2:
-        if len(self.peak_idxes) <= after_ep:
-            return None
         p2_start = self.peak_idxes[after_ep]
         dff = self.dff.copy()
         dff[mask] = 0
