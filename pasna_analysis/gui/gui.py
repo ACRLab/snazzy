@@ -72,19 +72,9 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
 
-    def render_next_trace(self, forward):
-        if self.model.curr_exp is None:
-            return
-        curr_emb = self.model.curr_emb_name
-        embs = self.model.get_filtered_embs(self.model.curr_exp)
-        emb_names = list(embs.keys())
-        curr_emb_index = emb_names.index(curr_emb)
-        if forward:
-            next_idx = (curr_emb_index + 1) % len(emb_names)
-        else:
-            next_idx = (curr_emb_index - 1) % len(emb_names)
-        next_emb = emb_names[next_idx]
-        self.render_trace(next_emb)
+    def render_next_trace(self, forward: bool):
+        next_emb_name = self.model.get_next_emb_name(forward)
+        self.render_trace(next_emb_name)
 
     def _get_directory(self) -> Path | None:
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -379,12 +369,14 @@ class MainWindow(QMainWindow):
 
             self.calibrate_sliders()
 
-    def toggle_emb_visibility(self, emb_name):
+    def toggle_emb_visibility(self, emb_id):
         exp = self.model.get_curr_experiment()
-        if emb_name in self.model.to_remove[exp.name]:
-            self.model.to_remove[exp.name].remove(emb_name)
+        if emb_id in self.model.to_remove[exp.name]:
+            self.model.to_remove[exp.name].remove(emb_id)
         else:
-            self.model.to_remove[exp.name].add(emb_name)
+            if self.model.get_curr_emb_id() == emb_id:
+                self.render_next_trace(forward=True)
+            self.model.to_remove[exp.name].add(emb_id)
 
     def paint_graphs(self):
         self.single_graph_frame = QFrame()
@@ -501,7 +493,7 @@ class MainWindow(QMainWindow):
     def view_json_data(self):
         if self.model.config is None:
             return
-        config_data = self.model.config.data
+        config_data = self.model.get_config_data()
         self.json_window = JsonViewer(config_data)
         self.json_window.update_config_signal.connect(self.update_from_json_viewer)
         self.json_window.show()
@@ -588,10 +580,11 @@ class MainWindow(QMainWindow):
         pd_params = self.collect_slider_params()
 
         if pd_params is None:
-            pd_params = self.model.config.get_pd_params()
+            pd_params = self.model.get_pd_params()
 
         trace = self.model.get_curr_trace()
         trace.detect_peaks(pd_params["freq"])
+        trace.compute_peak_bounds(pd_params["peak_width"])
         self.render_trace()
 
     def update_all_embs(self):
@@ -618,12 +611,13 @@ class MainWindow(QMainWindow):
             pd_params = self.collect_slider_params()
 
             if pd_params is None:
-                pd_params = self.model.config.get_pd_params()
+                pd_params = self.model.get_pd_params()
 
             to_remove = list(self.model.to_remove[exp_name])
 
             for emb in exp.embryos.values():
                 emb.trace.detect_peaks(pd_params["freq"])
+                emb.trace.compute_peak_bounds(pd_params["peak_width"])
 
             new_data = {"pd_params": pd_params, "exp_params": {"to_remove": to_remove}}
             self.model.update_config(new_data)
@@ -682,7 +676,7 @@ class MainWindow(QMainWindow):
         if self.model.has_combined_experiments():
             return
 
-        pd_params = self.model.config.get_pd_params()
+        pd_params = self.model.get_pd_params()
 
         for sld, name in (
             (self.freq_slider, "freq"),
@@ -693,8 +687,8 @@ class MainWindow(QMainWindow):
             sld.slider.sliderPressed.connect(self.started_dragging)
             sld.slider.sliderReleased.connect(self.stopped_dragging)
 
-        # it's too costly to repaint all peak widths, so I wont update them as we drag
-        # the width_slider
+        # it's too costly to repaint all peak widths, so they wont be
+        # updated while we drag the width_slider
         self.rel_h_slider.setValue(pd_params["peak_width"])
 
     def started_dragging(self):
@@ -710,139 +704,124 @@ class MainWindow(QMainWindow):
         return [QBrush(QColor(*color)) for color in colors]
 
     def render_trace(self, emb_name=None, exp_name=None):
-        """Renders the currently selected trace.
+        trace, embryo, time, dff = self.model.get_trace_context(
+            emb_name, exp_name, self.use_dev_time
+        )
 
-        Omitted values will be replaced by currently selected values in `self.model`.
-        For example, passing only an emb_name will select that emb from the current experiment.
-        """
-        if exp_name is None:
-            exp = self.model.get_curr_experiment()
-        else:
-            exp = self.model.get_experiment(exp_name)
+        self._clear_current_plot()
+        self._plot_raw_trace(time, dff)
+        self._plot_filtered_trace(time, trace)
+        self._plot_manual_annotations(time, trace, dff)
+        self._plot_peaks(time, trace)
+        self._plot_active_and_struct_channels(trace, embryo)
+        self._setup_trim_line(trace, embryo)
+        self._plot_peak_widths(time, trace)
+        self._plot_detected_oscillations(time, trace, dff)
+        self._set_plot_titles(embryo, exp_name)
 
-        if emb_name is None:
-            emb_name = self.model.curr_emb_name
-        else:
-            self.model.curr_emb_name = emb_name
-
+    def _clear_current_plot(self):
         self.plot_widget.clear()
         self.plot_channels.clear()
 
-        embryo = exp.embryos[emb_name]
-        trace = embryo.trace
-        if self.use_dev_time:
-            dev_time = embryo.lin_developmental_time()
-            time = dev_time[: trace.trim_idx]
-        else:
-            time = trace.time[: trace.trim_idx] / 60
-        dff = trace.dff[: trace.trim_idx]
-
+    def _plot_raw_trace(self, time, dff):
         self.plot_widget.plot(time, dff)
 
-        if len(trace.peak_idxes) > 0:
-            peak_times = time[trace.peak_idxes]
-            peak_amps = trace.peak_amplitudes
+    def _plot_filtered_trace(self, time, trace):
+        if self.display_filtered_dff and trace.filtered_dff is not None:
+            self.plot_widget.plot(time, trace.filtered_dff, pen=pg.mkPen("palegreen"))
 
-            # paint peaks
-            brushes = [
-                self.brushes[i % len(self.brushes)] for i in range(len(peak_times))
-            ]
-            scatter_plot_item = pg.ScatterPlotItem(
-                peak_times,
-                peak_amps,
-                size=8,
-                brush=brushes,
-                pen=QPen(Qt.PenStyle.NoPen),
-            )
-            # paint manual data
-            if trace.to_add or trace.to_remove:
-                ttad = np.array([*trace.to_add, *trace.to_remove])
-                manual_times = time[ttad]
-                manual_amps = dff[ttad]
-                manual_scatter = pg.ScatterPlotItem(
-                    manual_times, manual_amps, size=10, brush=QColor("cyan")
-                )
-                self.plot_widget.addItem(manual_scatter)
-            # paint trace
-            self.plot_widget.addItem(scatter_plot_item)
+    def _plot_manual_annotations(self, time, trace, dff):
+        if not trace.to_add and not trace.to_remove:
+            return
+        indices = np.array([*trace.to_add, *trace.to_remove])
+        manual_times = time[indices]
+        manual_amps = dff[indices]
+        scatter = pg.ScatterPlotItem(
+            manual_times, manual_amps, size=10, brush=QColor("cyan")
+        )
+        self.plot_widget.addItem(scatter)
 
-        if self.use_dev_time:
-            trace_time = dev_time
-        else:
-            trace_time = trace.time / 60
+    def _plot_peaks(self, time, trace):
+        if len(trace.peak_idxes) == 0:
+            return
+        peak_times = time[trace.peak_idxes]
+        peak_amps = trace.peak_amplitudes
+        brushes = [self.brushes[i % len(self.brushes)] for i in range(len(peak_times))]
 
-        self.plot_channels.plot(
-            trace_time,
-            trace.active,
-            name="Active channel",
-            pen=pg.mkPen("limegreen"),
+        scatter = pg.ScatterPlotItem(
+            x=peak_times,
+            y=peak_amps,
+            size=8,
+            brush=brushes,
+            pen=pg.mkPen(None),
+        )
+        self.plot_widget.addItem(scatter)
+
+    def _plot_active_and_struct_channels(self, trace, embryo):
+        trace_time = (
+            embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
         )
         self.plot_channels.plot(
-            trace_time,
-            trace.struct,
-            name="Structural channel",
-            pen=pg.mkPen("firebrick"),
+            trace_time, trace.active, name="Active", pen=pg.mkPen("limegreen")
+        )
+        self.plot_channels.plot(
+            trace_time, trace.struct, name="Struct", pen=pg.mkPen("firebrick")
+        )
+        self.plot_channels.addLegend()
+
+    def _setup_trim_line(self, trace, embryo):
+        trace_time = (
+            embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
         )
         trim_line = pg.InfiniteLine(
             trace_time[trace.trim_idx],
             movable=True,
-            pen=pg.mkPen(color="darkorange", cosmetic=True),
+            pen=pg.mkPen("darkorange", cosmetic=True),
         )
         trim_line.addMarker("<|>")
         trim_line.sigPositionChangeFinished.connect(self.change_trim_idx)
         self.plot_channels.addItem(trim_line)
-        self.plot_channels.setTitle(emb_name)
-        self.plot_channels.addLegend()
 
-        if self.display_filtered_dff and trace.filtered_dff is not None:
-            self.plot_widget.plot(time, trace.filtered_dff, pen=pg.mkPen("palegreen"))
+    def _plot_peak_widths(self, time, trace):
 
-        if self.model.has_combined_experiments():
-            self.plot_widget.setTitle(f"{exp.name} - {emb_name}")
-        else:
-            self.plot_widget.setTitle(emb_name)
-
-        # paint peak widths
-        rel_height = self.rel_h_slider.value()
-        trace.compute_peak_bounds(rel_height)
+        if self.is_dragging_slider or not self.show_peak_widths:
+            return
         if trace.peak_bounds_indices.size == 0:
             return
-        peak_bounds = trace.peak_bounds_indices.flatten()
 
+        peak_bounds = trace.peak_bounds_indices.flatten()
+        bound_times = time[peak_bounds]
+        brushes = [self.brushes[i % len(self.brushes)] for i in range(len(bound_times))]
+
+        for i, time_value in enumerate(bound_times):
+            color = brushes[i // 2].color() if self.color_mode else "gold"
+            line = pg.InfiniteLine(
+                time_value, movable=self.moveable_width_bars, pen=pg.mkPen(color)
+            )
+            line.peak_index = i
+            if self.moveable_width_bars:
+                line.addMarker("<|") if i % 2 == 0 else line.addMarker("|>")
+            line.sigPositionChangeFinished.connect(self.change_peak_bounds)
+            self.plot_widget.addItem(line)
+
+    def _plot_detected_oscillations(self, time, trace, dff):
         op = trace.detect_oscillations()
         if op is None:
+            print("No oscillations found")
             return
-        op_amps = trace.dff[op]
         op_times = time[op]
-        op_plot_items = pg.ScatterPlotItem(
-            op_times, op_amps, size=8, brush=QColor("orange")
+        op_amps = dff[op]
+        scatter = pg.ScatterPlotItem(op_times, op_amps, size=8, brush=QColor("orange"))
+        self.plot_widget.addItem(scatter)
+
+    def _set_plot_titles(self, embryo, exp_name):
+        title = (
+            f"{exp_name} - {embryo.name}"
+            if self.model.has_combined_experiments()
+            else embryo.name
         )
-        self.plot_widget.addItem(op_plot_items)
-
-        if not self.show_peak_widths or self.is_dragging_slider:
-            return
-
-        peak_bound_times = time[peak_bounds]
-        brushes = [
-            self.brushes[i % len(self.brushes)] for i in range(len(peak_bound_times))
-        ]
-        for i, idx in enumerate(peak_bound_times):
-            if self.color_mode:
-                il = pg.InfiniteLine(
-                    idx,
-                    movable=self.moveable_width_bars,
-                    pen=pg.mkPen(brushes[i // 2].color()),
-                )
-            else:
-                il = pg.InfiniteLine(idx, movable=self.moveable_width_bars)
-            il.peak_index = i
-            if self.moveable_width_bars:
-                if i % 2 == 0:
-                    il.addMarker("<|")
-                else:
-                    il.addMarker("|>")
-            il.sigPositionChangeFinished.connect(self.change_peak_bounds)
-            self.plot_widget.addItem(il)
+        self.plot_widget.setTitle(title)
+        self.plot_channels.setTitle(embryo.name)
 
     def change_trim_idx(self, il_obj):
         trace = self.model.get_curr_trace()
@@ -874,8 +853,10 @@ class MainWindow(QMainWindow):
 
         self.model.save_trim_idx(x)
 
-        pd_params = self.model.config.get_pd_params()
+        pd_params = self.model.get_pd_params()
+
         trace.detect_peaks(pd_params["freq"])
+        trace.compute_peak_bounds(pd_params["peak_width"])
 
         self.render_trace()
 

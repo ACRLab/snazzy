@@ -201,7 +201,7 @@ class Model:
                 exp.embryos = self.get_filtered_embs(exp_name, group_name)
         return groups
 
-    def get_filtered_embs(self, exp_name, group_name=None):
+    def get_filtered_embs(self, exp_name: str, group_name: str | None = None):
         exp = self.get_experiment(exp_name, group_name)
         if exp_name not in self.to_remove:
             return exp.embryos
@@ -211,7 +211,7 @@ class Model:
             if utils.emb_id(emb_name) not in self.to_remove[exp_name]
         }
 
-    def get_filtered_emb_numbers(self, exp_name, group_name=None):
+    def get_filtered_emb_numbers(self, exp_name: str, group_name: str | None = None):
         embs = self.get_filtered_embs(exp_name, group_name)
         return [utils.emb_id(emb_name) for emb_name in embs.keys()]
 
@@ -234,7 +234,17 @@ class Model:
     def get_curr_experiment(self) -> Experiment:
         return self.groups[self.curr_group][self.curr_exp]
 
-    def get_experiment(self, exp_name, group_name=None) -> Experiment:
+    def get_experiment(
+        self, exp_name: str, group_name: str | None = None
+    ) -> Experiment:
+        """Return an experiment based on experiment name.
+
+        Parameters:
+            exp_name(str):
+                Experiment's name.
+            group_name(str | None ):
+                Group's name. If None, use the currently selected group.
+        """
         if group_name is None:
             curr_group = self.get_curr_group()
         else:
@@ -252,7 +262,34 @@ class Model:
         exp = self.get_curr_experiment()
         return exp.embryos[self.curr_emb_name].trace
 
-    def add_group(self, group):
+    def get_curr_emb_id(self) -> int:
+        return utils.emb_id(self.curr_emb_name)
+
+    def get_trace_context(
+        self,
+        emb_name: str | None = None,
+        exp_name: str | None = None,
+        use_dev_time: bool = False,
+    ):
+        if exp_name:
+            exp = self.get_experiment(exp_name)
+        else:
+            exp = self.get_curr_experiment()
+
+        self.curr_emb_name = emb_name or self.curr_emb_name
+
+        embryo = exp.embryos[self.curr_emb_name]
+        trace = embryo.trace
+
+        if use_dev_time:
+            time = embryo.lin_developmental_time()[: trace.trim_idx]
+        else:
+            time = trace.time[: trace.trim_idx] / 60
+        dff = trace.dff[: trace.trim_idx]
+
+        return trace, embryo, time, dff
+
+    def add_group(self, group: str):
         if group in self.groups:
             raise ValueError("Group already exists.")
         self.groups[group] = {}
@@ -261,3 +298,28 @@ class Model:
 
     def has_combined_experiments(self):
         return len(self.get_curr_group()) > 1
+
+    def get_pd_params(self):
+        return self.config.get_pd_params()
+
+    def get_config_data(self):
+        return self.config.data
+
+    def get_next_emb_name(self, forward: bool) -> str:
+        """Returns the next valid embryo of the currenlty selected experiment.
+
+        Parameters:
+            forward(bool):
+                If True returns the next embryo, otherwise the previous embryo.
+        """
+        if self.curr_exp is None:
+            return
+        curr_emb = self.curr_emb_name
+        embs = self.get_filtered_embs(self.curr_exp)
+        emb_names = list(embs.keys())
+        curr_emb_index = emb_names.index(curr_emb)
+        if forward:
+            next_idx = (curr_emb_index + 1) % len(emb_names)
+        else:
+            next_idx = (curr_emb_index - 1) % len(emb_names)
+        return emb_names[next_idx]
