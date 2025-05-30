@@ -1,7 +1,10 @@
 import numpy as np
 import scipy.signal as spsig
 from scipy.ndimage import minimum_filter1d
+from scipy.spatial.distance import pdist, squareform
 from scipy.stats import zscore
+from skimage.filters import threshold_otsu
+from sklearn.preprocessing import MinMaxScaler
 
 from pasna_analysis import Config
 
@@ -562,17 +565,39 @@ class Trace:
         dff[: end - start] = self.dff[start:end]
         return spsig.stft(dff, fs, nperseg=fft_size, noverlap=noverlap, nfft=fft_size)
 
+    def get_phase1_features(self, filter_thres=0.02):
+        """Distance matrix based on features to target phase1 and phase2 boundary.
+        
+        Parameters:
+            filter_thres(float):
+                hi-pass filter value.
+        """
+        hi_pass = self.get_filtered_signal(filter_thres, low_pass=False)
 
-def _extend_true_right(bool_array, n_right):
-    """
-    Helper function that takes in a boolean array and extends each stretch of True values by n_right indices.
+        features = []
+        for pi, (s, e) in zip(self.peak_idxes, self.peak_bounds_indices):
+            feature = []
+            rms = np.sqrt(np.mean(np.power(hi_pass[s:e], 2)))
+            feature.append(self.dff[pi])
+            feature.append(rms)
+            features.append(feature)
 
-    Example:
-    >> extend_true_right([False, True, True, False, False, True, False], 1)
-    returns:             [False, True, True, True,  False, True, True]
-    """
-    extended = np.zeros_like(bool_array, dtype=bool)
-    for i, bool_val in enumerate(bool_array):
-        if bool_val:
-            extended[i : i + n_right] = True
-    return extended
+        scaler = MinMaxScaler()
+        features_scaled = scaler.fit_transform(features)
+
+        dist_matrix = squareform(pdist(features_scaled, metric="euclidean"))
+        return dist_matrix
+
+    def get_phase2_start(self, dist_matrix):
+        """Returns the index of the first burst in phase 2.
+        
+        Parameters:
+            dist_matrix(np.ndarray):
+                2D square matrix of feature distances.
+        """
+        thres = threshold_otsu(dist_matrix)
+        first_bursts = np.average(dist_matrix[:2], axis=0)
+        for i, cell in enumerate(first_bursts):
+            if cell > thres:
+                return i
+        return -1
