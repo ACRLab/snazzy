@@ -26,7 +26,7 @@ class Trace:
         self.config = config
         self.pd_params = config.get_pd_params()
         exp_params = config.get_exp_params()
-        self.has_transients = exp_params["has_transients"]
+        self.has_transients = exp_params.get('has_transients', None)
 
         # list of peaks that were manually added / removed:
         self.to_add = []
@@ -120,7 +120,12 @@ class Trace:
         return self._order_zero_savgol
 
     def compute_dff(self, window_size=80):
-        """Compute dff for the ratiometric active channel signal."""
+        """Compute dff for the ratiometric active channel signal.
+        
+        Parameters:
+            window_size(int):
+                Size of the window used to calculate the baseline.  
+        """
         ratiom_signal = self.compute_ratiom_gcamp()
         dff_strategy = self.pd_params.get("dff_strategy", "")
         if dff_strategy == "baseline":
@@ -513,7 +518,7 @@ class Trace:
         return peak_aucs
 
     def compute_local_peaks(self, height=0.02, prominence=0.01):
-        """Counts local peaks that happen within an episode."""
+        """Returns local peaks that happen within an episode."""
         peak_bounds = self.peak_bounds_indices
 
         local_peaks = []
