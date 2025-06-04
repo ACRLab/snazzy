@@ -30,7 +30,7 @@ class Experiment:
 
         if kwargs:
             to_update = {k: v for k, v in kwargs.items() if k in self.exp_params}
-            self.config.update_params(to_update, "exp_params")
+            self.config.update_params({"exp_params": to_update})
 
         data = DataLoader(exp_path)
         if not self.config.config_path.exists():

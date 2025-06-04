@@ -95,7 +95,8 @@ class Config:
     """
 
     def __init__(self, exp_path: Path, rel_root_path="data"):
-        self.exp_path = utils.convert_to_relative_path(exp_path, rel_root_path)
+        self.exp_path = exp_path
+        self.rel_path = utils.convert_to_relative_path(exp_path, rel_root_path)
         self.config_path = self.exp_path / "peak_detection_params.json"
 
         self.default_params = {
@@ -122,7 +123,7 @@ class Config:
             },
             "embryos": {},
         }
-        self.default_params["exp_path"] = str(self.exp_path)
+        self.default_params["exp_path"] = str(self.rel_path)
 
         self.data = self.load_data()
 
