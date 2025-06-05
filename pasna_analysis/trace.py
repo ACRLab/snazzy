@@ -26,7 +26,7 @@ class Trace:
         self.config = config
         self.pd_params = config.get_pd_params()
         exp_params = config.get_exp_params()
-        self.has_transients = exp_params.get('has_transients', None)
+        self.has_transients = exp_params.get("has_transients", None)
 
         # list of peaks that were manually added / removed:
         self.to_add = []
@@ -121,10 +121,10 @@ class Trace:
 
     def compute_dff(self, window_size=80):
         """Compute dff for the ratiometric active channel signal.
-        
+
         Parameters:
             window_size(int):
-                Size of the window used to calculate the baseline.  
+                Size of the window used to calculate the baseline.
         """
         ratiom_signal = self.compute_ratiom_gcamp()
         dff_strategy = self.pd_params.get("dff_strategy", "")
@@ -572,7 +572,7 @@ class Trace:
 
     def get_phase1_features(self, filter_thres=0.02):
         """Distance matrix based on features to target phase1 and phase2 boundary.
-        
+
         Parameters:
             filter_thres(float):
                 hi-pass filter value.
@@ -595,7 +595,7 @@ class Trace:
 
     def get_phase2_start(self, dist_matrix):
         """Returns the index of the first burst in phase 2.
-        
+
         Parameters:
             dist_matrix(np.ndarray):
                 2D square matrix of feature distances.

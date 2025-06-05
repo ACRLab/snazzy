@@ -91,7 +91,8 @@ class MainWindow(QMainWindow):
 
     def _show_experiment_dialog(self, config: Config, group_name: str):
         exp_params = config.get_exp_params()
-        dff_strategy = config.data["pd_params"].get("dff_strategy", "")
+        pd_params = config.get_pd_params()
+        dff_strategy = pd_params.get("dff_strategy", "")
 
         dialog_params = {
             "group_name": group_name,
