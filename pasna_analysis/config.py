@@ -1,6 +1,7 @@
 import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+import pprint
 from typing import Any, Dict, List
 
 from pasna_analysis import utils
@@ -126,6 +127,9 @@ class Config:
         self.default_params["exp_path"] = str(self.rel_path)
 
         self.data = self.load_data()
+
+    def __str__(self):
+        return pprint.pformat(self.data, sort_dicts=False)
 
     def update_params(self, new_data: dict):
         valid_keys = self.default_params.keys()
