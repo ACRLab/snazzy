@@ -20,6 +20,7 @@ class Experiment:
         self,
         exp_path: str | Path,
         config: Config | None = None,
+        verbose: bool = True,
         **kwargs,
     ):
         exp_path = Path(exp_path)
@@ -40,6 +41,11 @@ class Experiment:
         self.act_paths = data.activities()
         self.len_paths = data.lengths()
         self.embryos = self._get_embryos()
+
+        if verbose:
+            print(f"Parameters used for experiment {self.name}:")
+            print("-" * 50)
+            print(self.config)
 
     def _get_embryos(self) -> dict[str, Embryo]:
         """Returns all embryos where the first episode happend before `self.first_peak_threshold` minutes."""
