@@ -160,7 +160,7 @@ class Model:
 
     def create_experiment(self, config: Config, group_name: str):
         self.config = config
-        exp = Experiment(config.data["exp_path"], config)
+        exp = Experiment(config.exp_path, config)
 
         if not exp.embryos:
             first_peak_threshold = config.get_exp_params()["first_peak_threshold"]
