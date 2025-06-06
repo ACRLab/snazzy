@@ -1,5 +1,5 @@
 # dir with input files
-data/
+/data/
 
 # dir with output files
 results/
