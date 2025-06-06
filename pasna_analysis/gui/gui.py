@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
             "dff_strategy": dff_strategy,
         }
         dialog = ExperimentParamsDialog(
-            dialog_params, exp_path=config.exp_path, parent=self
+            dialog_params, exp_path=config.rel_path, parent=self
         )
         if not dialog.exec():
             return
