@@ -4,9 +4,9 @@ import pytest
 
 from pasna_analysis import DataLoader
 
-VALID_DIR = Path("./tests/assets/20250210")
+VALID_DIR = Path("./tests/assets/data/20250210")
 # MISSING_DATA_DIR does not have full_length.csv file.
-MISSING_DATA_DIR = Path("./tests/assets/20250101")
+MISSING_DATA_DIR = Path("./tests/assets/data/20250101")
 
 
 def test_creates_instance_when_dir_matches_expected_structure():
