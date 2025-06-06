@@ -3,14 +3,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pasna_analysis import Experiment
+from pasna_analysis import Config, Experiment
 
-VALID_DIR = Path("./tests/assets/20250210")
+VALID_DIR = Path("./tests/assets/data/20250210")
 
 
 @pytest.fixture
 def emb():
-    exp = Experiment(VALID_DIR, to_exclude=[3, 4])
+    to_exclude = [3, 4]
+    config = Config(VALID_DIR)
+    config.update_params({"exp_params": {"to_exclude": [to_exclude]}})
+    exp = Experiment(VALID_DIR, config)
     return exp.embryos["emb1"]
 
 
