@@ -124,9 +124,9 @@ class Config:
             },
             "embryos": {},
         }
-        self.default_params["exp_path"] = str(self.rel_path)
 
         self.data = self.load_data()
+        self.data["exp_path"] = str(self.rel_path)
 
     def __str__(self):
         return pprint.pformat(self.data, sort_dicts=False)
