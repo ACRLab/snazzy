@@ -13,7 +13,7 @@ class Experiment:
     config: Config | None
         Config obj. If not provided will be created if a peak_detection_params.json file is found. If not, a file based on default params will be created.
     kwargs:
-        See `config.ExpParams` for list of valid keys passed as kwargs.
+        See `self._parse_kwargs` for list of valid keys passed as kwargs.
     """
 
     def __init__(
@@ -30,8 +30,7 @@ class Experiment:
         self.exp_params = self.config.get_exp_params()
 
         if kwargs:
-            to_update = {k: v for k, v in kwargs.items() if k in self.exp_params}
-            self.config.update_params({"exp_params": to_update})
+            self._parse_kwargs(kwargs)
 
         data = DataLoader(exp_path)
         if not self.config.config_path.exists():
@@ -47,8 +46,37 @@ class Experiment:
             print("-" * 50)
             print(self.config)
 
+    def _parse_kwargs(self, kwargs):
+        """Updates Config with valid kwargs.
+
+        Attributes:
+            kwargs: dict
+                Valid keys are listed inside this function.
+        """
+        valid_params = {
+            "has_transients",
+            "to_exclude",
+            "dff_strategy",
+            "first_peak_threshold",
+            "has_transients",
+        }
+        ignored_params = [kw for kw in kwargs if kw not in valid_params]
+        if ignored_params:
+            print(
+                f"WARN: Some kwargs were ignored when creating a new Experiment: {ignored_params}."
+            )
+        update_exp_params = {k: v for k, v in kwargs.items() if k in self.exp_params}
+        dff_strategy = kwargs.get("dff_strategy", None)
+
+        to_update = {}
+        if dff_strategy is not None:
+            to_update["pd_params"] = {"dff_strategy": dff_strategy}
+        if update_exp_params:
+            to_update["exp_params"] = update_exp_params
+        self.config.update_params(to_update)
+
     def _get_embryos(self) -> dict[str, Embryo]:
-        """Returns all embryos where the first episode happend before `self.first_peak_threshold` minutes."""
+        """Returns all embryos where the first episode happend before `first_peak_threshold` minutes."""
         embryos = {}
 
         exp_params = self.config.get_exp_params()
