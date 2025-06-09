@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -5,13 +6,24 @@ import pytest
 from pasna_analysis import Config, Experiment
 
 VALID_DIR = Path("./tests/assets/data/20250210")
-# MISSING_DATA_DIR does not have full_length.csv file.
-MISSING_DATA_DIR = Path("./tests/assets/data/20250101")
 
 
 @pytest.fixture
 def exp():
     return Experiment(VALID_DIR)
+
+
+@pytest.fixture
+def config():
+    return Config(VALID_DIR)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def clear_pd_params():
+    yield
+    pd_params_path = VALID_DIR.joinpath("peak_detection_params.json")
+    if pd_params_path.exists():
+        os.remove(pd_params_path)
 
 
 def test_can_create_experiment(exp):
@@ -24,20 +36,18 @@ def test_can_skip_peaks_before_first_peak_threshold(exp):
     assert len(exp.embryos) == 2
 
 
-def test_can_exclude_embryos():
+def test_can_exclude_embryos(config):
     to_exclude = [1]
-    config = Config(VALID_DIR)
     config.update_params({"exp_params": {"to_exclude": to_exclude}})
     exp = Experiment(VALID_DIR, config)
 
     assert len(exp.embryos) == 1
 
 
-def test_ignores_embryos_not_in_experiment():
+def test_ignores_embryos_not_in_experiment(config):
     # VALID_DIR only contains emb1, emb3, and emb4
     to_exclude = [15]
 
-    config = Config(VALID_DIR)
     config.update_params({"exp_params": {"to_exclude": to_exclude}})
     exp = Experiment(VALID_DIR, config)
 
