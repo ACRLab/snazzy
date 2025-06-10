@@ -43,7 +43,11 @@ class Embryo:
         return self._lin_dev_time
 
     def import_data(self, csv_path: Path) -> np.ndarray:
-        return np.loadtxt(csv_path, delimiter=",", skiprows=1)
+        data = np.loadtxt(csv_path, delimiter=",", skiprows=1)
+        # csv files with a single row are read as 1D, but rest of the code expects 2D
+        if data.ndim == 1:
+            data = data[np.newaxis, :]
+        return data
 
     def developmental_time(self) -> np.ndarray:
         """Returns emb_size:VNC_size ratio."""
