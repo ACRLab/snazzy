@@ -1,14 +1,13 @@
 import json
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
 import pprint
-from typing import Any, Dict, List
+from pydantic import BaseModel, Field, ValidationError
+from typing import Any
 
 from pasna_analysis import utils
 
 
-@dataclass
-class ExpParams:
+class ExpParams(BaseModel):
     """
     Exp params.
 
@@ -16,25 +15,24 @@ class ExpParams:
     ----------
     first_peak_threshold: int
         Minimum time, in minutes, for the first peak. Embryos with peaks before that will be ignored.
-    to_exclude: Optional[list[int]]
+    to_exclude: list[int] | None
         List of embryo ids to be excluded. To exclude emb1 pass [1], for example.
-    dff_strategy: baseline | local_minima
+    dff_strategy: "baseline" | "local_minima"
         How to compute the dff baseline.
     has_transients: boolean
         If an experiment has transients, early peaks will be skipped.
     """
 
-    first_peak_threshold: int
-    to_exclude: List[int]
-    to_remove: List[int]
-    has_transients: bool
+    first_peak_threshold: int = 30
+    to_exclude: list[int] = Field(default_factory=list)
+    to_remove: list[int] = Field(default_factory=list)
+    has_transients: bool = True
 
 
-@dataclass
-class PDParams:
-    peak_width: float
-    freq: float
-    dff_strategy: str
+class PDParams(BaseModel):
+    peak_width: float = 0.98
+    freq: float = 0.0025
+    dff_strategy: str = "local_minima"
     trim_zscore: float = 0.35
     ISI_factor: float = 4
     low_amp_threshold: float = 0.1
@@ -47,49 +45,31 @@ class PDParams:
     port_peaks_thres: float = 70
 
 
-@dataclass
-class EmbryoParams:
-    wlen: int
-    manual_peaks: List[int]
-    manual_remove: List[int]
-    manual_widths: Dict[str, Any]
+class EmbryoParams(BaseModel):
+    wlen: int = 30
+    manual_peaks: list[int] = Field(default_factory=list)
+    manual_remove: list[int] = Field(default_factory=list)
+    manual_widths: dict[str, Any] = Field(default_factory={})
     manual_trim_idx: int = -1
 
 
-@dataclass
-class ConfigObj:
-    exp_path: str
-    exp_params: ExpParams
-    pd_params: PDParams
-    embryos: Dict[str, EmbryoParams] = field(default_factory=dict)
-
-
-def config_decoder(d):
-    if "to_exclude" in d and "first_peak_threshold" in d:
-        return ExpParams(**d)
-    elif "peak_width" in d and "freq" in d:
-        return PDParams(**d)
-    elif "wlen" in d and "manual_peaks" in d:
-        return EmbryoParams(**d)
-    elif "exp_path" in d and "exp_params" in d and "pd_params" in d:
-        return asdict(
-            ConfigObj(
-                exp_path=d["exp_path"],
-                exp_params=d["exp_params"],
-                pd_params=d["pd_params"],
-                embryos=d["embryos"],
-            )
-        )
-    return d
+class ConfigObj(BaseModel):
+    exp_path: str | None
+    exp_params: ExpParams = Field(default_factory=ExpParams)
+    pd_params: PDParams = Field(default_factory=PDParams)
+    embryos: dict[str, EmbryoParams] = Field(default_factory=dict)
 
 
 class Config:
     """
     Configuration data from Experiment class.
 
+    Falls back to default values if any values are missing. The default values
+    are specified in the BaseModel subclasses above.
+
     Attributes:
         exp_path (Path):
-            Path to the peak_detection_params.json file.
+            Path to the `peak_detection_params.json` file.
             If not found, will hold the default params in memory.
         rel_root_path (str):
             Name of the directory used to determine the relative path.
@@ -100,30 +80,7 @@ class Config:
         self.rel_path = utils.convert_to_relative_path(exp_path, rel_root_path)
         self.config_path = self.exp_path / "peak_detection_params.json"
 
-        self.default_params = {
-            "exp_params": {
-                "first_peak_threshold": 30,
-                "to_exclude": [],  # excluded from an Experiment, won't be in the GUI
-                "to_remove": [],  # shows in the GUI marked as removed
-                "has_transients": True,
-            },
-            "pd_params": {
-                "dff_strategy": "baseline",
-                "peak_width": 0.98,
-                "freq": 0.0025,
-                "trim_zscore": 0.35,
-                "ISI_factor": 4,
-                "low_amp_threshold": 0.1,
-                "fft_height": 0.04,
-                "fft_prominence": 0.03,
-                "local_thres_window_size": 300,
-                "local_thres_value": 75,
-                "local_thres_method": "percentile",
-                "port_peaks_window_size": 30,
-                "port_peaks_thres": 70,
-            },
-            "embryos": {},
-        }
+        self.default_params = ConfigObj().dict()
 
         self.data = self.load_data()
         self.data["exp_path"] = str(self.rel_path)
@@ -154,11 +111,21 @@ class Config:
             return self.read_from_file()
 
     def read_from_file(self):
-        """Reads Config data from file. When decoding, missing values will receive
-        the same default params values, defined in each dataclass."""
+        """Reads Config data from file.
+
+        Missing values are added using default values. If the file has invalid
+        data it will be ignored and the default values will be used.
+        """
         with open(self.config_path, "r") as f:
-            data = json.load(f, object_hook=config_decoder)
-        return data
+            data = json.load(f)
+            try:
+                return ConfigObj(**data).dict()
+            except ValidationError as e:
+                print(
+                    "WARN: Could not read `peak_detection_params.json`. Using default values."
+                )
+                print(e)
+                return self.default_params
 
     def initialize_config_file(self):
         with open(self.config_path, "w") as f:
