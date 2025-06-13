@@ -6,7 +6,7 @@ from scipy.stats import zscore
 from skimage.filters import threshold_otsu
 from sklearn.preprocessing import MinMaxScaler
 
-from pasna_analysis import Config
+from pasna_analysis import Config, TracePhases
 
 
 class Trace:
@@ -25,8 +25,7 @@ class Trace:
         self.struct = activity[:, 2]
         self.config = config
         self.pd_params = config.get_pd_params()
-        exp_params = config.get_exp_params()
-        self.has_transients = exp_params.get("has_transients", None)
+        self.exp_params = config.get_exp_params()
 
         # list of peaks that were manually added / removed:
         self.to_add = []
@@ -202,7 +201,7 @@ class Trace:
     def remove_transients(self, params):
         """Transients are very early bouts that result in a first peak that
         happens way before other peaks."""
-        has_transients = params.get("has_transients", self.has_transients)
+        has_transients = params.get("has_transients", self.exp_params["has_transients"])
         if not has_transients or len(self._peak_idxes) == 0:
             return
         ISI_factor = params.get("ISI_factor", self.pd_params["ISI_factor"])
@@ -265,6 +264,22 @@ class Trace:
             self._peak_idxes = np.array(
                 sorted(filtered_peaks + filtered_add), dtype=np.int64
             )
+
+    def get_dsna_start(self):
+        if not self.exp_params["has_dsna"]:
+            return
+
+        manual_dsna = self.config.get_corrected_dsna_start(self.name)
+
+        if manual_dsna is not None and manual_dsna >= 0:
+            return manual_dsna
+
+        tp = TracePhases(self)
+        dsna_start = tp.get_dsna_start()
+        if dsna_start == -1:
+            return self.trim_idx
+
+        return dsna_start
 
     def detect_peaks(self, freq=0.0025):
         self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
