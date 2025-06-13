@@ -27,6 +27,7 @@ class ExpParams(BaseModel):
     to_exclude: list[int] = Field(default_factory=list)
     to_remove: list[int] = Field(default_factory=list)
     has_transients: bool = True
+    has_dsna: bool = False
 
 
 class PDParams(BaseModel):
@@ -51,6 +52,8 @@ class EmbryoParams(BaseModel):
     manual_remove: list[int] = Field(default_factory=list)
     manual_widths: dict[str, Any] = Field(default_factory={})
     manual_trim_idx: int = -1
+    manual_phase1_end: int = -1
+    manual_dsna_start: int = -1
 
 
 class ConfigObj(BaseModel):
@@ -143,6 +146,12 @@ class Config:
         except KeyError:
             return None
 
+    def get_corrected_dsna_start(self, emb_name):
+        try:
+            return self.data["embryos"][emb_name]["manual_dsna_start"]
+        except KeyError:
+            return None
+
     def save_manual_peak_data(
         self,
         emb_name,
@@ -151,6 +160,8 @@ class Config:
         removed_peaks=None,
         manual_widths=None,
         manual_trim_idx=None,
+        manual_phase1_end=None,
+        manual_dsna_start=None,
     ):
         if "embryos" not in self.data:
             self.data["embryos"] = {}
@@ -162,6 +173,8 @@ class Config:
                 "manual_remove": [],
                 "manual_widths": {},
                 "manual_trim_idx": -1,
+                "manual_phase1_end": -1,
+                "manual_dsna_start": -1,
             }
 
         if wlen is not None:
@@ -174,5 +187,9 @@ class Config:
             self.data["embryos"][emb_name]["manual_widths"] = manual_widths
         if manual_trim_idx is not None:
             self.data["embryos"][emb_name]["manual_trim_idx"] = manual_trim_idx
+        if manual_phase1_end is not None:
+            self.data["embryos"][emb_name]["manual_phase1_end"] = manual_phase1_end
+        if manual_dsna_start is not None:
+            self.data["embryos"][emb_name]["manual_dsna_start"] = manual_dsna_start
 
         self.save_params()
