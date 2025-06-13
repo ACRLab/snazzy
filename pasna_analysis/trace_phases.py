@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-from pasna_analysis import Trace
-
 
 class TracePhases:
     """Calculate phase boundaries for a Trace.
@@ -16,14 +14,11 @@ class TracePhases:
     calculate features and determine when a new phase starts base on feature distances.
     """
 
-    def __init__(self, trace: Trace):
+    def __init__(self, trace):
         self.trace = trace
 
     def get_phase1_end(self) -> int:
-        """Return the index of the last phase 1 peak.
-
-        Combines methods to calculate phase 2 start.
-        """
+        """Return the index of the last phase 1 peak."""
         features = self.phase1_features()
         dm = TracePhases.dist_matrix(features)
         thres = TracePhases.feature_thres(dm)
@@ -32,15 +27,17 @@ class TracePhases:
         return p1_end
 
     def get_dsna_start(self) -> int:
-        """Return the index of the first peak labeled as dSNA.
+        """Return the index where dSNA starts.
 
         Used for specific traces where this behavior is observed, eg vgludf."""
         features = self.dsna_features()
+        if len(features) == 0:
+            return -1
         dm = TracePhases.dist_matrix(features)
         thres = TracePhases.feature_thres(dm)
         dsna_start = TracePhases.apply_threshold_to_matrix(dm, thres, reverse=True)
 
-        return dsna_start
+        return self.trace.peak_idxes[dsna_start]
 
     def phase1_features(self, hf_cutoff: float = 0.025) -> list:
         """Each peak is represented by HF pass RMS and peak amplitude.
