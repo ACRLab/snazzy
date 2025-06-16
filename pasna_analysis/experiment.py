@@ -91,7 +91,7 @@ class Experiment:
 
             try:
                 first_peak_threshold = exp_params.get("first_peak_threshold", 0)
-                if emb.trace.get_first_peak_time() <= first_peak_threshold * 60:
+                if emb.trace.peak_times[0] <= first_peak_threshold * 60:
                     print(
                         f"First peak detected before {first_peak_threshold} mins.",
                         f"Skipping {emb.name}..",
