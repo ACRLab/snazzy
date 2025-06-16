@@ -436,22 +436,22 @@ class ComparePlotWindow(QWidget):
             for exp in group.values():
                 Zxxs = []
                 for emb in exp.embryos.values():
-                    stft = emb.trace.stft(duration=3600)
+                    stft = emb.trace.calculate_STFT(duration=3600)
                     if stft is None:
                         continue
-                    f, t, zxx = stft
+                    f, t, Zxx = stft
                     if f_zero is None and t_zero is None:
                         f_zero = f
                         t_zero = t
-                    Zxxs.append(zxx)
+                    Zxxs.append(Zxx)
                 Zxxs = np.array(Zxxs)
-                abs_Zxx = np.abs(Zxxs)
-                avg_Zxx = np.mean(abs_Zxx, axis=0)
+                magnitudes = np.abs(Zxxs)
+                average_magnitude = np.mean(magnitudes, axis=0)
 
             self.ax[i].pcolormesh(
                 t_zero,
                 f_zero,
-                abs(avg_Zxx),
+                average_magnitude,
                 vmin=0,
                 vmax=0.03,
                 cmap="plasma",
