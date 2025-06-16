@@ -716,6 +716,7 @@ class MainWindow(QMainWindow):
         self._plot_peaks(time, trace)
         self._plot_active_and_struct_channels(trace, embryo)
         self._setup_trim_line(trace, embryo)
+        self._setup_dsna_line(trace, embryo)
         self._plot_peak_widths(time, trace)
         self._plot_detected_oscillations(time, trace, dff)
         self._set_plot_titles(embryo, exp_name)
@@ -745,8 +746,14 @@ class MainWindow(QMainWindow):
     def _plot_peaks(self, time, trace):
         if len(trace.peak_idxes) == 0:
             return
+
         peak_times = time[trace.peak_idxes]
         peak_amps = trace.peak_amplitudes
+
+        if trace.dsna_start is not None:
+            peak_times = peak_times[: trace.dsna_start]
+            peak_amps = peak_amps[: trace.dsna_start]
+
         brushes = [self.brushes[i % len(self.brushes)] for i in range(len(peak_times))]
 
         scatter = pg.ScatterPlotItem(
@@ -769,6 +776,33 @@ class MainWindow(QMainWindow):
             trace_time, trace.struct, name="Struct", pen=pg.mkPen("firebrick")
         )
         self.plot_channels.addLegend()
+
+    def _setup_dsna_line(self, trace, embryo):
+        has_dsna = self.model.has_dsna()
+        if not has_dsna:
+            return
+
+        trace_time = (
+            embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
+        )
+
+        dsna_start = trace.get_dsna_start()
+        if dsna_start == -1:
+            dsna_time = trace_time[trace.trim_idx]
+        else:
+            time_index = (
+                trace.peak_idxes[dsna_start - 1] + trace.peak_idxes[dsna_start]
+            ) // 2
+            dsna_time = trace_time[time_index]
+
+        dsna_line = pg.InfiniteLine(
+            dsna_time,
+            movable=True,
+            pen=pg.mkPen("chartreuse", cosmetic=True),
+        )
+        dsna_line.addMarker("<|>")
+        dsna_line.sigPositionChangeFinished.connect(self.change_dsna_start)
+        self.plot_widget.addItem(dsna_line)
 
     def _setup_trim_line(self, trace, embryo):
         trace_time = (
@@ -823,6 +857,53 @@ class MainWindow(QMainWindow):
         )
         self.plot_widget.setTitle(title)
         self.plot_channels.setTitle(embryo.name)
+
+    def change_dsna_start(self, il_obj):
+        trace = self.model.get_curr_trace()
+        emb = self.model.get_curr_embryo()
+
+        if self.use_dev_time:
+            dev_time = emb.lin_developmental_time()
+            idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
+            x = int(idx)
+        else:
+            x = int(il_obj.getXPos() * 10)
+
+        res = QMessageBox.question(
+            self,
+            "Confirm Update",
+            "Update dSNA start?",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+        )
+
+        prev_dsna_start = trace.dsna_start
+        prev_idx = trace.peak_idxes[prev_dsna_start]
+        if self.use_dev_time:
+            prev_value = dev_time[prev_idx]
+        else:
+            prev_value = prev_idx / 10
+
+        if res == QMessageBox.StandardButton.Cancel:
+            il_obj.setValue(prev_value)
+            return
+
+        peak_index = -1
+        for i, peak_idx in enumerate(trace.peak_idxes):
+            if peak_idx > x:
+                peak_index = i
+                break
+
+        if peak_index > 0:
+            self.model.save_dsna_start(emb.name, peak_index)
+        else:
+            il_obj.setValue(prev_value)
+
+        pd_params = self.model.get_pd_params()
+
+        trace.detect_peaks(pd_params["freq"])
+        trace.compute_peak_bounds(pd_params["peak_width"])
+
+        self.render_trace()
 
     def change_trim_idx(self, il_obj):
         trace = self.model.get_curr_trace()

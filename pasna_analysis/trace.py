@@ -36,6 +36,7 @@ class Trace:
         self._peak_bounds_indices = None
         self._order_zero_savgol = None
         self.filtered_dff = None
+        self.dsna_start = None
 
         self.trim_idx = self.get_trim_index()
         self.dff = self.compute_dff()
@@ -215,17 +216,6 @@ class Trace:
         if (peak_times[1] - peak_times[0]) > ISI_factor * avg_ISI:
             self._peak_idxes = np.array(self._peak_idxes[1:])
 
-    def remove_by_width(self, params):
-        min_width = params.get("min_width", 4)
-
-        filtered_peaks = []
-
-        for p, (s, e) in zip(self._peak_idxes, self.peak_bounds_indices):
-            if e - s > min_width:
-                filtered_peaks.append(p)
-
-        self._peak_idxes = np.array(filtered_peaks)
-
     def apply_low_threshold(self, params):
         """Removes all peaks below a percentage of the max amplitude."""
         if len(self.peak_amplitudes) == 0:
@@ -265,21 +255,10 @@ class Trace:
                 sorted(filtered_peaks + filtered_add), dtype=np.int64
             )
 
-    def get_dsna_start(self):
-        if not self.exp_params["has_dsna"]:
+    def update_dsna_start(self, params):
+        if not self.exp_params.get("has_dsna", False):
             return
-
-        manual_dsna = self.config.get_corrected_dsna_start(self.name)
-
-        if manual_dsna is not None and manual_dsna >= 0:
-            return manual_dsna
-
-        tp = TracePhases(self)
-        dsna_start = tp.get_dsna_start()
-        if dsna_start == -1:
-            return self.trim_idx
-
-        return dsna_start
+        self.dsna_start = self.get_dsna_start()
 
     def detect_peaks(self, freq=0.0025):
         self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
@@ -289,6 +268,7 @@ class Trace:
             (self.remove_transients, {}),
             (self.apply_low_threshold, {}),
             (self.reconcile_manual_peaks, {}),
+            (self.update_dsna_start, {}),
         ]
 
         self.process_peaks(stages)
@@ -584,39 +564,18 @@ class Trace:
         dff[: end - start] = self.dff[start:end]
         return spsig.stft(dff, fs, nperseg=fft_size, noverlap=noverlap, nfft=fft_size)
 
-    def get_phase1_features(self, filter_thres=0.02):
-        """Distance matrix based on features to target phase1 and phase2 boundary.
+    def get_dsna_start(self):
+        if not self.exp_params.get("has_dsna", False):
+            return
 
-        Parameters:
-            filter_thres(float):
-                hi-pass filter value.
-        """
-        hi_pass = self.get_filtered_signal(filter_thres, low_pass=False)
+        manual_dsna = self.config.get_corrected_dsna_start(self.name)
 
-        features = []
-        for pi, (s, e) in zip(self.peak_idxes, self.peak_bounds_indices):
-            feature = []
-            rms = np.sqrt(np.mean(np.power(hi_pass[s:e], 2)))
-            feature.append(self.dff[pi])
-            feature.append(rms)
-            features.append(feature)
+        if manual_dsna is not None and manual_dsna >= 0:
+            return manual_dsna
 
-        scaler = MinMaxScaler()
-        features_scaled = scaler.fit_transform(features)
+        tp = TracePhases(self)
+        dsna_start = tp.get_dsna_start()
+        if dsna_start == -1:
+            return self.trim_idx
 
-        dist_matrix = squareform(pdist(features_scaled, metric="euclidean"))
-        return dist_matrix
-
-    def get_phase2_start(self, dist_matrix):
-        """Returns the index of the first burst in phase 2.
-
-        Parameters:
-            dist_matrix(np.ndarray):
-                2D square matrix of feature distances.
-        """
-        thres = threshold_otsu(dist_matrix)
-        first_bursts = np.average(dist_matrix[:2], axis=0)
-        for i, cell in enumerate(first_bursts):
-            if cell > thres:
-                return i
-        return -1
+        return dsna_start
