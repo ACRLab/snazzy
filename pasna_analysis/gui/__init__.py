@@ -9,3 +9,4 @@ from .model import Model, Worker
 from .plot_window import PlotWindow
 from .sidebar import RemovableSidebar, FixedSidebar
 from .sliders import LabeledSlider
+from .phase_boundaries_window import PhaseBoundariesWindow

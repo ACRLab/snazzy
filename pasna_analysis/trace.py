@@ -1,10 +1,7 @@
 import numpy as np
 import scipy.signal as spsig
 from scipy.ndimage import minimum_filter1d
-from scipy.spatial.distance import pdist, squareform
 from scipy.stats import zscore
-from skimage.filters import threshold_otsu
-from sklearn.preprocessing import MinMaxScaler
 
 from pasna_analysis import Config, TracePhases
 
@@ -207,7 +204,7 @@ class Trace:
             return
         ISI_factor = params.get("ISI_factor", self.pd_params["ISI_factor"])
 
-        peak_times = self.time[self._peak_idxes]
+        peak_times = self.peak_times
         if len(peak_times) < 2:
             print("Cannot remove transients, not enough peaks.")
             return
@@ -418,10 +415,6 @@ class Trace:
 
         return np.array(peaks), filtered_dff
 
-    def get_first_peak_time(self):
-        """Returns the time when the first peak was detected."""
-        return self.peak_times[0]
-
     def get_trim_index(self):
         """Try to return the trim index from config, otherwise calculates it."""
         corrected_data = self.config.get_corrected_peaks(self.name)
@@ -433,7 +426,8 @@ class Trace:
         return self.trim_data(trim_zscore)
 
     def trim_data(self, trim_zscore):
-        """Computes the z score for each Savitzky-Golay-filtered sample, and removes all points after reaching `trim_zscore`."""
+        """Computes the z score for each Savitzky-Golay-filtered sample, and
+        removes all points after reaching `trim_zscore`."""
         tomato_savgol = spsig.savgol_filter(self.struct, 21, 2, deriv=0)
         zscored_tomato = zscore(tomato_savgol)
         zscored_tomato -= self.compute_baseline(zscored_tomato, window_size=10)
