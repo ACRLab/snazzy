@@ -5,14 +5,13 @@ import sys
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt, QThreadPool
-from PyQt6.QtGui import QAction, QBrush, QColor, QKeySequence, QPen
+from PyQt6.QtGui import QAction, QBrush, QColor, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
     QFileDialog,
     QFrame,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -34,6 +33,7 @@ from pasna_analysis.gui import (
     LabeledSlider,
     Model,
     PlotWindow,
+    PhaseBoundariesWindow,
     RemovableSidebar,
     Worker,
 )
@@ -203,6 +203,29 @@ class MainWindow(QMainWindow):
         groups = self.model.get_filtered_groups()
         self.cpw = ComparePlotWindow(groups)
         self.cpw.show()
+
+    def display_phase_boundaries(self):
+        exp = self.model.get_curr_experiment()
+        traces = [e.trace for e in exp.embryos.values()]
+
+        current_trace = self.model.curr_emb_name
+        current_trace_idx = 0
+        for i, trace in enumerate(traces):
+            if trace.name == current_trace:
+                current_trace_idx = i
+                break
+
+        has_dsna = self.model.has_dsna()
+        self.pbw = PhaseBoundariesWindow(traces, current_trace_idx, has_dsna)
+        self.pbw.save_bounds_signal.connect(self.save_trace_phases)
+        self.pbw.show()
+
+    def save_trace_phases(self, emb_name, new_phases):
+        if "phase1_end" in new_phases:
+            self.model.save_phase1_end_idx(emb_name, new_phases["phase1_end"])
+        if "dsna_start" in new_phases:
+            self.model.save_dsna_start(emb_name, new_phases["dsna_start"])
+        self.render_trace()
 
     def display_embryo_movie(self):
         exp = self.model.get_curr_experiment()
@@ -470,6 +493,10 @@ class MainWindow(QMainWindow):
         display_movie_action = QAction("View embryo movie", self)
         display_movie_action.triggered.connect(self.display_embryo_movie)
         plot_menu.addAction(display_movie_action)
+
+        display_phase_bounds_action = QAction("View phase boundaries", self)
+        display_phase_bounds_action.triggered.connect(self.display_phase_boundaries)
+        plot_menu.addAction(display_phase_bounds_action)
 
         display_plots_action = QAction("View plots", self)
         display_plots_action.triggered.connect(self.display_plots)
@@ -818,7 +845,6 @@ class MainWindow(QMainWindow):
         self.plot_channels.addItem(trim_line)
 
     def _plot_peak_widths(self, time, trace):
-
         if self.is_dragging_slider or not self.show_peak_widths:
             return
         if trace.peak_bounds_indices.size == 0:

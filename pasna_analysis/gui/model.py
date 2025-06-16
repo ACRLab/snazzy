@@ -67,6 +67,12 @@ class Model:
         emb_name = self.curr_emb_name
         self.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
 
+    def save_phase1_end_idx(self, emb_name, idx):
+        self.config.save_manual_peak_data(emb_name, manual_phase1_end=idx)
+
+    def save_dsna_start(self, emb_name, idx):
+        self.config.save_manual_peak_data(emb_name, manual_dsna_start=idx)
+
     def save_peak_widths(self, emb_name, peak_widths, peak_index):
         corrected_peaks = self.config.get_corrected_peaks(emb_name)
         peak_key = str(peak_index)
@@ -288,6 +294,10 @@ class Model:
         dff = trace.dff[: trace.trim_idx]
 
         return trace, embryo, time, dff
+
+    def has_dsna(self):
+        exp_params = self.config.get_exp_params()
+        return exp_params.get("has_dsna", False)
 
     def add_group(self, group: str):
         if group in self.groups:
