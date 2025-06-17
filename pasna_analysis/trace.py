@@ -147,6 +147,46 @@ class Trace:
             )
         return (ratiom_signal - baseline) / baseline
 
+    def preprocess_dff(self, duration=3600, onset_pad=300):
+        """
+        preprocess_embryo standardizes the trace to a given duration.
+        If embryo hatches, only data from onset to hatching are included.
+        If activity after onset does not continue for the entire duration,
+        the dff is padded. The resulting time and dff must be the same length. 
+        
+        Args:
+            emb (Embryo): The embryo to process.
+            duration (int): Target num of frames for time and dff. 
+            onset_pad (int): Num of frames to include before onset.
+        
+        Returns:
+            time_processed (arr): Trimmed/extended time. 
+            dff_processed (arr): Trimmed/extended dff.
+        """
+        
+        time = self.time / 60 # covert to mins
+        dff = self.dff
+
+        # trim dff from onset to hatching
+        onset = self.peak_bounds_indices[0][0]
+        if onset > onset_pad:
+            start_index = onset - onset_pad
+        else:
+            start_index = onset
+        dff = dff[start_index:self.trim_idx]
+
+        # trim/extend dff to duration
+        if duration > len(dff):
+            pad_size = duration - len(dff)
+            dff_processed = np.array(list(dff) + [None] * pad_size, dtype=object)
+        else:
+            dff_processed = dff[0:duration]
+
+        increment = time[1] - time[0]
+        time_processed = np.arange(0,duration/10, increment)
+
+        return time_processed, dff_processed
+
     def compute_ratiom_gcamp(self):
         """Computes the ratiometric GCaMP signal by dividing the raw GCaMP
         signal by the tdTomato signal."""
@@ -554,7 +594,7 @@ class Trace:
 
         return (len(lp_before), len(lp_after))
 
-    def calculate_STFT(self, fs=1/6, fft_size=600, noverlap=450):
+    def calculate_STFT(self, dff, fs=1/6, fft_size=600, noverlap=450):
         """
         calculate_STFT calculates the magnitude of a Short Time Fourier Transform
         for a single dff. It replaces None values with 1e-11. 
