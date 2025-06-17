@@ -78,14 +78,10 @@ class PhaseBoundariesWindow(QWidget):
         trace_phases = TracePhases(trace)
         phase1_end = trace_phases.get_phase1_end()
 
-        if phase1_end == trace.peak_idxes[-1]:
-            break_line = phase1_end
-        else:
-            peak_idxes = trace.peak_idxes
-            break_line = (peak_idxes[phase1_end] + peak_idxes[phase1_end + 1]) // 2
+        phase1_end_time = trace.time[phase1_end]
 
         self.phase2_line = pg.InfiniteLine(
-            trace.time[break_line],
+            phase1_end_time,
             movable=True,
             pen=pg.mkPen("tomato", cosmetic=True),
         )
@@ -164,13 +160,11 @@ class PhaseBoundariesWindow(QWidget):
         curr_trace = self.traces[self.current_trace]
         updated_bounds = {}
         if self.phase2_line is not None:
-            phase1_end_pos = int(self.phase2_line.getXPos())
-            new_idx = self.find_last_peak_index(phase1_end_pos, curr_trace)
-            updated_bounds["phase1_end"] = new_idx
+            phase1_end_pos = int(self.phase2_line.getXPos() / 6)
+            updated_bounds["phase1_end"] = phase1_end_pos
         if self.dsna_line is not None:
-            dsna_start_pos = int(self.dsna_line.getXPos())
-            new_idx = self.find_last_peak_index(dsna_start_pos, curr_trace) + 1
-            updated_bounds["dsna_start"] = new_idx
+            dsna_start_pos = int(self.dsna_line.getXPos() / 6)
+            updated_bounds["dsna_start"] = dsna_start_pos
 
         if updated_bounds:
             emb_name = curr_trace.name
