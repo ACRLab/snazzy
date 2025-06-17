@@ -56,8 +56,11 @@ class TracePhases:
         """
         high_pass = self.trace.get_filtered_signal(hf_cutoff, low_pass=False)
 
+        f = self.trace.pd_params["freq"]
+        peak_idxes = self.trace.get_all_peak_idxes()
+        peak_bounds = self.trace.compute_peak_bounds(f, peak_idxes)
         features = []
-        for pi, (s, e) in zip(self.trace.peak_idxes, self.trace.peak_bounds_indices):
+        for pi, (s, e) in zip(peak_idxes, peak_bounds):
             feature = []
             rms = np.sqrt(np.mean(np.power(high_pass[s:e], 2)))
             feature.append(self.trace.dff[pi])
@@ -66,7 +69,7 @@ class TracePhases:
 
         return features
 
-    def dsna_features(self, lf_cutoff: float = 0.002) -> list:
+    def dsna_features(self, freq, lf_cutoff: float = 0.002) -> list:
         """Each peak is represented by LF pass RMS and peak amplitude.
 
         Parameters:
@@ -76,10 +79,11 @@ class TracePhases:
         """
         low_pass = self.trace.get_filtered_signal(lf_cutoff, low_pass=True)
 
+        peak_idxes = self.trace.get_all_peak_idxes()
+        peak_bounds = self.trace.compute_peak_bounds(freq, peak_idxes)
         features = []
-        for i, pi in enumerate(self.trace.peak_idxes):
+        for pi, (s, e) in zip(peak_idxes, peak_bounds):
             feature = []
-            s, e = self.trace.peak_bounds_indices[i]
             rms = np.sqrt(np.mean(np.power(low_pass[s:e], 2)))
             feature.append(self.trace.dff[pi])
             feature.append(rms)
