@@ -20,24 +20,31 @@ class TracePhases:
     def get_phase1_end(self) -> int:
         """Return the index of the last phase 1 peak."""
         features = self.phase1_features()
+        if len(features) <= 1:
+            return -1
         dm = TracePhases.dist_matrix(features)
         thres = TracePhases.feature_thres(dm)
         p1_end = TracePhases.apply_threshold_to_matrix(dm, thres)
 
-        return p1_end
+        return self.trace_index(p1_end)
 
-    def get_dsna_start(self) -> int:
+    def get_dsna_start(self, freq) -> int:
         """Return the index of the first dSNA peak.
 
         Used for specific traces where this behavior is observed, eg vgludf."""
-        features = self.dsna_features()
-        if len(features) == 0:
+        features = self.dsna_features(freq)
+        if len(features) <= 1:
             return -1
+
         dm = TracePhases.dist_matrix(features)
         thres = TracePhases.feature_thres(dm)
         dsna_start = TracePhases.apply_threshold_to_matrix(dm, thres, reverse=True)
 
-        return dsna_start
+        return self.trace_index(dsna_start)
+
+    def trace_index(self, peak_idx):
+        peak_idxes = self.trace.get_all_peak_idxes()
+        return peak_idxes[peak_idx]
 
     def phase1_features(self, hf_cutoff: float = 0.025) -> list:
         """Each peak is represented by HF pass RMS and peak amplitude.

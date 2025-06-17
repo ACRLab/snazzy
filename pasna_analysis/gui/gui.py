@@ -777,10 +777,6 @@ class MainWindow(QMainWindow):
         peak_times = time[trace.peak_idxes]
         peak_amps = trace.peak_amplitudes
 
-        if trace.dsna_start is not None:
-            peak_times = peak_times[: trace.dsna_start]
-            peak_amps = peak_amps[: trace.dsna_start]
-
         brushes = [self.brushes[i % len(self.brushes)] for i in range(len(peak_times))]
 
         scatter = pg.ScatterPlotItem(
@@ -903,26 +899,16 @@ class MainWindow(QMainWindow):
         )
 
         prev_dsna_start = trace.dsna_start
-        prev_idx = trace.peak_idxes[prev_dsna_start]
         if self.use_dev_time:
-            prev_value = dev_time[prev_idx]
+            prev_value = dev_time[prev_dsna_start]
         else:
-            prev_value = prev_idx / 10
+            prev_value = prev_dsna_start / 10
 
         if res == QMessageBox.StandardButton.Cancel:
             il_obj.setValue(prev_value)
             return
 
-        peak_index = -1
-        for i, peak_idx in enumerate(trace.peak_idxes):
-            if peak_idx > x:
-                peak_index = i
-                break
-
-        if peak_index > 0:
-            self.model.save_dsna_start(emb.name, peak_index)
-        else:
-            il_obj.setValue(prev_value)
+        self.model.save_dsna_start(emb.name, x)
 
         pd_params = self.model.get_pd_params()
 
