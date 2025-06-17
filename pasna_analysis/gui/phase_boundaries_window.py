@@ -134,17 +134,14 @@ class PhaseBoundariesWindow(QWidget):
             self.plot_widget.removeItem(self.dsna_line)
 
         trace = self.traces[self.current_trace]
+        freq = trace.pd_params.get("freq")
         trace_phases = TracePhases(trace)
-        start = trace_phases.get_dsna_start()
+        start = trace_phases.get_dsna_start(freq)
 
-        if start == trace.peak_idxes[-1]:
-            break_line = start
-        else:
-            peak_idxes = trace.peak_idxes
-            break_line = (peak_idxes[start] + peak_idxes[start - 1]) // 2
+        start_time = trace.time[start]
 
         self.dsna_line = pg.InfiniteLine(
-            trace.time[break_line],
+            start_time,
             movable=True,
             pen=pg.mkPen("fuchsia", cosmetic=True),
         )

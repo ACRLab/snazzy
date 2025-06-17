@@ -45,6 +45,9 @@ class Trace:
                 self.detect_peaks(self.pd_params["freq"])
             else:
                 self.detect_peaks()
+        if self.exp_params.get("has_dsna", False):
+            filtered_peaks = [pi for pi in self._peak_idxes if pi < self.dsna_start]
+            return np.array(filtered_peaks)
         return self._peak_idxes
 
     @peak_idxes.setter
@@ -70,9 +73,11 @@ class Trace:
     @property
     def peak_bounds_indices(self):
         if "peak_width" in self.pd_params:
-            self.compute_peak_bounds(self.pd_params["peak_width"])
+            self._peak_bounds_indices = self.compute_peak_bounds(
+                self.pd_params["peak_width"]
+            )
         else:
-            self.compute_peak_bounds()
+            self._peak_bounds_indices = self.compute_peak_bounds()
         return self._peak_bounds_indices
 
     @property
@@ -114,6 +119,14 @@ class Trace:
                 self.dff[: self.trim_idx], 21, 4, deriv=0
             )
         return self._order_zero_savgol
+
+    def get_all_peak_idxes(self):
+        if self._peak_idxes is None:
+            if "freq" in self.pd_params:
+                self.detect_peaks(self.pd_params["freq"])
+            else:
+                self.detect_peaks()
+        return self._peak_idxes
 
     def compute_dff(self, window_size=80):
         """Compute dff for the ratiometric active channel signal.
@@ -255,17 +268,18 @@ class Trace:
     def update_dsna_start(self, params):
         if not self.exp_params.get("has_dsna", False):
             return
-        self.dsna_start = self.get_dsna_start()
+        self.dsna_start = self.get_dsna_start(params["freq"])
 
     def detect_peaks(self, freq=0.0025):
         self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
         self.filtered_dff = filtered_dff
+        self.dsna_start = self.get_dsna_start(freq)
 
         stages = [
             (self.remove_transients, {}),
             (self.apply_low_threshold, {}),
             (self.reconcile_manual_peaks, {}),
-            (self.update_dsna_start, {}),
+            (self.update_dsna_start, {"freq": freq}),
         ]
 
         self.process_peaks(stages)
@@ -380,10 +394,10 @@ class Trace:
         return np.array(local_peak_indices)
 
     def calculate_peaks(self, freq_cutoff):
-        """
-        Detect peaks based on the low-passed iFFT signal. Peaks found in the
-        freq domain are used as anchor points in the actual signal to determine
-        peak indices.
+        """Detect peaks based on the low-passed iFFT signal.
+
+        Peaks found in the freq domain are used as anchor points in the actual
+        signal to determine peak indices.
         """
         filtered_dff = self.get_filtered_signal(freq_cutoff)
 
@@ -439,44 +453,48 @@ class Trace:
             trim_idx = trim_points[0]
         return trim_idx
 
-    def compute_peak_bounds(self, rel_height=0.97):
+    def compute_peak_bounds(self, rel_height=0.97, peak_idxes=None):
         """Computes properties of each dff peak using spsig.peak_widths."""
-        if len(self.peak_idxes) == 0:
+        if peak_idxes is None:
+            peak_idxes = self.peak_idxes
+        if len(peak_idxes) == 0:
             self._peak_bounds_indices = np.array([])
             return
         dff = self.dff[: self.trim_idx].copy()
         # make sure that the peak we pass is not bound by local points
-        dff[self.peak_idxes] += 3
+        dff[peak_idxes] += 3
         _, _, start_idxs, end_idxs = spsig.peak_widths(
-            dff, self.peak_idxes, rel_height, wlen=150
+            dff, peak_idxes, rel_height, wlen=150
         )
 
         start_idxs = start_idxs.astype(np.int64)
         end_idxs = end_idxs.astype(np.int64)
-        self._peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
+        peak_bounds_indices = np.vstack((start_idxs, end_idxs)).T
 
-        peaks_to_bounds = {
-            p: [s, e] for (p, s, e) in zip(self.peak_idxes, start_idxs, end_idxs)
-        }
+        corrected_peaks = self.config.get_corrected_peaks(self.name)
+
+        if not corrected_peaks:
+            return peak_bounds_indices
 
         # reconcile the peak_bounds with manually changed peak widths here:
         # if a peak has associated manual width data, overwrite that peak's bounds
-        corrected_peaks = self.config.get_corrected_peaks(self.name)
+        peaks_to_bounds = {
+            p: [s, e] for (p, s, e) in zip(peak_idxes, start_idxs, end_idxs)
+        }
 
-        if corrected_peaks:
-            manual_peak_bounds = corrected_peaks.get("manual_widths", None)
+        manual_peak_bounds = corrected_peaks.get("manual_widths", None)
 
-            if manual_peak_bounds:
-                # must convert the data from json file to np type:
-                manual_peak_bounds = {
-                    np.int64(k): [np.int64(n) for n in v]
-                    for k, v in manual_peak_bounds.items()
-                }
+        if manual_peak_bounds:
+            # must convert the data from json file to np type:
+            manual_peak_bounds = {
+                np.int64(k): [np.int64(n) for n in v]
+                for k, v in manual_peak_bounds.items()
+            }
 
-                for peak in manual_peak_bounds:
-                    peaks_to_bounds[peak] = manual_peak_bounds[peak]
+            for peak in manual_peak_bounds:
+                peaks_to_bounds[peak] = manual_peak_bounds[peak]
 
-        self._peak_bounds_indices = np.array(list(peaks_to_bounds.values()))
+        return np.array(list(peaks_to_bounds.values()))
 
     def get_peak_bounds_times(self):
         """Returns times at peak boundaries as a 2D nparray of shape (N, 2),
@@ -522,6 +540,8 @@ class Trace:
 
     def compute_all_local_peaks(self, split_idx, height=0.02, prominence=0.01):
         """Counts number of local peaks before and after the `split_idx`."""
+        if self.peak_idxes.size == 0:
+            return (0, 0)
         first_peak = self.peak_idxes[0]
         dff = self.dff[: self.trim_idx]
 
@@ -558,9 +578,9 @@ class Trace:
         dff[: end - start] = self.dff[start:end]
         return spsig.stft(dff, fs, nperseg=fft_size, noverlap=noverlap, nfft=fft_size)
 
-    def get_dsna_start(self):
+    def get_dsna_start(self, freq):
         if not self.exp_params.get("has_dsna", False):
-            return
+            return None
 
         manual_dsna = self.config.get_corrected_dsna_start(self.name)
 
@@ -568,7 +588,7 @@ class Trace:
             return manual_dsna
 
         tp = TracePhases(self)
-        dsna_start = tp.get_dsna_start()
+        dsna_start = tp.get_dsna_start(freq)
         if dsna_start == -1:
             return self.trim_idx
 

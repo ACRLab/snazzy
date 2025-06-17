@@ -809,14 +809,10 @@ class MainWindow(QMainWindow):
             embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
         )
 
-        dsna_start = trace.get_dsna_start()
-        if dsna_start == -1:
-            dsna_time = trace_time[trace.trim_idx]
-        else:
-            time_index = (
-                trace.peak_idxes[dsna_start - 1] + trace.peak_idxes[dsna_start]
-            ) // 2
-            dsna_time = trace_time[time_index]
+        freq = self.freq_slider.value()
+
+        dsna_start = trace.get_dsna_start(freq)
+        dsna_time = trace_time[dsna_start]
 
         dsna_line = pg.InfiniteLine(
             dsna_time,
