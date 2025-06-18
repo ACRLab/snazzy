@@ -73,8 +73,8 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.placeholder)
 
     def render_next_trace(self, forward: bool):
-        next_emb_name = self.model.get_next_emb_name(forward)
-        self.render_trace(next_emb_name)
+        next_emb_name, next_exp = self.model.get_next_emb_name(forward)
+        self.render_trace(next_emb_name, next_exp)
 
     def _get_directory(self) -> Path | None:
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -867,14 +867,14 @@ class MainWindow(QMainWindow):
         scatter = pg.ScatterPlotItem(op_times, op_amps, size=8, brush=QColor("orange"))
         self.plot_widget.addItem(scatter)
 
-    def _set_plot_titles(self, embryo, exp_name):
-        title = (
-            f"{exp_name} - {embryo.name}"
-            if self.model.has_combined_experiments()
-            else embryo.name
-        )
+    def _set_plot_titles(self, emb_name, exp_name):
+        if self.model.has_combined_experiments():
+            exp_name = exp_name or self.model.curr_exp
+            title = f"{exp_name} - {emb_name}"
+        else:
+            title = emb_name
         self.plot_widget.setTitle(title)
-        self.plot_channels.setTitle(embryo.name)
+        self.plot_channels.setTitle(title)
 
     def change_dsna_start(self, il_obj):
         trace = self.model.get_curr_trace()
