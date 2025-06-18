@@ -54,10 +54,12 @@ class RemovableSidebar(QWidget):
         callback: Callable[[str, str | None], None],
         accepted_embs: set[int],
         removed_embs: set[int],
+        exp_name: str,
     ):
         super().__init__()
 
         self.callback = callback
+        self.exp_name = exp_name
 
         main_layout = QVBoxLayout()
 
@@ -86,7 +88,7 @@ class RemovableSidebar(QWidget):
             row_layout = QHBoxLayout()
             btn = QPushButton(emb_name)
             btn.clicked.connect(
-                lambda checked, name=emb_name: self.callback(name, None)
+                lambda checked, name=emb_name: self.callback(name, self.exp_name)
             )
             row_layout.addWidget(btn)
 

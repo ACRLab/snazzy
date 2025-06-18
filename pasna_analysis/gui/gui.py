@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
 
     def render_next_trace(self, forward: bool):
         next_emb_name, next_exp = self.model.get_next_emb_name(forward)
-        self.render_trace(next_emb_name, next_exp)
+        self.select_embryo(next_emb_name, next_exp)
 
     def _get_directory(self) -> Path | None:
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -416,9 +416,7 @@ class MainWindow(QMainWindow):
             accepted_embs = set(self.model.get_filtered_emb_numbers(exp.name))
             removed_embs = set(self.model.to_remove[exp.name])
             self.sidebar = RemovableSidebar(
-                self.render_trace,
-                accepted_embs,
-                removed_embs,
+                self.select_embryo, accepted_embs, removed_embs, exp.name
             )
             self.sidebar.emb_visibility_toggled.connect(self.toggle_emb_visibility)
         else:
@@ -426,7 +424,7 @@ class MainWindow(QMainWindow):
             exp_to_embs = {}
             for exp_name, exp in group.items():
                 exp_to_embs[exp_name] = self.model.get_filtered_embs(exp_name).keys()
-            self.sidebar = FixedSidebar(exp_to_embs, self.render_trace)
+            self.sidebar = FixedSidebar(exp_to_embs, self.select_embryo)
 
         scroll_area = QScrollArea()
         scroll_area.setWidget(self.sidebar)
@@ -734,10 +732,16 @@ class MainWindow(QMainWindow):
         colors = colormap.getLookupTable(nPts=6)
         return [QBrush(QColor(*color)) for color in colors]
 
-    def render_trace(self, emb_name=None, exp_name=None):
-        trace, embryo, time, trimmed_time, dff = self.model.get_trace_context(
-            emb_name, exp_name, self.use_dev_time
-        )
+    def select_embryo(self, emb_name, exp_name):
+        self.model.set_curr_emb(emb_name)
+        self.model.set_curr_exp(exp_name)
+        self.render_trace()
+
+    def render_trace(self):
+        """Render data about the currently selected embryo."""
+        trace, time, trimmed_time, dff = self.model.get_trace_context(self.use_dev_time)
+        emb_name = self.model.curr_emb_name
+        exp_name = self.model.curr_exp
 
         self._clear_current_plot()
         self._plot_raw_trace(trimmed_time, dff)
@@ -745,11 +749,11 @@ class MainWindow(QMainWindow):
         self._plot_manual_annotations(trimmed_time, trace, dff)
         self._plot_peaks(trimmed_time, trace)
         self._plot_active_and_struct_channels(time, trace)
-        self._setup_trim_line(trace, embryo)
-        self._setup_dsna_line(trace, embryo)
+        self._setup_trim_line(time, trace)
+        self._setup_dsna_line(trimmed_time, trace)
         self._plot_peak_widths(trimmed_time, trace)
         self._plot_detected_oscillations(trimmed_time, trace, dff)
-        self._set_plot_titles(embryo.name, exp_name)
+        self._set_plot_titles(emb_name, exp_name)
 
     def _clear_current_plot(self):
         self.plot_widget.clear()
@@ -800,14 +804,9 @@ class MainWindow(QMainWindow):
         )
         self.plot_channels.addLegend()
 
-    def _setup_dsna_line(self, trace, embryo):
-        has_dsna = self.model.has_dsna()
-        if not has_dsna:
+    def _setup_dsna_line(self, time, trace):
+        if not self.model.has_dsna():
             return
-
-        trace_time = (
-            embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
-        )
 
         try:
             freq = self.freq_slider.value()
@@ -815,10 +814,9 @@ class MainWindow(QMainWindow):
             freq = trace.pd_params["freq"]
 
         dsna_start = trace.get_dsna_start(freq)
-        dsna_time = trace_time[dsna_start]
 
         dsna_line = pg.InfiniteLine(
-            dsna_time,
+            time[dsna_start],
             movable=True,
             pen=pg.mkPen("chartreuse", cosmetic=True),
         )
@@ -826,16 +824,18 @@ class MainWindow(QMainWindow):
         dsna_line.sigPositionChangeFinished.connect(self.change_dsna_start)
         self.plot_widget.addItem(dsna_line)
 
-    def _setup_trim_line(self, trace, embryo):
-        trace_time = (
-            embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
-        )
+    def _setup_trim_line(self, time, trace):
+        is_single_exp = not self.model.has_combined_experiments()
+
         trim_line = pg.InfiniteLine(
-            trace_time[trace.trim_idx],
-            movable=True,
+            time[trace.trim_idx],
+            movable=is_single_exp,
             pen=pg.mkPen("darkorange", cosmetic=True),
         )
-        trim_line.addMarker("<|>")
+
+        if is_single_exp:
+            trim_line.addMarker("<|>")
+
         trim_line.sigPositionChangeFinished.connect(self.change_trim_idx)
         self.plot_channels.addItem(trim_line)
 
