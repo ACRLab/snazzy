@@ -173,6 +173,7 @@ class MainWindow(QMainWindow):
         self.clear_layout()
         self.add_experiment_action.setEnabled(True)
         self.compare_experiment_action.setEnabled(True)
+        self.view_pd_action.setEnabled(True)
         self.paint_main_view()
         self.render_trace()
         self.plot_all_traces()
@@ -479,6 +480,7 @@ class MainWindow(QMainWindow):
 
         self.view_pd_action = QAction("View pd_params data", self)
         self.view_pd_action.triggered.connect(self.view_json_data)
+        self.view_pd_action.setEnabled(False)
         file_menu.addAction(self.view_pd_action)
 
         exit_action = QAction("Exit", self)
@@ -520,9 +522,9 @@ class MainWindow(QMainWindow):
         menu_bar.addAction(prev_emb_action)
 
     def view_json_data(self):
-        if self.model.config is None:
-            return
         config_data = self.model.get_config_data()
+        if config_data is None:
+            return
         self.json_window = JsonViewer(config_data)
         self.json_window.update_config_signal.connect(self.update_from_json_viewer)
         self.json_window.show()
@@ -807,7 +809,10 @@ class MainWindow(QMainWindow):
             embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
         )
 
-        freq = self.freq_slider.value()
+        try:
+            freq = self.freq_slider.value()
+        except RuntimeError:
+            freq = trace.pd_params["freq"]
 
         dsna_start = trace.get_dsna_start(freq)
         dsna_time = trace_time[dsna_start]
