@@ -239,6 +239,12 @@ class Model:
 
         self.curr_emb_name = next(iter(curr_exp.embryos))
 
+    def set_curr_emb(self, emb_name):
+        self.curr_emb_name = emb_name
+
+    def set_curr_exp(self, exp):
+        self.curr_exp = exp
+
     def get_curr_experiment(self) -> Experiment:
         return self.groups[self.curr_group][self.curr_exp]
 
@@ -276,18 +282,8 @@ class Model:
     def get_curr_emb_id(self) -> int:
         return utils.emb_id(self.curr_emb_name)
 
-    def get_trace_context(
-        self,
-        emb_name: str | None = None,
-        exp_name: str | None = None,
-        use_dev_time: bool = False,
-    ):
-        if exp_name:
-            exp = self.get_experiment(exp_name)
-        else:
-            exp = self.get_curr_experiment()
-
-        self.curr_emb_name = emb_name or self.curr_emb_name
+    def get_trace_context(self, use_dev_time: bool = False):
+        exp = self.get_curr_experiment()
 
         embryo = exp.embryos[self.curr_emb_name]
         trace = embryo.trace
@@ -296,9 +292,10 @@ class Model:
             time = embryo.lin_developmental_time()
         else:
             time = trace.time / 60
+
         dff = trace.dff[: trace.trim_idx]
 
-        return trace, embryo, time, time[: trace.trim_idx], dff
+        return trace, time, time[: trace.trim_idx], dff
 
     def has_dsna(self):
         curr_exp = self.get_curr_experiment()
