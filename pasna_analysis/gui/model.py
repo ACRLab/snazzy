@@ -288,12 +288,12 @@ class Model:
         trace = embryo.trace
 
         if use_dev_time:
-            time = embryo.lin_developmental_time()[: trace.trim_idx]
+            time = embryo.lin_developmental_time()
         else:
-            time = trace.time[: trace.trim_idx] / 60
+            time = trace.time / 60
         dff = trace.dff[: trace.trim_idx]
 
-        return trace, embryo, time, dff
+        return trace, embryo, time, time[: trace.trim_idx], dff
 
     def has_dsna(self):
         exp_params = self.config.get_exp_params()

@@ -733,21 +733,21 @@ class MainWindow(QMainWindow):
         return [QBrush(QColor(*color)) for color in colors]
 
     def render_trace(self, emb_name=None, exp_name=None):
-        trace, embryo, time, dff = self.model.get_trace_context(
+        trace, embryo, time, trimmed_time, dff = self.model.get_trace_context(
             emb_name, exp_name, self.use_dev_time
         )
 
         self._clear_current_plot()
-        self._plot_raw_trace(time, dff)
-        self._plot_filtered_trace(time, trace)
-        self._plot_manual_annotations(time, trace, dff)
-        self._plot_peaks(time, trace)
-        self._plot_active_and_struct_channels(trace, embryo)
+        self._plot_raw_trace(trimmed_time, dff)
+        self._plot_filtered_trace(trimmed_time, trace)
+        self._plot_manual_annotations(trimmed_time, trace, dff)
+        self._plot_peaks(trimmed_time, trace)
+        self._plot_active_and_struct_channels(time, trace)
         self._setup_trim_line(trace, embryo)
         self._setup_dsna_line(trace, embryo)
-        self._plot_peak_widths(time, trace)
-        self._plot_detected_oscillations(time, trace, dff)
-        self._set_plot_titles(embryo, exp_name)
+        self._plot_peak_widths(trimmed_time, trace)
+        self._plot_detected_oscillations(trimmed_time, trace, dff)
+        self._set_plot_titles(embryo.name, exp_name)
 
     def _clear_current_plot(self):
         self.plot_widget.clear()
@@ -789,15 +789,12 @@ class MainWindow(QMainWindow):
         )
         self.plot_widget.addItem(scatter)
 
-    def _plot_active_and_struct_channels(self, trace, embryo):
-        trace_time = (
-            embryo.lin_developmental_time() if self.use_dev_time else trace.time / 60
+    def _plot_active_and_struct_channels(self, time, trace):
+        self.plot_channels.plot(
+            time, trace.active, name="Active", pen=pg.mkPen("limegreen")
         )
         self.plot_channels.plot(
-            trace_time, trace.active, name="Active", pen=pg.mkPen("limegreen")
-        )
-        self.plot_channels.plot(
-            trace_time, trace.struct, name="Struct", pen=pg.mkPen("firebrick")
+            time, trace.struct, name="Structural", pen=pg.mkPen("firebrick")
         )
         self.plot_channels.addLegend()
 
