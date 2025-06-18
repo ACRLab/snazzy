@@ -145,6 +145,7 @@ class MainWindow(QMainWindow):
             if not dialog_values:
                 return
 
+            group_name = dialog_values["group_name"]
             self._update_config(config, dialog_values)
 
             if should_reset_model:
