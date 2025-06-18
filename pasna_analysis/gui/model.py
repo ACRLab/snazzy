@@ -40,7 +40,6 @@ class Worker(QRunnable):
 class Model:
     def __init__(self):
         self.pm = PeakMatcher()
-        self.config: Config | None = None
         self.set_initial_state()
 
     def __str__(self):
@@ -56,6 +55,28 @@ class Model:
             f")"
         )
 
+    def set_initial_state(self):
+        self.groups: dict[str, dict[str, Experiment]] = {}
+        self.curr_group = None
+        self.to_remove: dict[str, set] = {}
+        self.curr_exp = None
+        self.curr_emb_name = None
+
+    def create_experiment(self, config: Config, group_name: str):
+        exp = Experiment(config.exp_path, config)
+
+        if not exp.embryos:
+            first_peak_threshold = config.get_exp_params()["first_peak_threshold"]
+            raise AttributeError(
+                f"Could not find any embryos with first peak after {first_peak_threshold} minutes."
+            )
+
+        self.add_experiment(exp, group_name)
+        exp_params = exp.config.get_exp_params()
+        self.to_remove[exp.name] = set(exp_params.get("to_remove", []))
+
+        return exp
+
     def update_config(self, new_data):
         """Updates the config data for the current experiment."""
         exp = self.get_curr_experiment()
@@ -64,17 +85,21 @@ class Model:
 
     def save_trim_idx(self, idx):
         """Updates trim index of the current embryo."""
+        curr_exp = self.get_curr_experiment()
         emb_name = self.curr_emb_name
-        self.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
+        curr_exp.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
 
     def save_phase1_end_idx(self, emb_name, idx):
-        self.config.save_manual_peak_data(emb_name, manual_phase1_end=idx)
+        curr_exp = self.get_curr_experiment()
+        curr_exp.config.save_manual_peak_data(emb_name, manual_phase1_end=idx)
 
     def save_dsna_start(self, emb_name, idx):
-        self.config.save_manual_peak_data(emb_name, manual_dsna_start=idx)
+        curr_exp = self.get_curr_experiment()
+        curr_exp.config.save_manual_peak_data(emb_name, manual_dsna_start=idx)
 
     def save_peak_widths(self, emb_name, peak_widths, peak_index):
-        corrected_peaks = self.config.get_corrected_peaks(emb_name)
+        curr_exp = self.get_curr_experiment()
+        corrected_peaks = curr_exp.config.get_corrected_peaks(emb_name)
         peak_key = str(peak_index)
 
         if corrected_peaks:
@@ -83,11 +108,12 @@ class Model:
         else:
             manual_widths = {peak_key: peak_widths}
 
-        self.config.save_manual_peak_data(emb_name, manual_widths=manual_widths)
+        curr_exp.config.save_manual_peak_data(emb_name, manual_widths=manual_widths)
 
     def add_peak(self, x, emb_name, trace, wlen=10):
         # load corrected data to reconcile with the new add
-        corrected_peaks = self.config.get_corrected_peaks(emb_name)
+        curr_exp = self.get_curr_experiment()
+        corrected_peaks = curr_exp.config.get_corrected_peaks(emb_name)
         manual_remove = [] if not corrected_peaks else corrected_peaks["manual_remove"]
 
         new_peak, new_peaks, removed_peaks = self.pm.add_peak(
@@ -100,14 +126,15 @@ class Model:
         else:
             added_peaks = [new_peak]
 
-        self.config.save_manual_peak_data(
+        curr_exp.config.save_manual_peak_data(
             emb_name, added_peaks=added_peaks, removed_peaks=removed_peaks, wlen=wlen
         )
         return new_peak, new_peaks
 
     def remove_peak(self, x, emb_name, trace, wlen=10):
         # load corrected data to reconcile with the new add
-        corrected_peaks = self.config.get_corrected_peaks(emb_name)
+        curr_exp = self.get_curr_experiment()
+        corrected_peaks = curr_exp.config.get_corrected_peaks(emb_name)
         manual_add = [] if not corrected_peaks else corrected_peaks["manual_peaks"]
         manual_widths = (
             None if not corrected_peaks else corrected_peaks["manual_widths"]
@@ -124,7 +151,7 @@ class Model:
         if manual_widths and peak_width_to_remove:
             del manual_widths[str(peak_width_to_remove)]
 
-        self.config.save_manual_peak_data(
+        curr_exp.config.save_manual_peak_data(
             emb_name,
             added_peaks=added_peaks,
             removed_peaks=removed,
@@ -139,46 +166,21 @@ class Model:
             emb.trace.to_add = []
             emb.trace.to_remove = []
 
-        if "embryos" in self.config.data:
-            self.config.data["embryos"] = {}
+        if "embryos" in exp.config.data:
+            exp.config.data["embryos"] = {}
 
-        self.config.save_params()
-
-    def set_initial_state(self):
-        self.groups: dict[str, dict[str, Experiment]] = {}
-        self.curr_group = None
-        self.to_remove: dict[str, set] = {}
-        self.curr_exp = None
-        self.curr_emb_name = None
+        exp.config.save_params()
 
     def reset_current_experiment(self):
-        exp_path = self.config.data["exp_path"]
-        del self.groups[self.curr_group][self.curr_exp]
+        curr_exp = self.get_curr_experiment()
+        exp_path = curr_exp.config.data["exp_path"]
+        self.remove_curr_experiment()
 
         new_exp = Experiment(exp_path=exp_path)
 
-        self.config = new_exp.config
-        self.curr_exp = None
-        self.curr_emb_name = None
         self.add_experiment(new_exp, group=self.curr_group)
-        exp_params = self.config.get_exp_params()
+        exp_params = new_exp.config.get_exp_params()
         self.to_remove[new_exp.name] = set(exp_params.get("to_remove", []))
-
-    def create_experiment(self, config: Config, group_name: str):
-        self.config = config
-        exp = Experiment(config.exp_path, config)
-
-        if not exp.embryos:
-            first_peak_threshold = config.get_exp_params()["first_peak_threshold"]
-            raise AttributeError(
-                f"Could not find any embryos with first peak after {first_peak_threshold} minutes."
-            )
-
-        self.add_experiment(exp, group_name)
-        exp_params = self.config.get_exp_params()
-        self.to_remove[exp.name] = set(exp_params.get("to_remove", []))
-
-        return exp
 
     def add_experiment(self, experiment: Experiment, group: str):
         if group is None:
@@ -240,6 +242,9 @@ class Model:
     def get_curr_experiment(self) -> Experiment:
         return self.groups[self.curr_group][self.curr_exp]
 
+    def remove_curr_experiment(self):
+        del self.groups[self.curr_group][self.curr_exp]
+
     def get_experiment(
         self, exp_name: str, group_name: str | None = None
     ) -> Experiment:
@@ -296,7 +301,8 @@ class Model:
         return trace, embryo, time, time[: trace.trim_idx], dff
 
     def has_dsna(self):
-        exp_params = self.config.get_exp_params()
+        curr_exp = self.get_curr_experiment()
+        exp_params = curr_exp.config.get_exp_params()
         return exp_params.get("has_dsna", False)
 
     def add_group(self, group: str):
@@ -310,10 +316,14 @@ class Model:
         return len(self.get_curr_group()) > 1
 
     def get_pd_params(self):
-        return self.config.get_pd_params()
+        curr_exp = self.get_curr_experiment()
+        return curr_exp.config.get_pd_params()
 
     def get_config_data(self):
-        return self.config.data
+        if self.curr_exp is None:
+            return None
+        curr_exp = self.get_curr_experiment()
+        return curr_exp.config.data
 
     def get_next_emb_name(self, forward: bool) -> tuple[str, str]:
         """Return the next emb_name and exp of the currenlty selected group.
