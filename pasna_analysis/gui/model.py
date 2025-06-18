@@ -315,21 +315,33 @@ class Model:
     def get_config_data(self):
         return self.config.data
 
-    def get_next_emb_name(self, forward: bool) -> str:
-        """Returns the next valid embryo of the currenlty selected experiment.
+    def get_next_emb_name(self, forward: bool) -> tuple[str, str]:
+        """Return the next emb_name and exp of the currenlty selected group.
 
         Parameters:
             forward(bool):
                 If True returns the next embryo, otherwise the previous embryo.
+        Returns:
+            next_values(tuple[str, str]):
+                next_emb_name, next_exp_name
         """
         if self.curr_exp is None:
             return
-        curr_emb = self.curr_emb_name
-        embs = self.get_filtered_embs(self.curr_exp)
-        emb_names = list(embs.keys())
-        curr_emb_index = emb_names.index(curr_emb)
+
+        emb_names = []
+        for exp_name in self.get_curr_group():
+            embs = self.get_filtered_embs(exp_name)
+            emb_names.extend([(emb, exp_name) for emb in embs])
+
+        curr_emb_index = emb_names.index((self.curr_emb_name, self.curr_exp))
+
         if forward:
             next_idx = (curr_emb_index + 1) % len(emb_names)
         else:
             next_idx = (curr_emb_index - 1) % len(emb_names)
+
+        next_emb, next_exp = emb_names[next_idx]
+        self.curr_emb_name = next_emb
+        self.curr_exp = next_exp
+
         return emb_names[next_idx]
