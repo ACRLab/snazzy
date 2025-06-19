@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pasna_analysis.gui import (
+    ClickableViewBox,
     ComparePlotWindow,
     ExperimentParamsDialog,
     FixedSidebar,
@@ -647,7 +648,10 @@ class MainWindow(QMainWindow):
         group = self.model.get_filtered_group()
         for exp_name, exp in group.items():
             for emb in exp.embryos.values():
-                plot_widget = pg.PlotWidget()
+                callback = partial(
+                    self.select_embryo_from_multi_view, emb.name, exp_name
+                )
+                plot_widget = ClickableViewBox(callback)
                 plot_widget.setMinimumHeight(200)
 
                 trace = emb.trace
@@ -723,6 +727,11 @@ class MainWindow(QMainWindow):
         colors = colormap.getLookupTable(nPts=6)
         return [QBrush(QColor(*color)) for color in colors]
 
+    def select_embryo_from_multi_view(self, emb_name, exp_name):
+        self.toggle_graph_view(False)
+        self.toggle_graph_btn.setChecked(False)
+        self.select_embryo(emb_name, exp_name)
+
     def select_embryo(self, emb_name, exp_name):
         self.model.set_curr_emb(emb_name)
         self.model.set_curr_exp(exp_name)
@@ -754,7 +763,9 @@ class MainWindow(QMainWindow):
         self.plot_widget.plot(time, dff)
 
     def _plot_filtered_trace(self, time, trace):
-        if self.display_filtered_dff and trace.filtered_dff is not None:
+        if trace.filtered_dff is None:
+            return
+        if self.display_filtered_dff or self.is_dragging_slider:
             self.plot_widget.plot(time, trace.filtered_dff, pen=pg.mkPen("palegreen"))
 
     def _plot_manual_annotations(self, time, trace, dff):
