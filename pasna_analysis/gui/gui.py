@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
 
         self.model = Model()
         self.moveable_width_bars = False
-        self.show_peak_widths = False
+        self.view_peak_widths = False
         self.is_dragging_slider = False
         self.color_mode = False
         self.brushes = [QBrush(pg.mkColor("m"))]
@@ -298,10 +298,10 @@ class MainWindow(QMainWindow):
         self.top_app_bar.addWidget(self.toggle_graph_btn)
 
         if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
-            self.toggle_width_view_btn = QPushButton("View widths")
-            self.toggle_width_view_btn.setCheckable(True)
-            self.toggle_width_view_btn.clicked.connect(self.toggle_width_view)
-            self.top_app_bar.addWidget(self.toggle_width_view_btn)
+            self.toggle_view_width_btn = QPushButton("View widths")
+            self.toggle_view_width_btn.setCheckable(True)
+            self.toggle_view_width_btn.clicked.connect(self.toggle_view_width)
+            self.top_app_bar.addWidget(self.toggle_view_width_btn)
 
             self.moveable_width_btn = QPushButton("Adjust widths")
             self.moveable_width_btn.setCheckable(True)
@@ -840,7 +840,7 @@ class MainWindow(QMainWindow):
         self.plot_channels.addItem(trim_line)
 
     def _plot_peak_widths(self, time, trace):
-        if self.is_dragging_slider or not self.show_peak_widths:
+        if self.is_dragging_slider or not self.view_peak_widths:
             return
         if trace.peak_bounds_indices.size == 0:
             return
