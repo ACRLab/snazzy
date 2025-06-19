@@ -18,14 +18,6 @@ def config():
     return Config(VALID_DIR)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def clear_pd_params():
-    yield
-    pd_params_path = VALID_DIR.joinpath("peak_detection_params.json")
-    if pd_params_path.exists():
-        os.remove(pd_params_path)
-
-
 def test_can_create_experiment(exp):
     assert exp is not None
 
