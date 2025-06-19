@@ -186,7 +186,10 @@ class Model:
     def reset_current_experiment(self):
         curr_exp = self.get_curr_experiment()
         exp_path = curr_exp.config.data["exp_path"]
-        self.remove_curr_experiment()
+
+        del self.groups[self.curr_group][self.curr_exp]
+
+        self.set_curr_emb(None)
 
         new_exp = Experiment(exp_path=exp_path)
 
@@ -252,6 +255,9 @@ class Model:
         self.curr_emb_name = next(iter(curr_exp.embryos))
 
     def set_curr_emb(self, emb_name):
+        if emb_name is not None:
+            curr_exp = self.get_curr_experiment()
+            assert emb_name in curr_exp.embryos
         self.curr_emb_name = emb_name
 
     def set_curr_exp(self, exp):
@@ -259,9 +265,6 @@ class Model:
 
     def get_curr_experiment(self) -> Experiment:
         return self.groups[self.curr_group][self.curr_exp]
-
-    def remove_curr_experiment(self):
-        del self.groups[self.curr_group][self.curr_exp]
 
     def get_experiment(
         self, exp_name: str, group_name: str | None = None
