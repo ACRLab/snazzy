@@ -344,27 +344,18 @@ class MainWindow(QMainWindow):
 
     def toggle_moveable_widths(self, check):
         self.moveable_width_bars = check
-        ils = sorted(
-            (
-                item
-                for item in self.plot_widget.get_items()
-                if isinstance(item, pg.InfiniteLine)
-            ),
-            key=lambda il: il.peak_index,
-        )
-        for i, il in enumerate(ils):
-            if self.moveable_width_bars:
-                il.setMovable(True)
-                if i % 2 == 0:
-                    il.addMarker("<|")
-                else:
-                    il.addMarker("|>")
-            else:
-                il.setMovable(False)
-                il.clearMarkers()
+        # to adjust widths `view_peak_widths` has to be True
+        if check:
+            self.toggle_view_width_btn.setChecked(True)
+            self.view_peak_widths = True
+        self.render_trace()
 
-    def toggle_width_view(self, checked):
-        self.show_peak_widths = checked
+    def toggle_view_width(self, checked):
+        self.view_peak_widths = checked
+        # if peak widths are hidden widths cant be adjusted either
+        if not checked:
+            self.moveable_width_btn.setChecked(False)
+            self.moveable_width_bars = False
         self.render_trace()
 
     def paint_controls(self):
