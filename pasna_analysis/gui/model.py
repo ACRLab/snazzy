@@ -97,6 +97,18 @@ class Model:
         curr_exp = self.get_curr_experiment()
         curr_exp.config.save_manual_peak_data(emb_name, manual_dsna_start=idx)
 
+    def update_peak_widths(self, peak_index, line_index, new_line_pos):
+        trace = self.get_curr_trace()
+
+        peak_bounds = trace.peak_bounds_indices[peak_index]
+        peak_bounds[line_index] = new_line_pos
+
+        peak_bounds = peak_bounds.tolist()
+        # cast to int because will be json dumped
+        peak_index = int(trace.peak_idxes[peak_index])
+        emb_name = self.curr_emb_name
+        self.save_peak_widths(emb_name, peak_bounds, peak_index)
+
     def save_peak_widths(self, emb_name, peak_widths, peak_index):
         curr_exp = self.get_curr_experiment()
         corrected_peaks = curr_exp.config.get_corrected_peaks(emb_name)

@@ -845,7 +845,7 @@ class MainWindow(QMainWindow):
             line = pg.InfiniteLine(
                 time_value, movable=self.moveable_width_bars, pen=pg.mkPen(color)
             )
-            line.peak_index = i
+            line.line_index = i
             if self.moveable_width_bars:
                 line.addMarker("<|") if i % 2 == 0 else line.addMarker("|>")
             line.sigPositionChangeFinished.connect(self.change_peak_bounds)
@@ -945,27 +945,20 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def change_peak_bounds(self, il_obj):
-        trace = self.model.get_curr_trace()
-        exp = self.model.get_curr_experiment()
-        emb_name = self.model.curr_emb_name
-        emb = exp.embryos[emb_name]
+        emb = self.model.get_curr_embryo()
 
-        row, col = divmod(il_obj.peak_index, 2)
+        # since each peak has two bounds, we can recover the peak index
+        # and bound index from the line number
+        peak_index, bound_index = divmod(il_obj.line_index, 2)
 
         if self.use_dev_time:
             dev_time = emb.lin_developmental_time()
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
-            x = int(idx)
+            new_line_pos = int(idx)
         else:
-            x = il_obj.getXPos() * 10
+            new_line_pos = int(il_obj.getXPos() * 10)
 
-        trace.peak_bounds_indices[row, col] = x
-        peak_bounds = trace.peak_bounds_indices[row].tolist()
-        # cast values to int / str because that will be json dumped
-        peak_bounds = [int(pb) for pb in peak_bounds]
-        # indirectly the row represents the peak_index that this il is associated to
-        peak_index = str(trace.peak_idxes[row])
-        self.save_peak_pos(peak_bounds, peak_index)
+        self.model.update_peak_widths(peak_index, bound_index, new_line_pos)
 
     def clear_layout(self, layout=None):
         if layout is None:
@@ -979,9 +972,6 @@ class MainWindow(QMainWindow):
                 self.clear_layout(item.layout())
 
     def clear_manual_data(self):
-        """Removes all manual data from pd_params.json file.
-
-        All manual data is stored under the 'embryos' key."""
         self.model.clear_manual_data()
 
         self.update_all_embs()
