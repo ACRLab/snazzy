@@ -37,6 +37,7 @@ class Trace:
 
         self.trim_idx = self.get_trim_index()
         self.dff = self.compute_dff()
+        self.aligned_time, self.aligned_dff = self.preprocess_dff()
 
     @property
     def peak_idxes(self):
@@ -168,7 +169,10 @@ class Trace:
         dff = self.dff
 
         # trim dff from onset to hatching
-        onset = self.peak_bounds_indices[0][0]
+        if len(self.peak_bounds_indices) > 0:
+            onset = self.peak_bounds_indices[0][0]
+        else:
+            onset = 0
         if onset > onset_pad:
             start_index = onset - onset_pad
         else:
@@ -614,6 +618,7 @@ class Trace:
         f, t, Zxx = spsig.stft(
             dff, fs, nperseg=fft_size, noverlap=noverlap
         )
+        
         return f, t, Zxx
 
     def get_dsna_start(self, freq):

@@ -6,6 +6,7 @@ import numpy as np
 
 
 def plot_raw_signals(embryos, rc):
+    plt.style.use('dark_background')
     with plt.rc_context(rc):
         fig_width = rc['figure.figsize'][0]
         fig, axes = plt.subplots(len(embryos), 3, figsize=(fig_width, 2.5 * (len(embryos))), gridspec_kw={'width_ratios': [2, 10, 10]})
@@ -45,6 +46,7 @@ def plot_raw_signals(embryos, rc):
 
 
 def plot_trace(time, dff, rc, color='black', xmin=0, xmax=360, xinterval=60, ymin=-0.1, ymax=1):
+    plt.style.use('dark_background')
     with plt.rc_context(rc):
         fig = plt.figure()
         plt.plot(time, dff, color=color)
@@ -65,9 +67,11 @@ def plot_trace(time, dff, rc, color='black', xmin=0, xmax=360, xinterval=60, ymi
         fig.tight_layout()
         plt.show()
 
-def plot_spec(f, t, mag, mymap, rc, display_colorbar=True, xmin=0, xmax=360, ymin=0, ymax=0.03):
+def plot_spec(f, t, Zxx, mymap, rc, display_colorbar=True, xmin=0, xmax=360, ymin=0, ymax=0.03):
+    plt.style.use('dark_background')
     with plt.rc_context(rc):
         fig = plt.figure()
+        mag = abs(Zxx)
         spec = plt.pcolormesh(
             t,
             f,
@@ -105,14 +109,15 @@ def plot_spec(f, t, mag, mymap, rc, display_colorbar=True, xmin=0, xmax=360, ymi
     fig.tight_layout()
     plt.show()
 
-def plot_traces(names, time, dffs, rc, color='black', xmin=0, xmax=360, ymin=-0.1, ymax=1):
+def plot_traces(embryo_info, rc, color='black', xmin=0, xmax=360, ymin=-0.1, ymax=1):
     with plt.rc_context(rc):
         fig_width = rc['figure.figsize'][0]
-        fig, axes = plt.subplots(len(dffs), 2, figsize=(fig_width, 2 * (len(dffs))), gridspec_kw={'width_ratios': [1, 20]})
+        fig, axes = plt.subplots(len(embryo_info), 2, figsize=(fig_width, 2 * (len(embryo_info))), gridspec_kw={'width_ratios': [1, 20]})
         fig.subplots_adjust(top=0.99, bottom=0.05, hspace=0.9, wspace=0.15)
 
-        for axes, dff, name in zip(axes, dffs, names):
+        for axes, emb in zip(axes, embryo_info):
             label, ax = axes
+            time, dff = embryo_info[emb]
             ax.plot(time, dff, color=color)
 
             # x axis
@@ -131,7 +136,7 @@ def plot_traces(names, time, dffs, rc, color='black', xmin=0, xmax=360, ymin=-0.
 
             # label
             label.axis('off')
-            label.text(0, 0.5, f"{name}", 
+            label.text(0, 0.5, f"{emb}", 
                        va='center', ha='left', 
                        fontsize=rc['font.size'] * 1.5, 
                        rotation=90,
@@ -139,15 +144,16 @@ def plot_traces(names, time, dffs, rc, color='black', xmin=0, xmax=360, ymin=-0.
     
     plt.show()
 
-def plot_specs(names, f, t, mags, mymap, rc, display_colorbar=True, xmin=0, xmax=360, ymin=0, ymax=0.03):
+def plot_specs(embryo_info, mymap, rc, display_colorbar=True, xmin=0, xmax=360, ymin=0, ymax=0.03):
     with plt.rc_context(rc):
         fig_width = rc['figure.figsize'][0]
-        fig, axes = plt.subplots(len(mags), 2, figsize=(fig_width, 3 * (len(mags))), gridspec_kw={'width_ratios': [1, 20]})
+        fig, axes = plt.subplots(len(embryo_info), 2, figsize=(fig_width, 3 * (len(embryo_info))), gridspec_kw={'width_ratios': [1, 20]})
         fig.subplots_adjust(top=0.99, bottom=0.05, hspace=0.9, wspace=0.15)
 
-        for axes, mag, name in zip(axes, mags, names):
+        for axes, emb in zip(axes, embryo_info):
             label, ax = axes
-            
+            f, t, Zxx = embryo_info[emb]
+            mag = abs(Zxx)
             spec = ax.pcolormesh(
                 t,
                 f,
@@ -184,7 +190,7 @@ def plot_specs(names, f, t, mags, mymap, rc, display_colorbar=True, xmin=0, xmax
 
             # label
             label.axis('off')
-            label.text(0, 0.5, f"{name}", 
+            label.text(0, 0.5, f"{emb}", 
                        va='center', ha='left', 
                        fontsize=rc['font.size'] * 1,
                        rotation=90,
@@ -193,6 +199,7 @@ def plot_specs(names, f, t, mags, mymap, rc, display_colorbar=True, xmin=0, xmax
     plt.show()
 
 def plot_pointplot(dataframe, x, y, rc, category, linestyle=None, xmin=0, xmax=15, xinterval=2, xlabels=None, ymin=None, ymax=None, lines=True):
+    plt.style.use('dark_background')
     with plt.rc_context(rc):
         fig, ax = plt.subplots()
         sns.set(style="whitegrid", palette="colorblind", rc=rc)
@@ -209,6 +216,7 @@ def plot_pointplot(dataframe, x, y, rc, category, linestyle=None, xmin=0, xmax=1
         plt.show()
 
 def plot_cdf(dataframe, x, category, rc):
+    plt.style.use('dark_background')
     with plt.rc_context(rc):
         fig, ax = plt.subplots()
         sns.set(style="whitegrid", palette="colorblind", rc=rc)
