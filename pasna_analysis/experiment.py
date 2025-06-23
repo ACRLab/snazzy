@@ -11,7 +11,8 @@ class Experiment:
     exp_path: Path
         Path with `pasnascope` output.
     config: Config | None
-        Config obj. If not provided will be created if a peak_detection_params.json file is found. If not, a file based on default params will be created.
+        Config obj. If not provided will look for config data saved as json in
+        the exp_path. If not found, a file with default params will be created.
     kwargs:
         See `self._parse_kwargs` for list of valid keys passed as kwargs.
     """
@@ -27,10 +28,10 @@ class Experiment:
         self.directory = exp_path
         self.config = config if config is not None else Config(exp_path)
 
-        self.exp_params = self.config.get_exp_params()
-
         if kwargs:
             self._parse_kwargs(kwargs)
+
+        self.exp_params = self.config.get_exp_params()
 
         data = DataLoader(exp_path)
         if not self.config.config_path.exists():
@@ -65,7 +66,8 @@ class Experiment:
             print(
                 f"WARN: Some kwargs were ignored when creating a new Experiment: {ignored_params}."
             )
-        update_exp_params = {k: v for k, v in kwargs.items() if k in self.exp_params}
+        exp_params_keys = self.config.default_params["exp_params"].keys()
+        update_exp_params = {k: v for k, v in kwargs.items() if k in exp_params_keys}
         dff_strategy = kwargs.get("dff_strategy", None)
 
         to_update = {}
@@ -79,8 +81,7 @@ class Experiment:
         """Returns all embryos where the first episode happend before `first_peak_threshold` minutes."""
         embryos = {}
 
-        exp_params = self.config.get_exp_params()
-        to_exclude = exp_params.get("to_exclude", [])
+        to_exclude = self.exp_params.get("to_exclude", [])
         for act_path, len_path in zip(self.act_paths, self.len_paths):
             emb_name = act_path.stem
             emb_id = utils.emb_id(emb_name)
@@ -90,7 +91,7 @@ class Experiment:
             emb = Embryo(act_path, len_path, self.config)
 
             try:
-                first_peak_threshold = exp_params.get("first_peak_threshold", 0)
+                first_peak_threshold = self.exp_params.get("first_peak_threshold", 0)
                 if emb.trace.peak_times[0] <= first_peak_threshold * 60:
                     print(
                         f"First peak detected before {first_peak_threshold} mins.",
