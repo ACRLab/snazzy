@@ -11,21 +11,18 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
-from pasna_analysis import Experiment, Trace, utils
+from pasna_analysis import Embryo, Trace, utils
 
 
 matplotlib.use("QtAgg")
 
 
 class PlotWindow(QWidget):
-    def __init__(
-        self, group: dict[str, Experiment], group_name: str, curr_trace: Trace
-    ):
+    def __init__(self, embryos: list[Embryo], group_name: str, curr_trace: Trace):
         super().__init__()
 
-        self.group = group
         self.curr_trace = curr_trace
-        self.embryos = [emb for exp in group.values() for emb in exp.embryos.values()]
+        self.embryos = embryos
 
         self.setWindowTitle(f"Plots - {group_name}")
 
@@ -61,7 +58,8 @@ class PlotWindow(QWidget):
 
     def save_all_plots(self):
         for exp in self.group.values():
-            exp_dir = exp.pd_params_path.parent
+            # exp_dir = exp.pd_params_path.parent
+            exp_dir = exp.directory
             timestamp = datetime.now().strftime("%m%d%Y_%H:%M:%S")
             save_path = exp_dir / "plots" / timestamp
             save_path.mkdir(parents=True, exist_ok=True)
