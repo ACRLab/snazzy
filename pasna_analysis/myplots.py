@@ -53,7 +53,7 @@ def plot_raw_signals(embryos, rc, title=None):
     plt.show()
 
 
-def plot_trace(time, dff, rc, color=None, xmin=0, xmax=360, xinterval=60, ymin=-0.1, ymax=1):
+def plot_trace(time, dff, rc, color=None, xmin=0, xmax=360, xinterval=60, ymin=-0.1, ymax=1, yinterval=1):
     with plt.rc_context(rc):
         if color is None:
             color = plt.rcParams['axes.prop_cycle'].by_key()['color'][9]
@@ -71,8 +71,7 @@ def plot_trace(time, dff, rc, color=None, xmin=0, xmax=360, xinterval=60, ymin=-
         # y axis
         plt.ylabel("ΔF/F")
         plt.ylim(ymin, ymax)
-        increment = 1
-        dff_ticks = np.arange(0, ymax+increment, increment)
+        dff_ticks = np.arange(ymin, ymax+yinterval, yinterval)
         plt.yticks(dff_ticks, dff_ticks)
         fig.tight_layout()
         plt.show()
