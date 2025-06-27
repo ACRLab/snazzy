@@ -57,7 +57,7 @@ class EmbryoParams(BaseModel):
 
 
 class ConfigObj(BaseModel):
-    exp_path: str | None
+    # exp_path: str | None
     exp_params: ExpParams = Field(default_factory=ExpParams)
     pd_params: PDParams = Field(default_factory=PDParams)
     embryos: dict[str, EmbryoParams] = Field(default_factory=dict)
