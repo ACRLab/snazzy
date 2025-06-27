@@ -169,7 +169,7 @@ class Trace:
         dff = self.dff
 
         # trim dff from onset to hatching
-        if len(self.peak_bounds_indices) > 0:
+        if self.peak_bounds_indices is not None and len(self.peak_bounds_indices) > 0:
             onset = self.peak_bounds_indices[0][0]
         else:
             onset = 0
