@@ -71,6 +71,8 @@ def plot_trace(time, dff, rc, color=None, xmin=0, xmax=360, xinterval=60, ymin=-
         # y axis
         plt.ylabel("ΔF/F")
         plt.ylim(ymin, ymax)
+        if abs(ymin - round(ymin)) < 0.2: # if the ymin is close to a whole number, just round
+            ymin = round(ymin)
         dff_ticks = np.arange(ymin, ymax+yinterval, yinterval)
         plt.yticks(dff_ticks, dff_ticks)
         fig.tight_layout()
