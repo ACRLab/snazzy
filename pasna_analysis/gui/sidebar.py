@@ -47,7 +47,7 @@ class FixedSidebar(QWidget):
 
 
 class RemovableSidebar(QWidget):
-    emb_visibility_toggled = pyqtSignal(int)
+    emb_visibility_toggled = pyqtSignal(str)
 
     def __init__(
         self,
@@ -82,13 +82,11 @@ class RemovableSidebar(QWidget):
 
     def populate_buttons(self, labels, layout, is_accepted):
         """Populate buttons into the given layout."""
-        # for label in sorted(labels, key=sort_by_emb_number):
-        for label in sorted(labels):
-            emb_name = f"emb{label}"
+        for label in sorted(labels, key=sort_by_emb_number):
             row_layout = QHBoxLayout()
-            btn = QPushButton(emb_name)
+            btn = QPushButton(label)
             btn.clicked.connect(
-                lambda checked, name=emb_name: self.callback(name, self.exp_name)
+                lambda checked, name=label: self.callback(name, self.exp_name)
             )
             row_layout.addWidget(btn)
 
