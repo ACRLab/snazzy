@@ -21,7 +21,7 @@ class Experiment:
         self,
         exp_path: str | Path,
         config: Config | None = None,
-        verbose: bool = True,
+        verbose: bool = False,
         **kwargs,
     ):
         exp_path = Path(exp_path)
@@ -34,18 +34,42 @@ class Experiment:
         self.exp_params = self.config.get_exp_params()
 
         data = DataLoader(exp_path)
+        # persist config to file if it only exists in memory
         if not self.config.config_path.exists():
             self.config.initialize_config_file()
 
         self.name = data.name
         self.act_paths = data.activities()
         self.len_paths = data.lengths()
-        self.embryos = self._get_embryos()
+        self.filtered_out = set(self.exp_params.get("to_remove", []))
+        self._embryos = self._create_embryos()
 
         if verbose:
             print(f"Parameters used for experiment {self.name}:")
             print("-" * 50)
             print(self.config)
+
+    @property
+    def embryos(self) -> list[Embryo]:
+        """Embryos which first peak happens after first peak threshold."""
+        return [
+            emb for emb in self._embryos.values() if emb.name not in self.filtered_out
+        ]
+
+    def get_all_embryos(self) -> list[Embryo]:
+        """All embryos calculated"""
+        return [emb for emb in self._embryos.values()]
+
+    def get_embryo(self, emb_name) -> Embryo:
+        """Return Embryo based on name.
+
+        Parameters:
+            emb_name (str):
+                Embryo name, eg: `emb12`
+        """
+        if emb_name not in self._embryos:
+            raise ValueError(f"Cannot find {emb_name}.")
+        return self._embryos[emb_name]
 
     def _parse_kwargs(self, kwargs):
         """Updates Config with valid kwargs.
@@ -77,8 +101,7 @@ class Experiment:
             to_update["exp_params"] = update_exp_params
         self.config.update_params(to_update)
 
-    def _get_embryos(self) -> dict[str, Embryo]:
-        """Returns all embryos where the first episode happend before `first_peak_threshold` minutes."""
+    def _create_embryos(self) -> dict[str, Embryo]:
         embryos = {}
 
         to_exclude = self.exp_params.get("to_exclude", [])
@@ -97,9 +120,9 @@ class Experiment:
                         f"First peak detected before {first_peak_threshold} mins.",
                         f"Skipping {emb.name}..",
                     )
-                    continue
+                    self.filtered_out.add(emb.name)
             except (ValueError, IndexError):
                 print(f"No peaks detected for {emb.name}. Skipping..")
-            embryos[emb_name] = emb
+            embryos[emb.name] = emb
 
         return embryos
