@@ -1,10 +1,18 @@
 import json
 from pathlib import Path
 import pprint
-from pydantic import BaseModel, Field, ValidationError
 from typing import Any
 
+from pydantic import BaseModel, Field, ValidationError
+
 from pasna_analysis import utils
+
+
+class PdParamsEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return super().default(obj)
 
 
 class ExpParams(BaseModel):
@@ -15,17 +23,22 @@ class ExpParams(BaseModel):
     ----------
     first_peak_threshold: int
         Minimum time, in minutes, for the first peak. Embryos with peaks before that will be ignored.
-    to_exclude: list[int] | None
-        List of embryo ids to be excluded. To exclude emb1 pass [1], for example.
+    to_exclude: list[str] | None
+        List of embryo names to be excluded. These embryos won't even be created.
+    to_remove: list[str] | None
+        List of embryo names to be removed. These will be created and show up in the GUI as removed.
     dff_strategy: "baseline" | "local_minima"
         How to compute the dff baseline.
     has_transients: boolean
         If an experiment has transients, early peaks will be skipped.
+    has_dsna: boolean
+        If an experiment has embryos with dSNA, automatically calculates dSNA start and ignores peaks
+        that happen after that point.
     """
 
     first_peak_threshold: int = 30
-    to_exclude: list[int] = Field(default_factory=list)
-    to_remove: list[int] = Field(default_factory=list)
+    to_exclude: list[str] = Field(default_factory=list)
+    to_remove: list[str] = Field(default_factory=list)
     has_transients: bool = True
     has_dsna: bool = False
 
@@ -105,7 +118,7 @@ class Config:
 
     def save_params(self):
         with open(self.config_path, "w") as f:
-            json.dump(self.data, f, indent=4)
+            json.dump(self.data, f, cls=PdParamsEncoder, indent=4)
 
     def load_data(self):
         if not self.config_path.exists():
