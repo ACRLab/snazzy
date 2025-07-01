@@ -1,6 +1,7 @@
 from functools import partial
 from pathlib import Path
 import sys
+import traceback
 
 import numpy as np
 import pyqtgraph as pg
@@ -73,10 +74,6 @@ class MainWindow(QMainWindow):
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
 
-    def render_next_trace(self, forward: bool):
-        next_emb_name, next_exp = self.model.get_next_emb_name(forward)
-        self.select_embryo(next_emb_name, next_exp)
-
     def _get_directory(self) -> Path | None:
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
         if not directory:
@@ -87,7 +84,7 @@ class MainWindow(QMainWindow):
         return (
             f"group{len(self.model.groups) + 1}"
             if is_new_group
-            else self.model.curr_group
+            else self.model.selected_group.name
         )
 
     def _show_experiment_dialog(self, config: Config, group_name: str):
@@ -107,6 +104,7 @@ class MainWindow(QMainWindow):
             return
         return dialog.get_values()
 
+    # TODO: it should be easier to update Config from the GUI
     def _update_config(self, config: Config, dialog_values):
         exp_params = config.get_exp_params()
         new_exp_params = {k: v for k, v in dialog_values.items() if k in exp_params}
@@ -152,13 +150,11 @@ class MainWindow(QMainWindow):
             if should_reset_model:
                 self.model.set_initial_state()
 
-            if is_new_group and group_name:
-                self.model.add_group(group_name)
-
             self._present_loading()
 
             self._start_experiment_worker(config, group_name)
         except Exception as e:
+            traceback.print_exc()
             self.show_error_message(str(e))
 
     def handle_open_err(self, err: Exception):
@@ -189,7 +185,11 @@ class MainWindow(QMainWindow):
         self._open_directory(is_new_group=False)
 
     def change_group(self, i):
-        self.model.set_curr_group(self.group_combo_box.itemText(i))
+        group_name = self.group_combo_box.itemText(i)
+        group = self.model.get_group_by_name(group_name)
+        if group is None:
+            return
+        self.model.select_group(group)
 
         self.clear_layout(self.bottom_layout)
         self.paint_graphs()
@@ -197,22 +197,22 @@ class MainWindow(QMainWindow):
         self.plot_all_traces()
 
     def display_plots(self):
-        curr_group = self.model.curr_group
-        embs = self.model.get_selected_embs(curr_group)
-        curr_trace = self.model.get_curr_trace()
-        self.pw = PlotWindow(embs, self.model.curr_group, curr_trace)
+        curr_group = self.model.selected_group
+        embs = list(emb for exp_name, emb in curr_group.iter_all_embryos())
+        curr_trace = self.model.selected_trace
+        self.pw = PlotWindow(embs, curr_group.name, curr_trace)
         self.pw.show()
 
     def display_compare_plots(self):
-        groups = self.model.get_filtered_groups()
+        groups = self.model.groups
         self.cpw = ComparePlotWindow(groups)
         self.cpw.show()
 
     def display_phase_boundaries(self):
-        exp = self.model.get_curr_experiment()
-        traces = [e.trace for e in exp.embryos.values()]
+        exp = self.model.selected_experiment
+        traces = [e.trace for e in exp.embryos]
 
-        current_trace = self.model.curr_emb_name
+        current_trace = self.model.selected_trace
         current_trace_idx = 0
         for i, trace in enumerate(traces):
             if trace.name == current_trace:
@@ -232,7 +232,7 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def display_embryo_movie(self):
-        exp = self.model.get_curr_experiment()
+        exp = self.model.selected_experiment
         try:
             self.viewer = ImageSequenceViewer(exp.directory, exp)
         except FileNotFoundError as e:
@@ -241,7 +241,7 @@ class MainWindow(QMainWindow):
         self.viewer.show()
 
     def display_field_of_view(self):
-        exp = self.model.get_curr_experiment()
+        exp = self.model.selected_experiment
         img_path = exp.directory / "emb_numbers.png"
         try:
             self.image_window = ImageWindow(str(img_path))
@@ -270,11 +270,11 @@ class MainWindow(QMainWindow):
             select_group.activated.connect(self.change_group)
 
             for i, group in enumerate(self.model.groups):
-                select_group.insertItem(i, group)
+                select_group.insertItem(i, group.name)
 
             return select_group
 
-        label_text = self.model.curr_group
+        label_text = self.model.selected_group.name
         return QLabel(label_text)
 
     def paint_top_app_bar(self):
@@ -324,7 +324,8 @@ class MainWindow(QMainWindow):
             self.toggle_dev_time_btn.setText("Time")
         else:
             self.toggle_dev_time_btn.setText("Dev time")
-        self.update_all_embs()
+        self.render_trace()
+        self.plot_all_traces()
 
     def toggle_display_filtered_dff(self):
         self.display_filtered_dff = not self.display_filtered_dff
@@ -388,14 +389,10 @@ class MainWindow(QMainWindow):
 
             self.calibrate_sliders()
 
-    def toggle_emb_visibility(self, emb_id):
-        exp = self.model.get_curr_experiment()
-        if emb_id in self.model.to_remove[exp.name]:
-            self.model.to_remove[exp.name].remove(emb_id)
-        else:
-            if self.model.get_curr_emb_id() == emb_id:
-                self.render_next_trace(forward=True)
-            self.model.to_remove[exp.name].add(emb_id)
+    def toggle_emb_visibility(self, emb_id, should_remove):
+        self.model.toggle_emb_visibility(emb_id, should_remove)
+        if should_remove:
+            self.render_trace()
 
     def paint_graphs(self):
         self.single_graph_frame = QFrame()
@@ -404,19 +401,19 @@ class MainWindow(QMainWindow):
         self.single_graph_frame.setLayout(single_graph_layout)
 
         # Sidebar start
+        exp = self.model.selected_experiment
         if not self.model.has_combined_experiments():
-            exp = self.model.get_curr_experiment()
-            accepted_embs = set(self.model.get_filtered_emb_numbers(exp.name))
-            removed_embs = set(self.model.to_remove[exp.name])
+            accepted_embs = set([e.name for e in exp.embryos])
+            removed_embs = set(exp.to_remove)
             self.sidebar = RemovableSidebar(
                 self.select_embryo, accepted_embs, removed_embs, exp.name
             )
             self.sidebar.emb_visibility_toggled.connect(self.toggle_emb_visibility)
         else:
-            group = self.model.get_curr_group()
             exp_to_embs = {}
-            for exp_name, exp in group.items():
-                exp_to_embs[exp_name] = self.model.get_filtered_embs(exp_name).keys()
+            group = self.model.selected_group
+            for exp_name, exp in group.experiments.items():
+                exp_to_embs[exp_name] = [e.name for e in exp.embryos]
             self.sidebar = FixedSidebar(exp_to_embs, self.select_embryo)
 
         scroll_area = QScrollArea()
@@ -470,7 +467,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.compare_experiment_action)
 
         self.view_pd_action = QAction("View pd_params data", self)
-        self.view_pd_action.triggered.connect(self.view_json_data)
+        self.view_pd_action.triggered.connect(self.display_json_data)
         self.view_pd_action.setEnabled(False)
         file_menu.addAction(self.view_pd_action)
 
@@ -512,7 +509,7 @@ class MainWindow(QMainWindow):
         )
         menu_bar.addAction(prev_emb_action)
 
-    def view_json_data(self):
+    def display_json_data(self):
         config_data = self.model.get_config_data()
         if config_data is None:
             return
@@ -553,16 +550,16 @@ class MainWindow(QMainWindow):
             self.single_graph_frame.show()
 
     def save_peak_pos(self, peak_widths, peak_index):
-        emb_name = self.model.curr_emb_name
+        emb_name = self.model.selected_embryo
         self.model.save_peak_widths(emb_name, peak_widths, peak_index)
 
     def add_peak(self, x, y):
-        exp = self.model.get_curr_experiment()
-        trace = self.model.get_curr_trace()
-        emb_name = self.model.curr_emb_name
+        embryo = self.model.selected_embryo
+        trace = embryo.trace
+        emb_name = embryo.name
 
         if self.use_dev_time:
-            dev_time = exp.embryos[emb_name].lin_developmental_time()
+            dev_time = embryo.lin_developmental_time()
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
@@ -576,12 +573,12 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def remove_peak(self, x, y):
-        exp = self.model.get_curr_experiment()
-        trace = self.model.get_curr_trace()
-        emb_name = self.model.curr_emb_name
+        embryo = self.model.selected_embryo
+        trace = embryo.trace
+        emb_name = embryo.name
 
         if self.use_dev_time:
-            dev_time = exp.embryos[emb_name].lin_developmental_time()
+            dev_time = embryo.lin_developmental_time()
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
@@ -598,13 +595,12 @@ class MainWindow(QMainWindow):
         """Repaints peaks for the trace currently being displayed.
 
         This funciton runs after any of the peak detection params sliders change."""
-
         pd_params = self.collect_slider_params()
 
         if pd_params is None:
             pd_params = self.model.get_pd_params()
 
-        trace = self.model.get_curr_trace()
+        trace = self.model.selected_trace
         trace.detect_peaks(pd_params["freq"])
         trace.compute_peak_bounds(pd_params["peak_width"])
         self.render_trace()
@@ -629,70 +625,56 @@ class MainWindow(QMainWindow):
         """Recalculates peak indices for all embryos.
 
         Persists peak detection params in `peak_detection_params.json`."""
-        for exp_name, exp in self.model.get_curr_group().items():
-            pd_params = self.collect_slider_params()
-
-            if pd_params is None:
-                pd_params = self.model.get_pd_params()
-
-            to_remove = list(self.model.to_remove[exp_name])
-
-            for emb in exp.embryos.values():
-                emb.trace.detect_peaks(pd_params["freq"])
-                emb.trace.compute_peak_bounds(pd_params["peak_width"])
-
-            new_data = {"pd_params": pd_params, "exp_params": {"to_remove": to_remove}}
-            self.model.update_config(new_data)
+        pd_params = self.collect_slider_params()
+        self.model.calc_peaks_all_embs(pd_params)
 
     def plot_all_traces(self):
         self.clear_layout(self.graph_layout)
-        group = self.model.get_filtered_group()
-        for exp_name, exp in group.items():
-            for emb in exp.embryos.values():
-                callback = partial(
-                    self.select_embryo_from_multi_view, emb.name, exp_name
+
+        exps_and_embryos = list(self.model.selected_group.iter_all_embryos())
+        for exp_name, emb in exps_and_embryos:
+            callback = partial(self.select_embryo_from_multi_view, emb.name, exp_name)
+            plot_widget = ClickableViewBox(callback)
+            plot_widget.setMinimumHeight(200)
+
+            trace = emb.trace
+            if self.use_dev_time:
+                dev_time = emb.lin_developmental_time()
+                time = dev_time[: trace.trim_idx]
+            else:
+                time = trace.time[: trace.trim_idx] / 60
+            dff = trace.dff[: trace.trim_idx]
+
+            plot_widget.plot(time, dff)
+
+            if self.model.has_combined_experiments():
+                plot_widget.setTitle(f"{exp_name} - {emb.name}")
+            else:
+                plot_widget.setTitle(emb.name)
+
+            self.graph_layout.addWidget(plot_widget)
+
+            if trace.to_add or trace.to_remove:
+                ttad = np.array([*trace.to_add, *trace.to_remove])
+                manual_times = time[ttad]
+                manual_amps = dff[ttad]
+                manual_scatter = pg.ScatterPlotItem(
+                    manual_times, manual_amps, size=10, brush=QColor("cyan")
                 )
-                plot_widget = ClickableViewBox(callback)
-                plot_widget.setMinimumHeight(200)
+                plot_widget.addItem(manual_scatter)
 
-                trace = emb.trace
-                if self.use_dev_time:
-                    dev_time = emb.lin_developmental_time()
-                    time = dev_time[: trace.trim_idx]
-                else:
-                    time = trace.time[: trace.trim_idx] / 60
-                dff = trace.dff[: trace.trim_idx]
+            if len(trace.peak_idxes) == 0:
+                continue
+            peak_times = time[trace.peak_idxes]
 
-                plot_widget.plot(time, dff)
+            scatter_plot_item = pg.ScatterPlotItem(
+                size=8,
+                brush=pg.mkColor("m"),
+            )
+            peak_amps = trace.peak_amplitudes
+            scatter_plot_item.setData(peak_times, peak_amps)
 
-                if self.model.has_combined_experiments():
-                    plot_widget.setTitle(f"{exp_name} - {emb.name}")
-                else:
-                    plot_widget.setTitle(emb.name)
-
-                self.graph_layout.addWidget(plot_widget)
-
-                if trace.to_add or trace.to_remove:
-                    ttad = np.array([*trace.to_add, *trace.to_remove])
-                    manual_times = time[ttad]
-                    manual_amps = dff[ttad]
-                    manual_scatter = pg.ScatterPlotItem(
-                        manual_times, manual_amps, size=10, brush=QColor("cyan")
-                    )
-                    plot_widget.addItem(manual_scatter)
-
-                if len(trace.peak_idxes) == 0:
-                    continue
-                peak_times = time[trace.peak_idxes]
-
-                scatter_plot_item = pg.ScatterPlotItem(
-                    size=8,
-                    brush=pg.mkColor("m"),
-                )
-                peak_amps = trace.peak_amplitudes
-                scatter_plot_item.setData(peak_times, peak_amps)
-
-                plot_widget.addItem(scatter_plot_item)
+            plot_widget.addItem(scatter_plot_item)
 
     def calibrate_sliders(self):
         """Adjusts the sliders based on pd_params.json.
@@ -734,15 +716,21 @@ class MainWindow(QMainWindow):
         self.select_embryo(emb_name, exp_name)
 
     def select_embryo(self, emb_name, exp_name):
-        self.model.set_curr_emb(emb_name)
-        self.model.set_curr_exp(exp_name)
+        exp = self.model.selected_group.experiments[exp_name]
+        emb = exp.get_embryo(emb_name)
+        self.model.select_experiment(exp)
+        self.model.select_embryo(emb)
+        self.render_trace()
+
+    def render_next_trace(self, forward: bool):
+        self.model.move_to_next_emb(forward)
         self.render_trace()
 
     def render_trace(self):
         """Render data about the currently selected embryo."""
         trace, time, trimmed_time, dff = self.model.get_trace_context(self.use_dev_time)
-        emb_name = self.model.curr_emb_name
-        exp_name = self.model.curr_exp
+        emb_name = self.model.selected_embryo.name
+        exp_name = self.model.selected_experiment.name
 
         self._clear_current_plot()
         self._plot_raw_trace(trimmed_time, dff)
@@ -875,7 +863,7 @@ class MainWindow(QMainWindow):
 
     def _set_plot_titles(self, emb_name, exp_name):
         if self.model.has_combined_experiments():
-            exp_name = exp_name or self.model.curr_exp
+            exp_name = exp_name or self.model.selected_experiment
             title = f"{exp_name} - {emb_name}"
         else:
             title = emb_name
@@ -883,8 +871,8 @@ class MainWindow(QMainWindow):
         self.plot_channels.setTitle(title)
 
     def change_dsna_start(self, il_obj):
-        trace = self.model.get_curr_trace()
-        emb = self.model.get_curr_embryo()
+        trace = self.model.selected_trace
+        emb = self.model.selected_embryo
 
         if self.use_dev_time:
             dev_time = emb.lin_developmental_time()
@@ -920,8 +908,8 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def change_trim_idx(self, il_obj):
-        trace = self.model.get_curr_trace()
-        emb = self.model.get_curr_embryo()
+        trace = self.model.selected_trace
+        emb = self.model.selected_embryo
 
         if self.use_dev_time:
             dev_time = emb.lin_developmental_time()
@@ -957,7 +945,7 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def change_peak_bounds(self, il_obj):
-        emb = self.model.get_curr_embryo()
+        emb = self.model.selected_embryo
 
         # since each peak has two bounds, we can recover the peak index
         # and bound index from the line number
