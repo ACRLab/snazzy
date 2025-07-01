@@ -14,7 +14,7 @@ def emb():
     config = Config(VALID_DIR)
     config.update_params({"exp_params": {"to_exclude": [to_exclude]}})
     exp = Experiment(VALID_DIR, config)
-    return exp.embryos["emb1"]
+    return exp.get_embryo("emb1")
 
 
 @pytest.fixture

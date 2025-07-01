@@ -4,7 +4,7 @@ import os
 import pytest
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture(scope="module", autouse=True)
 def clear_pd_params():
     yield
     for dir in Path("tests/assets/data").iterdir():
