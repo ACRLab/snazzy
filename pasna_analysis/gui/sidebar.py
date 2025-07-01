@@ -47,7 +47,7 @@ class FixedSidebar(QWidget):
 
 
 class RemovableSidebar(QWidget):
-    emb_visibility_toggled = pyqtSignal(str)
+    emb_visibility_toggled = pyqtSignal(str, bool)
 
     def __init__(
         self,
@@ -112,7 +112,7 @@ class RemovableSidebar(QWidget):
         self.populate_buttons(self.accepted_embs, self.accepted_layout, True)
         self.populate_buttons(self.removed_embs, self.removed_layout, False)
 
-        self.emb_visibility_toggled.emit(label)
+        self.emb_visibility_toggled.emit(label, is_accepted)
 
     def clear_layout(self, layout):
         """Clear all widgets from a layout."""
