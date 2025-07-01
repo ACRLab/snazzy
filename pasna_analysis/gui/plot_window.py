@@ -89,10 +89,16 @@ class PlotWindow(QWidget):
 
         Embryos are represented as horizontal lines."""
         self.clear_plot()
+        if len(self.embryos) == 0:
+            return
 
         times = []
         for emb in self.embryos:
             trace = emb.trace
+
+            if len(trace.peak_idxes) == 0:
+                continue
+
             times.append(
                 [t / 60 for t in trace.peak_times if t < trace.time[trace.trim_idx]]
             )
@@ -114,6 +120,8 @@ class PlotWindow(QWidget):
     def plot_AUC(self, save=False, save_dir=None):
         """Binned area under the curve."""
         self.clear_plot()
+        if len(self.embryos) == 0:
+            return
 
         data = {"auc": [], "bin": [], "emb": []}
         n_bins = 5
@@ -121,6 +129,9 @@ class PlotWindow(QWidget):
         bin_width = 0.2
         for i, emb in enumerate(self.embryos):
             trace = emb.trace
+
+            if len(trace.peak_idxes) == 0:
+                continue
 
             dev_time_at_peaks = emb.get_DT_from_time(trace.peak_times)
 
@@ -157,9 +168,14 @@ class PlotWindow(QWidget):
 
     def plot_burst_correlogram(self, save=False, save_dir=None):
         self.clear_plot()
+        if len(self.embryos) == 0:
+            return
 
         dff = self.curr_trace.dff.copy()
         peak_indices = self.curr_trace.peak_idxes
+
+        if len(peak_indices) == 0:
+            return
 
         n = len(peak_indices)
         corr_matrix = np.zeros((n, n))
@@ -191,6 +207,8 @@ class PlotWindow(QWidget):
 
     def plot_high_frequency_distances(self, save=False, save_dir=None):
         self.clear_plot()
+        if len(self.embryos) == 0 or len(self.curr_trace.peak_idxes) == 0:
+            return
 
         hi_pass = self.curr_trace.get_filtered_signal(0.02, low_pass=False)
 

@@ -15,6 +15,7 @@ KEY_TYPES = {
     "to_exclude": list,
     "to_remove": list,
     "has_transients": bool,
+    "has_dsna": bool,
     "pd_params": dict,
     "freq": float,
     "trim_zscore": float,
@@ -125,10 +126,13 @@ class JsonViewer(QWidget):
     def parse_value(self, key, value):
         # all lists in Config at the moment are list[int]
         if key.startswith("["):
-            return int(value)
+            return str(value)
         if key not in KEY_TYPES:
             raise ValueError(f"Got a key that is not part of config params: {key}.")
         try:
-            return KEY_TYPES[key](value)
+            ktype = KEY_TYPES[key]
+            if ktype == bool:
+                return True if value == "True" else False
+            return ktype(value)
         except ValueError:
             return value

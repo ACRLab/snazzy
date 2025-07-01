@@ -9,6 +9,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from pasna_analysis import utils
+
 
 def convert_value(value: str, field_name: str):
     """Convert fields for the corresponding type based on field name."""
@@ -20,17 +22,24 @@ def convert_value(value: str, field_name: str):
     elif field_name == "dff_strategy":
         return value
     elif field_name == "to_exclude" or field_name == "to_remove":
-        return [int(x) for x in value.strip("[]").split(",") if x.strip()]
+        return [f"emb{x.strip()}" for x in value.strip("[]").split(",") if x.strip()]
     else:
         return value
 
 
 class ExperimentParamsDialog(QDialog):
+    """Present Experiment params that can be changed before creating an Experiment.
+
+    Embryos are presented as embryo ids, to make the input easier to change.
+    Internally, pasna_analysis uses embryo names, so when data is coming in / going
+    out it has to alternate between emb_names and emb_ids.
+    """
+
     def __init__(self, properties, exp_path, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Experiment parameters")
         self.setFixedWidth(480)
-        self.properties = properties
+        self.adjust_emb_names(properties)
         self.inputs = {}
         self.combo_keys = {"dff_strategy": ["baseline", "local_minima"]}
 
@@ -67,6 +76,20 @@ class ExperimentParamsDialog(QDialog):
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
+
+    def adjust_emb_names(self, properties):
+        """Convert the embryo names to embryo ids, so its easier to add / remove embryos."""
+        for key in ("to_remove", "to_exclude"):
+            if key in properties:
+                if properties[key]:
+                    # keeping this check for compatibility:
+                    # previous versions of pd_params used to save ids instead of emb_names
+                    if properties[key][0].isdigit():
+                        properties[key] = [int(emb_id) for emb_id in properties[key]]
+                    else:
+                        properties[key] = [
+                            utils.emb_id(emb_name) for emb_name in properties[key]
+                        ]
 
     def showEvent(self, event):
         super().showEvent(event)
