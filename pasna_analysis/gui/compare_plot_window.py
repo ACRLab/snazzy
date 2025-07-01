@@ -9,13 +9,13 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
-from pasna_analysis import Experiment
+from pasna_analysis.gui import GroupModel
 
 matplotlib.use("QtAgg")
 
 
 class ComparePlotWindow(QWidget):
-    def __init__(self, groups: dict[str, dict[str, Experiment]]):
+    def __init__(self, groups: list[GroupModel]):
         super().__init__()
 
         self.groups = groups
@@ -59,9 +59,9 @@ class ComparePlotWindow(QWidget):
         self.create_buttons()
 
     def save_all_plots(self):
-        for group in self.groups.values():
-            for exp in group.values():
-                exp_dir = exp.pd_params_path.parent
+        for group in self.groups:
+            for exp in group.experiments.values():
+                exp_dir = exp.directory.parent
                 timestamp = datetime.now().strftime("%m%d%Y_%H:%M:%S")
                 save_path = exp_dir / "plots" / timestamp
                 save_path.mkdir(parents=True, exist_ok=True)
@@ -91,15 +91,14 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"dev_fp": [], "group": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    if emb.trace.peak_times.size == 0:
-                        continue
-                    time_first_peak = emb.trace.peak_times[0]
-                    dev_time_first_peak = emb.get_DT_from_time(time_first_peak)
-                    data["dev_fp"].append(dev_time_first_peak)
-                    data["group"].append(group_name)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                if emb.trace.peak_times.size == 0:
+                    continue
+                time_first_peak = emb.trace.peak_times[0]
+                dev_time_first_peak = emb.get_DT_from_time(time_first_peak)
+                data["dev_fp"].append(dev_time_first_peak)
+                data["group"].append(group.name)
 
         sns.swarmplot(
             data=data,
@@ -127,15 +126,14 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"dev_hatching": [], "group": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    trace = emb.trace
-                    time_hatching = trace.time[trace.trim_idx]
-                    dev_time_first_peak = emb.get_DT_from_time(time_hatching)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                trace = emb.trace
+                time_hatching = trace.time[trace.trim_idx]
+                dev_time_first_peak = emb.get_DT_from_time(time_hatching)
 
-                    data["dev_hatching"].append(dev_time_first_peak)
-                    data["group"].append(group_name)
+                data["dev_hatching"].append(dev_time_first_peak)
+                data["group"].append(group.name)
 
         ax = sns.swarmplot(
             data=data,
@@ -162,15 +160,14 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"group": [], "duration": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    trace = emb.trace
-                    if trace.peak_times.size == 0:
-                        continue
-                    data["group"].append(group_name)
-                    duration = (trace.time[trace.trim_idx] - trace.peak_times[0]) / 60
-                    data["duration"].append(duration)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                trace = emb.trace
+                if trace.peak_times.size == 0:
+                    continue
+                data["group"].append(group.name)
+                duration = (trace.time[trace.trim_idx] - trace.peak_times[0]) / 60
+                data["duration"].append(duration)
 
         ax = sns.swarmplot(data=data, x="group", y="duration", hue="group", ax=self.ax)
         ax.set_title("SNA duration")
@@ -189,12 +186,11 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"group": [], "num_eps": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    trace = emb.trace
-                    data["group"].append(group_name)
-                    data["num_eps"].append(len(trace.peak_idxes))
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                trace = emb.trace
+                data["group"].append(group.name)
+                data["num_eps"].append(len(trace.peak_idxes))
 
         ax = sns.swarmplot(data=data, x="group", y="num_eps", hue="group", ax=self.ax)
         ax.set_title("Number of episodes")
@@ -213,12 +209,11 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"dev_time": [], "group": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    dev_times = [emb.get_DT_from_time(t) for t in emb.trace.peak_times]
-                    data["dev_time"].extend(dev_times)
-                    data["group"].extend([group_name] * len(dev_times))
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                dev_times = [emb.get_DT_from_time(t) for t in emb.trace.peak_times]
+                data["dev_time"].extend(dev_times)
+                data["group"].extend([group.name] * len(dev_times))
 
         sns.ecdfplot(data=data, x="dev_time", hue="group", ax=self.ax)
 
@@ -240,13 +235,12 @@ class ComparePlotWindow(QWidget):
         data = {"peak_amp": [], "group": [], "peak_idx": []}
         num_of_peaks = 15
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    for i, amp in zip(range(num_of_peaks), emb.trace.peak_amplitudes):
-                        data["peak_amp"].append(amp)
-                        data["group"].append(group_name)
-                        data["peak_idx"].append(i)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                for i, amp in zip(range(num_of_peaks), emb.trace.peak_amplitudes):
+                    data["peak_amp"].append(amp)
+                    data["group"].append(group.name)
+                    data["peak_idx"].append(i)
 
         dodge = len(set(data["group"])) > 1
         sns.pointplot(
@@ -277,13 +271,12 @@ class ComparePlotWindow(QWidget):
         data = {"group": [], "dev_time": [], "idx": []}
         num_of_peaks = 15
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    for i, t in zip(range(num_of_peaks), emb.trace.peak_times):
-                        data["group"].append(group_name)
-                        data["dev_time"].append(emb.get_DT_from_time(t))
-                        data["idx"].append(i)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                for i, t in zip(range(num_of_peaks), emb.trace.peak_times):
+                    data["group"].append(group.name)
+                    data["dev_time"].append(emb.get_DT_from_time(t))
+                    data["idx"].append(i)
 
         dodge = len(set(data["group"])) > 1
         sns.pointplot(
@@ -314,15 +307,12 @@ class ComparePlotWindow(QWidget):
         data = {"group": [], "interval": [], "idx": []}
         num_of_peaks = 15
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    for i, interval in zip(
-                        range(num_of_peaks), emb.trace.peak_intervals
-                    ):
-                        data["group"].append(group_name)
-                        data["interval"].append(interval / 60)
-                        data["idx"].append(i)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                for i, interval in zip(range(num_of_peaks), emb.trace.peak_intervals):
+                    data["group"].append(group.name)
+                    data["interval"].append(interval / 60)
+                    data["idx"].append(i)
 
         dodge = len(set(data["group"])) > 1
         sns.pointplot(
@@ -353,21 +343,18 @@ class ComparePlotWindow(QWidget):
         num_of_peaks = 15
         data = {"group": [], "qa_ratio": [], "idx": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    trace = emb.trace
-                    for i, (ps, pe) in zip(
-                        range(num_of_peaks), trace.peak_bounds_times
-                    ):
-                        try:
-                            next_ps = trace.peak_bounds_times[i + 1][0]
-                        except IndexError:
-                            break
-                        qa = (next_ps - pe) / (next_ps - ps)
-                        data["group"].append(group_name)
-                        data["qa_ratio"].append(qa)
-                        data["idx"].append(i)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                trace = emb.trace
+                for i, (ps, pe) in zip(range(num_of_peaks), trace.peak_bounds_times):
+                    try:
+                        next_ps = trace.peak_bounds_times[i + 1][0]
+                    except IndexError:
+                        break
+                qa = (next_ps - pe) / (next_ps - ps)
+                data["group"].append(group.name)
+                data["qa_ratio"].append(qa)
+                data["idx"].append(i)
 
         sns.pointplot(
             data=data, x="idx", y="qa_ratio", hue="group", linestyle="None", ax=self.ax
@@ -391,13 +378,12 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"group": [], "decay_times": [], "idx": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    for i, decay in zip(range(15), emb.trace.peak_decay_times):
-                        data["group"].append(group_name)
-                        data["decay_times"].append(decay / 60)
-                        data["idx"].append(i)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                for i, decay in zip(range(15), emb.trace.peak_decay_times):
+                    data["group"].append(group.name)
+                    data["decay_times"].append(decay / 60)
+                    data["idx"].append(i)
 
         dodge = len(set(data["group"])) > 1
         sns.pointplot(
@@ -430,13 +416,13 @@ class ComparePlotWindow(QWidget):
         else:
             self.ax = ax
 
-        for i, (group_name, group) in enumerate(self.groups.items()):
+        for i, group in enumerate(self.groups):
             f_zero = None
             t_zero = None
-            for exp in group.values():
+            for exp in group.experiments.values():
                 Zxxs = []
-                for emb in exp.embryos.values():
-                    stft = emb.trace.calculate_STFT(duration=3600)
+                for emb in exp.embryos:
+                    stft = emb.trace.stft(duration=3600)
                     if stft is None:
                         continue
                     f, t, Zxx = stft
@@ -458,7 +444,7 @@ class ComparePlotWindow(QWidget):
                 shading="nearest",
                 snap=True,
             )
-            self.ax[i].set_title(group_name)
+            self.ax[i].set_title(group.name)
             self.ax[i].set_ylabel("Hz")
             self.ax[i].set_xlabel("time (mins)")
 
@@ -476,13 +462,12 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"group": [], "duration": [], "idx": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    for i, duration in zip(range(15), emb.trace.peak_durations):
-                        data["group"].append(group_name)
-                        data["duration"].append(duration / 60)
-                        data["idx"].append(i)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                for i, duration in zip(range(15), emb.trace.peak_durations):
+                    data["group"].append(group.name)
+                    data["duration"].append(duration / 60)
+                    data["idx"].append(i)
 
         dodge = len(set(data["group"])) > 1
         ax = sns.pointplot(
@@ -491,7 +476,6 @@ class ComparePlotWindow(QWidget):
 
         ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
         ax.set_title("Durations by peak")
-        ax.set_xlabel("Peak #")
         ax.set_ylabel("Duration (min)")
 
         if not save:
@@ -508,13 +492,12 @@ class ComparePlotWindow(QWidget):
         self.clear_axes()
         data = {"group": [], "duration": [], "idx": []}
 
-        for group_name, group in self.groups.items():
-            for exp in group.values():
-                for emb in exp.embryos.values():
-                    for i, duration in zip(range(15), emb.trace.peak_rise_times):
-                        data["group"].append(group_name)
-                        data["duration"].append(duration)
-                        data["idx"].append(i)
+        for group in self.groups:
+            for exp_name, emb in group.iter_all_embryos():
+                for i, duration in zip(range(15), emb.trace.peak_rise_times):
+                    data["group"].append(group.name)
+                    data["duration"].append(duration)
+                    data["idx"].append(i)
 
         dodge = len(set(data["group"])) > 1
         ax = sns.pointplot(

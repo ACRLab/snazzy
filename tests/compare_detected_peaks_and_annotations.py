@@ -43,7 +43,7 @@ def load_data(annotated_path, exp_dir, annot_type):
 
         for annot in annotations:
             emb_name = annot.emb_name
-            trace = exp.embryos[emb_name].trace
+            trace = exp.get_embryo(emb_name).trace
             calc_idxes = get_peak_idxes(exp, emb_name)
             yield (annot, calc_idxes, exp_name, trace)
 
@@ -136,7 +136,7 @@ def get_comparison_results(annot_to_exp, annot_type):
 
 
 def get_peak_idxes(exp: Experiment, emb_name):
-    idxs = exp.embryos[emb_name].trace.peak_idxes
+    idxs = exp.get_embryo(emb_name).trace.peak_idxes
     return [int(idx) for idx in idxs]
 
 

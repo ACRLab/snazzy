@@ -1,40 +1,65 @@
-from copy import deepcopy
-import sys
-import traceback
-
-from PyQt6.QtCore import pyqtSignal, QObject, QRunnable
-
-from pasna_analysis import Config, Embryo, Experiment, Trace, utils
+from pasna_analysis import Config, Embryo, Experiment, utils
 from pasna_analysis.gui import PeakMatcher
 
 
-class WorkerSignals(QObject):
-    finished = pyqtSignal()
-    error = pyqtSignal(object)
-    result = pyqtSignal(object)
+class ExperimentModel:
+    def __init__(self, experiment: Experiment):
+        self.experiment = experiment
+        self.to_remove = self.get_removed_embryos()
+        self.selected_embryo = self.embryos[0]
+
+    @property
+    def embryos(self):
+        """List of filtered embryos for this experiment."""
+        return [e for e in self.all_embryos() if e.name not in self.to_remove]
+
+    def __getattr__(self, name):
+        return getattr(self.experiment, name)
+
+    def get_embryo(self, emb_name):
+        for embryo in self.all_embryos():
+            if embryo.name == emb_name:
+                return embryo
+        raise ValueError(f"Could not find {emb_name} in experiment {self.name}.")
+
+    def get_emb_ids(self):
+        return [e.get_id() for e in self.embryos]
+
+    def all_embryos(self):
+        return self.experiment.get_all_embryos()
+
+    def get_removed_embryos(self):
+        manual_remove = self.experiment.exp_params.get("to_remove", [])
+        if self.experiment.filtered_out is not None:
+            manual_remove.extend(self.experiment.filtered_out)
+        return set(manual_remove)
+
+    def mark_as_accepted(self, emb_name):
+        self.to_remove.remove(emb_name)
+
+    def mark_as_removed(self, emb_name):
+        self.to_remove.add(emb_name)
 
 
-class Worker(QRunnable):
-    finished = pyqtSignal()
+class GroupModel:
+    def __init__(self, name: str):
+        self.name = name
+        self.experiments: dict[str, ExperimentModel] = {}
 
-    def __init__(self, fn, *args, **kwargs):
-        super().__init__()
-        self.fn = fn
-        self.args = args
-        self.kwargs = kwargs
-        self.signals = WorkerSignals()
+    def add_experiment(self, exp: ExperimentModel):
+        if exp.name in self.experiments:
+            raise ValueError("Experiment already added to this group.")
+        self.experiments[exp.name] = exp
 
-    def run(self):
-        try:
-            result = self.fn(*self.args, **self.kwargs)
-        except Exception:
-            traceback.print_exc()
-            value = sys.exc_info()[1]
-            self.signals.error.emit(value)
-        else:
-            self.signals.result.emit(result)
-        finally:
-            self.signals.finished.emit()
+    def remove_experiment(self, exp: ExperimentModel):
+        if exp.name in self.experiments:
+            del self.experiments[exp.name]
+
+    def iter_all_embryos(self):
+        """Yield tuples of exp_name, embryo for all valid embryos in a Group."""
+        for exp_name, exp in self.experiments.items():
+            for emb in exp.embryos:
+                yield exp_name, emb
 
 
 class Model:
@@ -43,24 +68,38 @@ class Model:
         self.set_initial_state()
 
     def __str__(self):
-        group_names = list(self.groups.keys())
-        to_remove_count = {k: len(v) for k, v in self.to_remove.items()}
+        group_names = [g.name for g in self.groups]
+        to_remove_count = {
+            exp: len(exp.to_remove)
+            for g in self.groups
+            for exp in g.experiments.values()
+        }
         return (
             f"Model(\n"
             f"  groups: {group_names} groups\n"
-            f"  curr_group: {self.curr_group}\n"
+            f"  curr_group: {self.selected_group.name}\n"
             f"  to_remove: {to_remove_count}\n"
-            f"  curr_exp: {self.curr_exp}\n"
-            f"  curr_emb_name: {self.curr_emb_name}\n"
+            f"  curr_exp: {self.selected_experiment.name}\n"
+            f"  curr_emb_name: {self.selected_embryo.name}\n"
             f")"
         )
 
+    @property
+    def selected_trace(self):
+        if self.selected_experiment is None:
+            return None
+        return self.selected_experiment.selected_embryo.trace
+
+    @property
+    def selected_embryo(self):
+        if self.selected_experiment is None:
+            return None
+        return self.selected_experiment.selected_embryo
+
     def set_initial_state(self):
-        self.groups: dict[str, dict[str, Experiment]] = {}
-        self.curr_group = None
-        self.to_remove: dict[str, set] = {}
-        self.curr_exp = None
-        self.curr_emb_name = None
+        self.groups: list[GroupModel] = []
+        self.selected_group: GroupModel = None
+        self.selected_experiment: ExperimentModel = None
 
     def create_experiment(self, config: Config, group_name: str):
         exp = Experiment(config.exp_path, config)
@@ -71,47 +110,90 @@ class Model:
                 f"Could not find any embryos with first peak after {first_peak_threshold} minutes."
             )
 
-        self.add_experiment(exp, group_name)
-        exp_params = exp.config.get_exp_params()
-        self.to_remove[exp.name] = set(exp_params.get("to_remove", []))
+        return self.add_experiment(ExperimentModel(exp), group_name)
 
-        return exp
+    def add_experiment(self, experiment: ExperimentModel, group_name: str):
+        group = self.get_group_by_name(group_name)
+        if group is None:
+            group = self.create_group(group_name)
+            self.add_group(group)
+
+        group.add_experiment(experiment)
+
+        self.select_group(group)
+        self.select_experiment(experiment)
+        self.select_embryo(experiment.embryos[0])
+
+    def create_group(self, group_name: str) -> GroupModel:
+        for g in self.groups:
+            if g.name == group_name:
+                return
+        group = GroupModel(group_name)
+        self.add_group(group)
+        return group
+
+    def add_group(self, group: GroupModel):
+        for g in self.groups:
+            if g.name == group.name:
+                return
+        self.groups.append(group)
+
+    def select_group(self, group: GroupModel):
+        if self.selected_group == group:
+            return
+        self.selected_group = group
+        if group.experiments:
+            self.select_experiment(next(iter(group.experiments.values())))
+
+    def select_experiment(self, experiment: ExperimentModel):
+        if self.selected_experiment == experiment:
+            return
+        self.selected_experiment = experiment
+
+    def select_embryo(self, embryo: Embryo):
+        if self.selected_experiment.selected_embryo == embryo:
+            return
+        self.selected_experiment.selected_embryo = embryo
+
+    def get_group_by_name(self, name: str) -> GroupModel | None:
+        for group in self.groups:
+            if group.name == name:
+                return group
+        return None
 
     def update_config(self, new_data):
         """Updates the config data for the current experiment."""
-        exp = self.get_curr_experiment()
+        exp = self.selected_experiment
         exp.config.update_params(new_data)
         exp.config.save_params()
 
     def save_trim_idx(self, idx):
         """Updates trim index of the current embryo."""
-        curr_exp = self.get_curr_experiment()
-        emb_name = self.curr_emb_name
-        curr_exp.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
+        exp = self.selected_experiment
+        emb_name = exp.selected_embryo.name
+        exp.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
 
     def save_phase1_end_idx(self, emb_name, idx):
-        curr_exp = self.get_curr_experiment()
-        curr_exp.config.save_manual_peak_data(emb_name, manual_phase1_end=idx)
+        exp = self.selected_experiment
+        exp.config.save_manual_peak_data(emb_name, manual_phase1_end=idx)
 
     def save_dsna_start(self, emb_name, idx):
-        curr_exp = self.get_curr_experiment()
-        curr_exp.config.save_manual_peak_data(emb_name, manual_dsna_start=idx)
+        exp = self.selected_experiment
+        exp.config.save_manual_peak_data(emb_name, manual_dsna_start=idx)
 
     def update_peak_widths(self, peak_index, line_index, new_line_pos):
-        trace = self.get_curr_trace()
+        emb = self.selected_experiment.selected_embryo
 
-        peak_bounds = trace.peak_bounds_indices[peak_index]
+        peak_bounds = emb.trace.peak_bounds_indices[peak_index]
         peak_bounds[line_index] = new_line_pos
 
         peak_bounds = peak_bounds.tolist()
-        # cast to int because will be json dumped
-        peak_index = int(trace.peak_idxes[peak_index])
-        emb_name = self.curr_emb_name
-        self.save_peak_widths(emb_name, peak_bounds, peak_index)
+        peak_index = int(emb.trace.peak_idxes[peak_index])
+        self.save_peak_widths(emb.name, peak_bounds, peak_index)
 
     def save_peak_widths(self, emb_name, peak_widths, peak_index):
-        curr_exp = self.get_curr_experiment()
-        corrected_peaks = curr_exp.config.get_corrected_peaks(emb_name)
+        exp = self.selected_experiment
+        corrected_peaks = exp.config.get_corrected_peaks(emb_name)
         peak_key = str(peak_index)
 
         if corrected_peaks:
@@ -120,12 +202,33 @@ class Model:
         else:
             manual_widths = {peak_key: peak_widths}
 
-        curr_exp.config.save_manual_peak_data(emb_name, manual_widths=manual_widths)
+        exp.config.save_manual_peak_data(emb_name, manual_widths=manual_widths)
+
+    def calc_peaks_all_embs(self, pd_params):
+        """Calculates peaks for all embryos in a given experiment.
+
+        Persists the parameters used to calculate peaks in pd_params.json.
+
+        There's no need to calculate all peaks for all experiments in a Group because
+        the GUI does not support updating combined experiments.
+        If there are combined experiments, the GUI will only present them."""
+        exp = self.selected_experiment
+        if pd_params is None:
+            pd_params = exp.pd_params
+
+        for emb in exp.all_embryos():
+            emb.trace.detect_peaks(pd_params["freq"])
+            emb.trace.compute_peak_bounds(pd_params["peak_width"])
+
+        to_remove = self.selected_experiment.to_remove
+        self.update_config(
+            {"pd_params": pd_params, "exp_params": {"to_remove": to_remove}}
+        )
 
     def add_peak(self, x, emb_name, trace, wlen=10):
         # load corrected data to reconcile with the new add
-        curr_exp = self.get_curr_experiment()
-        corrected_peaks = curr_exp.config.get_corrected_peaks(emb_name)
+        exp = self.selected_experiment
+        corrected_peaks = exp.config.get_corrected_peaks(emb_name)
         manual_remove = [] if not corrected_peaks else corrected_peaks["manual_remove"]
 
         new_peak, new_peaks, removed_peaks = self.pm.add_peak(
@@ -138,15 +241,15 @@ class Model:
         else:
             added_peaks = [new_peak]
 
-        curr_exp.config.save_manual_peak_data(
+        exp.config.save_manual_peak_data(
             emb_name, added_peaks=added_peaks, removed_peaks=removed_peaks, wlen=wlen
         )
         return new_peak, new_peaks
 
     def remove_peak(self, x, emb_name, trace, wlen=10):
         # load corrected data to reconcile with the new add
-        curr_exp = self.get_curr_experiment()
-        corrected_peaks = curr_exp.config.get_corrected_peaks(emb_name)
+        exp = self.selected_experiment
+        corrected_peaks = exp.config.get_corrected_peaks(emb_name)
         manual_add = [] if not corrected_peaks else corrected_peaks["manual_peaks"]
         manual_widths = (
             None if not corrected_peaks else corrected_peaks["manual_widths"]
@@ -163,7 +266,7 @@ class Model:
         if manual_widths and peak_width_to_remove:
             del manual_widths[str(peak_width_to_remove)]
 
-        curr_exp.config.save_manual_peak_data(
+        exp.config.save_manual_peak_data(
             emb_name,
             added_peaks=added_peaks,
             removed_peaks=removed,
@@ -171,10 +274,31 @@ class Model:
         )
         return removed, new_arr
 
-    def clear_manual_data(self):
-        exp = self.get_curr_experiment()
+    def is_emb_accepted(self, emb_id):
+        emb_name = f"emb{emb_id}"
+        exp = self.selected_experiment
+        return emb_name in exp.embryos
 
-        for emb in exp.embryos.values():
+    def toggle_emb_visibility(self, emb_name, should_remove):
+        exp = self.selected_experiment
+        if not should_remove:
+            exp.mark_as_accepted(emb_name)
+        else:
+            next_exp, next_emb = self.get_next_emb_name(forward=True)
+            exp.mark_as_removed(emb_name)
+            experiment = self.selected_group.experiments[next_exp]
+            embryo = experiment.get_embryo(next_emb)
+            self.select_experiment(experiment)
+            self.select_embryo(embryo)
+
+        new_data = {"exp_params": {"to_remove": exp.to_remove}}
+        self.update_config(new_data)
+        return emb_name in exp.to_remove
+
+    def clear_manual_data(self):
+        exp = self.selected_experiment
+
+        for emb in exp.embryos:
             emb.trace.to_add = []
             emb.trace.to_remove = []
 
@@ -184,123 +308,18 @@ class Model:
         exp.config.save_params()
 
     def reset_current_experiment(self):
-        curr_exp = self.get_curr_experiment()
-        exp_path = curr_exp.config.data["exp_path"]
+        exp = self.selected_experiment
+        config = exp.config
 
-        del self.groups[self.curr_group][self.curr_exp]
+        group = self.selected_group
+        group.remove_experiment(exp)
 
-        self.set_curr_emb(None)
-
-        new_exp = Experiment(exp_path=exp_path)
-
-        self.add_experiment(new_exp, group=self.curr_group)
-        exp_params = new_exp.config.get_exp_params()
-        self.to_remove[new_exp.name] = set(exp_params.get("to_remove", []))
-
-    def add_experiment(self, experiment: Experiment, group: str):
-        if group is None:
-            group = self.curr_group
-
-        if experiment in self.groups[group]:
-            raise ValueError("Experiment already added to this group.")
-
-        self.groups[group][experiment.name] = experiment
-        self.to_remove[experiment.name] = set()
-
-        if self.curr_emb_name is None:
-            try:
-                emb_name = next(iter(experiment.embryos))
-            except StopIteration:
-                return
-            self.curr_emb_name = emb_name
-
-        if self.curr_exp is None:
-            self.curr_exp = experiment.name
-
-    def get_filtered_groups(self):
-        groups = deepcopy(self.groups)
-        for group_name, group in groups.items():
-            for exp_name, exp in group.items():
-                exp.embryos = self.get_filtered_embs(exp_name, group_name)
-        return groups
-
-    def get_filtered_embs(self, exp_name: str, group_name: str | None = None):
-        exp = self.get_experiment(exp_name, group_name)
-        if exp_name not in self.to_remove:
-            return exp.embryos
-        return {
-            emb_name: emb
-            for emb_name, emb in exp.embryos.items()
-            if utils.emb_id(emb_name) not in self.to_remove[exp_name]
-        }
-
-    def get_filtered_emb_numbers(self, exp_name: str, group_name: str | None = None):
-        embs = self.get_filtered_embs(exp_name, group_name)
-        return [utils.emb_id(emb_name) for emb_name in embs.keys()]
-
-    def get_filtered_group(self):
-        group = deepcopy(self.groups[self.curr_group])
-        for exp_name, exp in group.items():
-            exp.embryos = self.get_filtered_embs(exp_name)
-        return group
-
-    def set_curr_group(self, group=str):
-        if group not in self.groups:
-            raise ValueError("Group not found.")
-        self.curr_group = group
-
-        self.curr_exp = next(iter(self.groups[group]))
-        curr_exp = self.get_curr_experiment()
-
-        self.curr_emb_name = next(iter(curr_exp.embryos))
-
-    def set_curr_emb(self, emb_name):
-        if emb_name is not None:
-            curr_exp = self.get_curr_experiment()
-            assert emb_name in curr_exp.embryos
-        self.curr_emb_name = emb_name
-
-    def set_curr_exp(self, exp):
-        self.curr_exp = exp
-
-    def get_curr_experiment(self) -> Experiment:
-        return self.groups[self.curr_group][self.curr_exp]
-
-    def get_experiment(
-        self, exp_name: str, group_name: str | None = None
-    ) -> Experiment:
-        """Return an experiment based on experiment name.
-
-        Parameters:
-            exp_name(str):
-                Experiment's name.
-            group_name(str | None ):
-                Group's name. If None, use the currently selected group.
-        """
-        if group_name is None:
-            curr_group = self.get_curr_group()
-        else:
-            curr_group = self.groups[group_name]
-        return curr_group[exp_name]
-
-    def get_curr_group(self) -> dict[str, Experiment]:
-        return self.groups[self.curr_group]
-
-    def get_curr_embryo(self) -> Embryo:
-        exp = self.get_curr_experiment()
-        return exp.embryos[self.curr_emb_name]
-
-    def get_curr_trace(self) -> Trace:
-        exp = self.get_curr_experiment()
-        return exp.embryos[self.curr_emb_name].trace
-
-    def get_curr_emb_id(self) -> int:
-        return utils.emb_id(self.curr_emb_name)
+        self.create_experiment(config, group.name)
 
     def get_trace_context(self, use_dev_time: bool = False):
-        exp = self.get_curr_experiment()
+        exp = self.selected_experiment
 
-        embryo = exp.embryos[self.curr_emb_name]
+        embryo = exp.selected_embryo
         trace = embryo.trace
 
         if use_dev_time:
@@ -313,32 +332,27 @@ class Model:
         return trace, time, time[: trace.trim_idx], dff
 
     def has_dsna(self):
-        curr_exp = self.get_curr_experiment()
-        exp_params = curr_exp.config.get_exp_params()
+        exp = self.selected_experiment
+        exp_params = exp.config.get_exp_params()
         return exp_params.get("has_dsna", False)
 
-    def add_group(self, group: str):
-        if group in self.groups:
-            raise ValueError("Group already exists.")
-        self.groups[group] = {}
-        if self.curr_group is None:
-            self.curr_group = group
-
     def has_combined_experiments(self):
-        return len(self.get_curr_group()) > 1
+        return len(self.selected_group.experiments) > 1
 
     def get_pd_params(self):
-        curr_exp = self.get_curr_experiment()
-        return curr_exp.config.get_pd_params()
+        exp = self.selected_experiment
+        return exp.config.get_pd_params()
 
     def get_config_data(self):
-        if self.curr_exp is None:
+        exp = self.selected_experiment
+        if exp is None:
             return None
-        curr_exp = self.get_curr_experiment()
-        return curr_exp.config.data
+        return exp.config.data
 
     def get_next_emb_name(self, forward: bool) -> tuple[str, str]:
-        """Return the next emb_name and exp of the currenlty selected group.
+        """Return the next valid exp_name and emb_name of the currenlty selected group.
+
+        If an emb marked as to_remove is selected, returns the first valid embryo.
 
         Parameters:
             forward(bool):
@@ -347,23 +361,34 @@ class Model:
             next_values(tuple[str, str]):
                 next_emb_name, next_exp_name
         """
-        if self.curr_exp is None:
+        if self.select_experiment is None:
             return
 
-        emb_names = []
-        for exp_name in self.get_curr_group():
-            embs = self.get_filtered_embs(exp_name)
-            emb_names.extend([(emb, exp_name) for emb in embs])
+        exp_and_embs = [
+            (exp_name, emb.name)
+            for exp_name, emb in self.selected_group.iter_all_embryos()
+        ]
 
-        curr_emb_index = emb_names.index((self.curr_emb_name, self.curr_exp))
+        exp_and_embs.sort(key=lambda e: (e[0], utils.emb_id(e[1])))
+
+        try:
+            exp = self.selected_experiment
+            curr_emb_index = exp_and_embs.index((exp.name, exp.selected_embryo.name))
+        except ValueError:
+            return exp_and_embs[0]
 
         if forward:
-            next_idx = (curr_emb_index + 1) % len(emb_names)
+            next_idx = (curr_emb_index + 1) % len(exp_and_embs)
         else:
-            next_idx = (curr_emb_index - 1) % len(emb_names)
+            next_idx = (curr_emb_index - 1) % len(exp_and_embs)
 
-        next_emb, next_exp = emb_names[next_idx]
-        self.curr_emb_name = next_emb
-        self.curr_exp = next_exp
+        return exp_and_embs[next_idx]
 
-        return emb_names[next_idx]
+    def move_to_next_emb(self, forward):
+        exp_name, emb_name = self.get_next_emb_name(forward)
+
+        experiment = self.selected_group.experiments[exp_name]
+        embryo = experiment.get_embryo(emb_name)
+
+        self.select_experiment(experiment)
+        self.select_embryo(embryo)
