@@ -100,11 +100,11 @@ class TracePhases:
                 Square matrix of distance features.
             num_classes(int):
                 Number of classes to use in threshold_multiotsu. The threshold
-                returned is the highest threshold found by threshold_multiotsu.
-                Using more classes tends to increate the threshold value.
+                returned is the lowest threshold found by threshold_multiotsu.
+                Using more classes tends to decrease the threshold value.
         """
         thres_vals = threshold_multiotsu(dist_matrix, classes=num_classes)
-        return thres_vals[-1]
+        return thres_vals[0]
 
     @staticmethod
     def dist_matrix(features: list) -> np.ndarray:
