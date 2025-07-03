@@ -17,9 +17,18 @@ class TracePhases:
     def __init__(self, trace):
         self.trace = trace
 
-    def get_phase1_end(self) -> int:
-        """Return the index of the last phase 1 peak."""
-        features = self.phase1_features()
+    def get_phase1_end(self, freq: float = 0.025) -> int:
+        """Return the index of the last phase 1 peak.
+
+        Parameters:
+            freq(float):
+                High frequency cutoff value used to calculate the HF feature.
+
+        Returns:
+            phase1_end(int):
+                Time series index of the last phase 1 peak.
+        """
+        features = self.phase1_features(hf_cutoff=freq)
         if len(features) <= 1:
             return -1
         dm = TracePhases.dist_matrix(features)
@@ -28,11 +37,20 @@ class TracePhases:
 
         return self.trace_index(p1_end)
 
-    def get_dsna_start(self, freq) -> int:
+    def get_dsna_start(self, freq: float = 0.002) -> int:
         """Return the index of the first dSNA peak.
 
-        Used for specific traces where this behavior is observed, eg vgludf."""
-        features = self.dsna_features(freq)
+        Used for specific traces where this behavior is observed, eg vgludf.
+
+        Parameters:
+            freq(float):
+                Low frequency cutoff used to calculate the LF feature.
+
+        Returns:
+            dsna_start(int):
+                Time series index of the first dSNA peak.
+        """
+        features = self.dsna_features(lf_cutoff=freq)
         if len(features) <= 1:
             return -1
 
@@ -162,7 +180,13 @@ class TracePhases:
                     return k - 1
         return N - 1
 
-    def plot_phase_change(self, dist_matrix: np.ndarray, change_index: int):
+    def plot_phase_change(
+        self,
+        dist_matrix: np.ndarray,
+        change_index: int,
+        features: list,
+        feature_names: list[str] | None = None,
+    ):
         """Visualize change index with DFF trace and feat dist matrix."""
         peaks = self.trace.peak_idxes
         peak_amps = self.trace.dff[peaks]
@@ -176,11 +200,30 @@ class TracePhases:
             return
 
         fig = plt.figure(figsize=(14, 10))
-        axs = fig.subplot_mosaic([["dff"], ["dist_matrix"]])
+        axs = fig.subplot_mosaic([["dff", "dff"], ["features", "dist_matrix"]])
 
         axs["dff"].axvline(boundary, color="r")
         axs["dff"].plot(self.trace.dff[: self.trace.trim_idx])
         axs["dff"].plot(peak_times, peak_amps, "m.")
+
+        scaler = MinMaxScaler()
+        scaled_features = scaler.fit_transform(features)
+
+        for i, feat in enumerate(zip(*scaled_features)):
+            if feature_names is not None:
+                axs["features"].plot(
+                    feat,
+                    linestyle="None",
+                    marker="o",
+                    markerfacecolor="None",
+                    label=feature_names[i],
+                )
+            else:
+                axs["features"].plot(
+                    feat, linestyle="None", marker="o", markerfacecolor="None"
+                )
+        if feature_names is not None:
+            axs["features"].legend()
 
         sns.heatmap(
             dist_matrix,
