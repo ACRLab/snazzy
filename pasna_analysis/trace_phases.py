@@ -56,9 +56,9 @@ class TracePhases:
         """
         high_pass = self.trace.get_filtered_signal(hf_cutoff, low_pass=False)
 
-        f = self.trace.pd_params["freq"]
+        rel_height = self.trace.pd_params["peak_width"]
         peak_idxes = self.trace.get_all_peak_idxes()
-        peak_bounds = self.trace.compute_peak_bounds(f, peak_idxes)
+        peak_bounds = self.trace.compute_peak_bounds(rel_height, peak_idxes)
         features = []
         for pi, (s, e) in zip(peak_idxes, peak_bounds):
             feature = []
