@@ -129,13 +129,11 @@ class Trace:
                 self.detect_peaks()
         return self._peak_idxes
 
-    def compute_dff(self, window_size=80):
-        """Compute dff for the ratiometric active channel signal.
+    def compute_dff(self):
+        """Compute dff for the ratiometric active channel signal."""
+        default_ws = self.config.default_params.get("baseline_window_size")
+        window_size = self.pd_params.get("baseline_window_size", default_ws)
 
-        Parameters:
-            window_size(int):
-                Size of the window used to calculate the baseline.
-        """
         ratiom_signal = self.compute_ratiom_gcamp()
         dff_strategy = self.pd_params.get("dff_strategy", "")
         if dff_strategy == "baseline":

@@ -47,6 +47,7 @@ class PDParams(BaseModel):
     peak_width: float = 0.98
     freq: float = 0.0025
     dff_strategy: str = "local_minima"
+    baseline_window_size: int = 80
     trim_zscore: float = 0.35
     ISI_factor: float = 4
     low_amp_threshold: float = 0.1
