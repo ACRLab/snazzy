@@ -20,6 +20,7 @@ KEY_TYPES = {
     "freq": float,
     "trim_zscore": float,
     "dff_strategy": str,
+    "baseline_window_size": int,
     "peak_width": float,
     "manual_peaks": list,
     "manual_remove": list,
