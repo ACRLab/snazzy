@@ -123,6 +123,7 @@ class Experiment:
                     self.filtered_out.add(emb.name)
             except (ValueError, IndexError):
                 print(f"No peaks detected for {emb.name}. Skipping..")
+                self.filtered_out.add(emb.name)
             embryos[emb.name] = emb
 
         return embryos
