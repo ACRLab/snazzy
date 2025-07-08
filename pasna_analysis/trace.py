@@ -1,6 +1,7 @@
+import bisect
+
 import numpy as np
 import scipy.signal as spsig
-from scipy.ndimage import minimum_filter1d
 from scipy.stats import zscore
 
 from pasna_analysis import Config, TracePhases
@@ -139,7 +140,9 @@ class Trace:
         if dff_strategy == "baseline":
             baseline = self.compute_baseline(ratiom_signal, window_size)
         elif dff_strategy == "local_minima":
-            baseline = minimum_filter1d(ratiom_signal, size=window_size)
+            baseline = self.average_n_lowest_window(
+                ratiom_signal, window_size, n_lowest=11
+            )
         else:
             raise ValueError(
                 f"Could not apply the dff_strategy specified: {dff_strategy}."
@@ -186,7 +189,6 @@ class Trace:
         # trim/extend dff to duration
         if duration > len(dff):
             pad_size = duration - len(dff)
-            # dff_processed = np.array(list(dff) + [None] * pad_size, dtype=object)
             dff_processed = np.array(list(dff) + [0] * pad_size, dtype=object)
         else:
             dff_processed = dff[0:duration]
@@ -206,6 +208,53 @@ class Trace:
         entire signal."""
         half = window_size // 2
         return np.concatenate((signal[:half], signal, signal[-half:]))
+
+    @staticmethod
+    def average_n_lowest_window(arr, window_size, n_lowest):
+        """Compute the average of the N lowest values for all elements of the array.
+
+        Values at the start and end of the array are reflected.
+        This function uses a sorted sliding window to keep track of the lowest
+        elements efficiently.
+
+        Parameters:
+            arr(list[int]):
+                Input that will be filtered.
+            window_size(int):
+                Number of elements used to look for the lowest values. The window is
+                centered at the corresponding element.
+            n_lowest(int):
+                Number of lowest elements to pick.
+
+        Returns:
+            averages(ndarray):
+                List of same size as `arr` with the average of n_lowest values of a
+                window centered at each element.
+        """
+        if window_size % 2 == 0:
+            raise ValueError("window_size must be odd")
+        if n_lowest > window_size:
+            raise ValueError("n_lowest cannot be greater than window_size")
+
+        half_window = window_size // 2
+        padded = np.pad(arr, pad_width=half_window, mode="reflect")
+        result = np.empty_like(arr, dtype=float)
+
+        sorted_window = sorted(padded[:window_size])
+        result[0] = np.mean(sorted_window[:n_lowest])
+
+        for i in range(1, len(arr)):
+            outgoing = padded[i - 1]
+            incoming = padded[i + window_size - 1]
+
+            idx = bisect.bisect_left(sorted_window, outgoing)
+            sorted_window.pop(idx)
+
+            bisect.insort(sorted_window, incoming)
+
+            result[i] = np.mean(sorted_window[:n_lowest])
+
+        return result
 
     def compute_baseline(self, signal, window_size=160, n_bins=64):
         """Compute baseline for each sliding window by dividing up the signal
