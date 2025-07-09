@@ -174,7 +174,7 @@ class TracePhases:
                 if np.average(next_cells) > thres:
                     return k
         else:
-            for k in range(1, N + 1):
+            for k in range(1, N):
                 next_cells = matrix[k, :k]
                 if np.average(next_cells) > thres:
                     return k - 1
