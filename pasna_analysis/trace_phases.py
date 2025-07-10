@@ -32,8 +32,8 @@ class TracePhases:
         if len(features) <= 1:
             return -1
         dm = TracePhases.dist_matrix(features)
-        thres = TracePhases.feature_thres(dm)
-        p1_end = TracePhases.apply_threshold_to_matrix(dm, thres)
+        thres = TracePhases.feature_thres(dm, num_classes=3)
+        p1_end = TracePhases.segment_distance_matrix_forward(dm, thres)
 
         return self.trace_index(p1_end)
 
@@ -56,7 +56,7 @@ class TracePhases:
 
         dm = TracePhases.dist_matrix(features)
         thres = TracePhases.feature_thres(dm)
-        dsna_start = TracePhases.apply_threshold_to_matrix(dm, thres, reverse=True)
+        dsna_start = TracePhases.segment_distance_matrix_reverse(dm, thres)
 
         return self.trace_index(dsna_start)
 
@@ -140,43 +140,67 @@ class TracePhases:
         return squareform(pdist(features_scaled, metric="euclidean"))
 
     @staticmethod
-    def apply_threshold_to_matrix(matrix, thres, reverse=False) -> int:
-        """Return index of the first cell in the matrix above `thres`.
+    def segment_distance_matrix_forward(matrix, thres) -> int:
+        """Segmentation by region growing until the provided thres is reached.
 
-        For each cell in the matrix diagonal, calculate the average distance of
-        all previous cells. Stop when the average reaches the threshold.
-
-        Based on the iteration order, the returned value has different meanings:
-
-        When reverse == `False`, the index returned is the last cell of that phase.
-        When reverse == `True`, the index returned is the first cell of that phase.
+        Iterate over each cell in the matrix diagonal and calculate the average
+        distance between that cell and all previous cells. Stop when the average
+        reaches the threshold.
 
         Parameters:
             matrix (nparray):
                 Feature distances square matrix.
             thres (float):
                 Threshold used to determine index.
-            reverse (bool):
-                Determines the iteration order. If `False`, starts from first cell
-                and averages distances of previous cells. If `True`, start from
-                last cell and averages next cells.
+
+        Returns:
+            segmentation_index (int):
+                Highest index that is still below `thres`.
         """
         if matrix.size == 0:
             raise ValueError("Cannot apply threshold to empty matrix.")
+
         N = len(matrix)
         if N == 1:
             return 0
 
-        if reverse:
-            for k in range(N - 2, -1, -1):
-                next_cells = matrix[k, k + 1 : N]
-                if np.average(next_cells) > thres:
-                    return k
-        else:
-            for k in range(1, N):
-                next_cells = matrix[k, :k]
-                if np.average(next_cells) > thres:
-                    return k - 1
+        for k in range(1, N):
+            next_cells = matrix[k, :k]
+            if np.average(next_cells) > thres:
+                return k - 1
+
+        return N - 1
+
+    @staticmethod
+    def segment_distance_matrix_reverse(matrix, thres) -> int:
+        """Segmentation by region growing until the provided thres is reached.
+
+        **Starting from the last element of the matrix**, iterate over each cell
+        in the matrix diagonal and calculate the average distance between that
+        cell and all forward cells. Stop when the average reaches the threshold.
+
+        Parameters:
+            matrix (nparray):
+                Feature distances square matrix.
+            thres (float):
+                Threshold used to determine index.
+
+        Returns:
+            segmentation_index (int):
+                Lowest index that is still below `thres`.
+        """
+        if matrix.size == 0:
+            raise ValueError("Cannot apply threshold to empty matrix.")
+
+        N = len(matrix)
+        if N == 1:
+            return 0
+
+        for k in range(N - 2, -1, -1):
+            next_cells = matrix[k, k + 1 :]
+            if np.average(next_cells) > thres:
+                return k
+
         return N - 1
 
     def plot_phase_change(

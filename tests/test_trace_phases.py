@@ -10,7 +10,10 @@ def test_finds_right_index_in_dist_matrix():
     k = 5
     dist_matrix[k, :] += 1
 
-    assert TracePhases.apply_threshold_to_matrix(dist_matrix, thres) == k - 1
+    actual_index = TracePhases.segment_distance_matrix_forward(dist_matrix, thres)
+    expected_index = k - 1
+
+    assert actual_index == expected_index
 
 
 def test_finds_right_index_in_last_row():
@@ -19,14 +22,17 @@ def test_finds_right_index_in_last_row():
     k = 9
     dist_matrix[k, :] += 1
 
-    assert TracePhases.apply_threshold_to_matrix(dist_matrix, thres) == k - 1
+    actual_index = TracePhases.segment_distance_matrix_forward(dist_matrix, thres)
+    expected_index = k - 1
+
+    assert actual_index == expected_index
 
 
 def test_when_all_dists_below_thres_return_last_index():
     dist_matrix = np.random.random((10, 10))
     thres = 2
 
-    actual_index = TracePhases.apply_threshold_to_matrix(dist_matrix, thres)
+    actual_index = TracePhases.segment_distance_matrix_forward(dist_matrix, thres)
     expected_index = len(dist_matrix) - 1
 
     assert actual_index == expected_index
@@ -36,9 +42,7 @@ def test_when_reversing_and_all_dists_below_thres_return_last_index():
     dist_matrix = np.random.random((10, 10))
     thres = 2
 
-    actual_index = TracePhases.apply_threshold_to_matrix(
-        dist_matrix, thres, reverse=True
-    )
+    actual_index = TracePhases.segment_distance_matrix_reverse(dist_matrix, thres)
     expected_index = 9
 
     assert actual_index == expected_index
@@ -47,10 +51,12 @@ def test_when_reversing_and_all_dists_below_thres_return_last_index():
 def test_finds_right_index_in_dist_matrix_reverse():
     dist_matrix = np.random.random((10, 10))
     thres = 1
-    k = 5
-    dist_matrix[k, :] += 1
+    expected_index = 5
+    dist_matrix[expected_index, :] += 1
 
-    assert TracePhases.apply_threshold_to_matrix(dist_matrix, thres, reverse=True) == k
+    actual_index = TracePhases.segment_distance_matrix_reverse(dist_matrix, thres)
+
+    assert actual_index == expected_index
 
 
 def test_finds_right_index_if_dist_matrix_size_1():
@@ -58,7 +64,9 @@ def test_finds_right_index_if_dist_matrix_size_1():
     thres = 0
     expected_index = 0
 
-    assert TracePhases.apply_threshold_to_matrix(dist_matrix, thres) == expected_index
+    actual_index = TracePhases.segment_distance_matrix_forward(dist_matrix, thres)
+
+    assert actual_index == expected_index
 
 
 def test_apply_thres_raises_if_empty_dist_matrix():
@@ -66,4 +74,4 @@ def test_apply_thres_raises_if_empty_dist_matrix():
     thres = 0
 
     with pytest.raises(ValueError):
-        TracePhases.apply_threshold_to_matrix(dist_matrix, thres)
+        TracePhases.segment_distance_matrix_forward(dist_matrix, thres)
