@@ -65,11 +65,11 @@ class TracePhases:
         return peak_idxes[peak_idx]
 
     def phase1_features(self, hf_cutoff: float = 0.025) -> list:
-        """Each peak is represented by HF pass RMS and peak amplitude.
+        """Each peak is represented by HF pass RMS.
 
         Parameters:
             hf_cutoff(float):
-                Higher frequency cutoff. Calculates peak RMS after removing all
+                High frequency cutoff. Calculates peak RMS after removing all
                 frequencies lower than this value.
         """
         high_pass = self.trace.get_filtered_signal(hf_cutoff, low_pass=False)
@@ -78,12 +78,11 @@ class TracePhases:
         peak_idxes = self.trace.get_all_peak_idxes()
         peak_bounds = self.trace.compute_peak_bounds(rel_height, peak_idxes)
         features = []
-        for pi, (s, e) in zip(peak_idxes, peak_bounds):
-            feature = []
+        for s, e in peak_bounds:
             rms = np.sqrt(np.mean(np.power(high_pass[s:e], 2)))
-            feature.append(self.trace.dff[pi])
-            feature.append(rms)
-            features.append(feature)
+            # down the pipeline `features` must be 2D so each rms value is
+            # passed in a list, even though it's a single feature
+            features.append([rms])
 
         return features
 
