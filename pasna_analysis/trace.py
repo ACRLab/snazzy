@@ -634,22 +634,6 @@ class Trace:
             local_peaks.append(len(peak_indices))
         return local_peaks
 
-    def compute_all_local_peaks(self, split_idx, height=0.02, prominence=0.01):
-        """Counts number of local peaks before and after the `split_idx`."""
-        if self.peak_idxes.size == 0:
-            return (0, 0)
-        first_peak = self.peak_idxes[0]
-        dff = self.dff[: self.trim_idx]
-
-        lp_before, _ = spsig.find_peaks(
-            dff[first_peak:split_idx], height=height, prominence=prominence
-        )
-        lp_after, _ = spsig.find_peaks(
-            dff[split_idx:], height=height, prominence=prominence
-        )
-
-        return (len(lp_before), len(lp_after))
-
     def calculate_STFT(self, dff, fs=1 / 6, fft_size=600, noverlap=450):
         """Calculate the Short Time Fourier Transform for a dff signal.
 
