@@ -209,15 +209,17 @@ class TracePhases:
         change_index: int,
         features: list,
         feature_names: list[str] | None = None,
+        from_start: bool = True,
     ):
         """Visualize change index with DFF trace and feat dist matrix."""
         peaks = self.trace.peak_idxes
         peak_amps = self.trace.dff[peaks]
         peak_times = self.trace.time[peaks] / 6
+        all_peaks = self.trace.get_all_peak_idxes()
 
         # plot the mid point between last phase 1 point and first phase 2 point
         try:
-            boundary = (peaks[change_index] + peaks[change_index + 1]) // 2
+            boundary = (all_peaks[change_index] + all_peaks[change_index + 1]) // 2
         except IndexError:
             print("Could not determine phase 2 start")
             return
@@ -257,14 +259,26 @@ class TracePhases:
             ax=axs["dist_matrix"],
         )
 
-        rect = patches.Rectangle(
-            (0, 0),
-            change_index + 1,
-            change_index + 1,
-            linewidth=2,
-            edgecolor="red",
-            facecolor="none",
-        )
+        # plot segmented area from start or from finish
+        if from_start:
+            rect = patches.Rectangle(
+                (0, 0),
+                change_index + 1,
+                change_index + 1,
+                linewidth=2,
+                edgecolor="red",
+                facecolor="none",
+            )
+        else:
+            width = len(dist_matrix) - change_index
+            rect = patches.Rectangle(
+                (change_index, change_index),
+                width,
+                width,
+                linewidth=2,
+                edgecolor="red",
+                facecolor="none",
+            )
         axs["dist_matrix"].add_patch(rect)
         axs["dist_matrix"].set_title("Feature distances")
 
