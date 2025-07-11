@@ -51,10 +51,11 @@ def test_when_reversing_and_all_dists_below_thres_return_last_index():
 def test_finds_right_index_in_dist_matrix_reverse():
     dist_matrix = np.random.random((10, 10))
     thres = 1
-    expected_index = 5
-    dist_matrix[expected_index, :] += 1
+    k = 5
+    dist_matrix[k, :] += 1
 
     actual_index = TracePhases.segment_distance_matrix_reverse(dist_matrix, thres)
+    expected_index = k + 1
 
     assert actual_index == expected_index
 
@@ -62,9 +63,9 @@ def test_finds_right_index_in_dist_matrix_reverse():
 def test_finds_right_index_if_dist_matrix_size_1():
     dist_matrix = np.random.random(1)
     thres = 0
-    expected_index = 0
 
     actual_index = TracePhases.segment_distance_matrix_forward(dist_matrix, thres)
+    expected_index = 0
 
     assert actual_index == expected_index
 

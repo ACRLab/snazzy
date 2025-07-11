@@ -11,7 +11,7 @@ class TracePhases:
     """Calculate phase boundaries for a Trace.
 
     A phase is a time inverval where peaks have similar features. This class is used to
-    calculate features and determine when a new phase starts base on feature distances.
+    calculate features and determine phase boundaries based on feature distances.
     """
 
     def __init__(self, trace):
@@ -35,7 +35,7 @@ class TracePhases:
         thres = TracePhases.feature_thres(dm, num_classes=3)
         p1_end = TracePhases.segment_distance_matrix_forward(dm, thres)
 
-        return self.trace_index(p1_end)
+        return self.to_dff_index(p1_end)
 
     def get_dsna_start(self, freq: float = 0.002) -> int:
         """Return the index of the first dSNA peak.
@@ -58,19 +58,25 @@ class TracePhases:
         thres = TracePhases.feature_thres(dm)
         dsna_start = TracePhases.segment_distance_matrix_reverse(dm, thres)
 
-        return self.trace_index(dsna_start)
+        return self.to_dff_index(dsna_start)
 
-    def trace_index(self, peak_idx):
+    def to_dff_index(self, peak_idx: int):
+        """Convert from peak index to DFF index."""
         peak_idxes = self.trace.get_all_peak_idxes()
         return peak_idxes[peak_idx]
 
     def phase1_features(self, hf_cutoff: float = 0.025) -> list:
-        """Each peak is represented by HF pass RMS.
+        """Each peak is represented by high frequency pass RMS.
 
         Parameters:
             hf_cutoff(float):
                 High frequency cutoff. Calculates peak RMS after removing all
                 frequencies lower than this value.
+
+        Returns:
+            features(list):
+                A 2D list where each nested list has features of a given peak.
+                The only phase 1 feature used is HF filtered RMS.
         """
         high_pass = self.trace.get_filtered_signal(hf_cutoff, low_pass=False)
 
@@ -86,39 +92,42 @@ class TracePhases:
 
         return features
 
-    def dsna_features(self, freq, lf_cutoff: float = 0.002) -> list:
+    def dsna_features(self, lf_cutoff: float = 0.005) -> list:
         """Each peak is represented by LF pass RMS and peak amplitude.
 
         Parameters:
             lf_cutoff(float):
                 Lower frequency cutoff. Calculates peak RMS after removing all
                 frequencies higher than this value.
+
+        Returns:
+            features(list):
+                A 2D list where each nested list has features of a given peak.
         """
         low_pass = self.trace.get_filtered_signal(lf_cutoff, low_pass=True)
 
+        rel_height = self.trace.pd_params["peak_width"]
         peak_idxes = self.trace.get_all_peak_idxes()
-        peak_bounds = self.trace.compute_peak_bounds(freq, peak_idxes)
+        peak_bounds = self.trace.compute_peak_bounds(rel_height, peak_idxes)
         features = []
-        for pi, (s, e) in zip(peak_idxes, peak_bounds):
-            feature = []
+        for i, (s, e) in enumerate(peak_bounds):
             rms = np.sqrt(np.mean(np.power(low_pass[s:e], 2)))
-            feature.append(self.trace.dff[pi])
-            feature.append(rms)
-            features.append(feature)
+            peak_amp = self.trace.dff[peak_idxes[i]]
+            features.append([rms, peak_amp])
 
         return features
 
     @staticmethod
-    def feature_thres(dist_matrix, num_classes: int = 2) -> float:
-        """Return the distance threshold using threshold multiotsu.
+    def feature_thres(dist_matrix: np.ndarray, num_classes: int = 2) -> float:
+        """Return the lower threshold value from multiclass otsu threshold.
+
+        Increasing the number of classes decreases the threshold value.
 
         Parameters:
             dist_matrix(ndarray):
                 Square matrix of distance features.
             num_classes(int):
-                Number of classes to use in threshold_multiotsu. The threshold
-                returned is the lowest threshold found by threshold_multiotsu.
-                Using more classes tends to decrease the threshold value.
+                Number of classes to use in threshold_multiotsu.
         """
         thres_vals = threshold_multiotsu(dist_matrix, classes=num_classes)
         return thres_vals[0]
@@ -127,7 +136,9 @@ class TracePhases:
     def dist_matrix(features: list) -> np.ndarray:
         """Return a square matrix of feature distances.
 
-        Features are first minMax scaled before calculating distances.
+        To ensure that all features have the same range and contribute equally
+        to the distance matrix, they are first minMax scaled before calculating
+        distances.
 
         Parameters:
             features(list):
@@ -140,7 +151,7 @@ class TracePhases:
         return squareform(pdist(features_scaled, metric="euclidean"))
 
     @staticmethod
-    def segment_distance_matrix_forward(matrix, thres) -> int:
+    def segment_distance_matrix_forward(matrix: np.ndarray, thres: float) -> int:
         """Segmentation by region growing until the provided thres is reached.
 
         Iterate over each cell in the matrix diagonal and calculate the average
@@ -172,7 +183,7 @@ class TracePhases:
         return N - 1
 
     @staticmethod
-    def segment_distance_matrix_reverse(matrix, thres) -> int:
+    def segment_distance_matrix_reverse(matrix: np.ndarray, thres: float) -> int:
         """Segmentation by region growing until the provided thres is reached.
 
         **Starting from the last element of the matrix**, iterate over each cell
@@ -199,7 +210,7 @@ class TracePhases:
         for k in range(N - 2, -1, -1):
             next_cells = matrix[k, k + 1 :]
             if np.average(next_cells) > thres:
-                return k
+                return k + 1
 
         return N - 1
 
