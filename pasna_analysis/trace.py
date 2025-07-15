@@ -350,9 +350,9 @@ class Trace:
         )
 
         if corrected_peaks:
-            to_add = corrected_peaks["manual_peaks"]
-            to_remove = corrected_peaks["manual_remove"]
-            wlen = corrected_peaks["wlen"]
+            to_add = corrected_peaks.get("manual_peaks", [])
+            to_remove = corrected_peaks.get("manual_remove", [])
+            wlen = corrected_peaks.get("wlen", 10)
             filtered_peaks = [
                 p
                 for p in self._peak_idxes
