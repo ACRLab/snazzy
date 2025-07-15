@@ -1,10 +1,18 @@
 import bisect
+from enum import Enum
 
 import numpy as np
 import scipy.signal as spsig
 from scipy.stats import zscore
 
 from pasna_analysis import Config, TracePhases
+
+
+class BaselineStrategies(Enum):
+    """Enumerates the methods used to calculate baseline."""
+
+    BASELINE = "baseline"
+    LOCAL_MINIMA = "local_minima"
 
 
 class Trace:
@@ -136,16 +144,14 @@ class Trace:
         window_size = self.pd_params.get("baseline_window_size", default_ws)
 
         ratiom_signal = self.compute_ratiom_gcamp()
-        dff_strategy = self.pd_params.get("dff_strategy", "")
-        if dff_strategy == "baseline":
+        dff_strategy_name = self.pd_params.get("dff_strategy", "")
+
+        dff_strategy = BaselineStrategies(dff_strategy_name)
+        if dff_strategy == BaselineStrategies.BASELINE:
             baseline = self.compute_baseline(ratiom_signal, window_size)
-        elif dff_strategy == "local_minima":
+        elif dff_strategy == BaselineStrategies.LOCAL_MINIMA:
             baseline = self.average_n_lowest_window(
                 ratiom_signal, window_size, n_lowest=11
-            )
-        else:
-            raise ValueError(
-                f"Could not apply the dff_strategy specified: {dff_strategy}."
             )
         return (ratiom_signal - baseline) / baseline
 
