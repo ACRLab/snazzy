@@ -422,7 +422,7 @@ class ComparePlotWindow(QWidget):
             for exp in group.experiments.values():
                 Zxxs = []
                 for emb in exp.embryos:
-                    stft = emb.trace.stft(duration=3600)
+                    stft = emb.trace.calculate_STFT(emb.trace.dff)
                     if stft is None:
                         continue
                     f, t, Zxx = stft
