@@ -284,16 +284,24 @@ class Model:
         if not should_remove:
             exp.mark_as_accepted(emb_name)
         else:
-            next_exp, next_emb = self.get_next_emb_name(forward=True)
+            if emb_name == self.selected_embryo.name:
+                self.render_next_embryo()
             exp.mark_as_removed(emb_name)
-            experiment = self.selected_group.experiments[next_exp]
-            embryo = experiment.get_embryo(next_emb)
-            self.select_experiment(experiment)
-            self.select_embryo(embryo)
 
+        self.update_emb_visibility_in_config()
+        return emb_name in exp.to_remove
+
+    def update_emb_visibility_in_config(self):
+        exp = self.selected_experiment
         new_data = {"exp_params": {"to_remove": exp.to_remove}}
         self.update_config(new_data)
-        return emb_name in exp.to_remove
+
+    def render_next_embryo(self):
+        next_exp, next_emb = self.get_next_emb_name(forward=True)
+        experiment = self.selected_group.experiments[next_exp]
+        embryo = experiment.get_embryo(next_emb)
+        self.select_experiment(experiment)
+        self.select_embryo(embryo)
 
     def clear_manual_data(self):
         exp = self.selected_experiment

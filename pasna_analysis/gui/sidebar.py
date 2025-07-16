@@ -99,8 +99,12 @@ class RemovableSidebar(QWidget):
             layout.addLayout(row_layout)
 
     def toggle_button(self, label, is_accepted):
-        """Toggle the button between accepted and removed categories."""
+        """Toggle the button between accepted and removed categories.
+
+        Keeps at least one embryo in the accepted sidebar all times."""
         if is_accepted:
+            if len(self.accepted_embs) == 1:
+                return
             self.accepted_embs.remove(label)
             self.removed_embs.add(label)
         else:
