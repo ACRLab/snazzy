@@ -389,8 +389,8 @@ class MainWindow(QMainWindow):
 
             self.calibrate_sliders()
 
-    def toggle_emb_visibility(self, emb_id, should_remove):
-        self.model.toggle_emb_visibility(emb_id, should_remove)
+    def toggle_emb_visibility(self, emb_name, should_remove):
+        self.model.toggle_emb_visibility(emb_name, should_remove)
         if should_remove:
             self.render_trace()
 
