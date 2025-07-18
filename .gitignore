@@ -33,3 +33,6 @@ docs/build
 
 # saved images
 notebooks/*.svg
+
+# macOS
+.DS_Store
