@@ -37,8 +37,9 @@ class ImageWindow(QWidget):
 
 
 def normalize_16bit_to_8bit(img: np.ndarray, lower_p=0.25, upper_p=99.75) -> np.ndarray:
-    """Converts a nparray from 16 bit to 8 bit, clipping outliers in the upper
-    and lower percentiles."""
+    """Convert a nparray from 16 bit to 8 bit.
+
+    Outliers are clipped to match the upper and lower percentiles."""
     min_val = np.percentile(img, lower_p)
     max_val = np.percentile(img, upper_p)
     img = np.clip(img, min_val, max_val)
@@ -50,7 +51,14 @@ class ImageSequenceViewer(QWidget):
     def __init__(self, directory: Path, exp: Experiment):
         super().__init__()
         self.directory = directory
-        self.dff_traces = {name: e.trace.dff for (name, e) in exp.embryos.items()}
+
+        embs_path = self.directory.joinpath("embs")
+        if not embs_path.exists():
+            raise FileNotFoundError(
+                f"Embryo movies should be saved in {embs_path}. Could not find this directory."
+            )
+
+        self.dff_traces = {e.name: e.trace.dff for e in exp.embryos}
 
         self.setWindowTitle("Image Sequence Viewer")
         self.setGeometry(100, 100, 800, 600)
@@ -62,14 +70,11 @@ class ImageSequenceViewer(QWidget):
         self.init_file_selector()
 
     def init_file_selector(self):
-        """Initialize the file selector UI."""
         self.selector_label = QLabel("Select a file:")
         self.combo_box = QComboBox()
-        embs_path = self.directory / "embs"
-        if not embs_path.exists():
-            raise FileNotFoundError(f"Directory not found:\n{embs_path}")
-        file_options = [str(f) for f in embs_path.iterdir() if "ch1.tif" in f.name]
-        self.combo_box.addItems(file_options)
+        embs_path = self.directory.joinpath("embs")
+        file_names = [str(f) for f in embs_path.iterdir() if "ch1.tif" in f.name]
+        self.combo_box.addItems(file_names)
         self.open_button = QPushButton("Open Viewer")
 
         self.layout.addWidget(self.selector_label)
@@ -79,7 +84,6 @@ class ImageSequenceViewer(QWidget):
         self.open_button.clicked.connect(self.load_file)
 
     def load_file(self):
-        """Load selected file and initialize viewer."""
         selected_file = self.combo_box.currentText()
         full_path = Path(selected_file)
         self.data = self.dff_traces[full_path.stem[:-4]]
@@ -98,7 +102,6 @@ class ImageSequenceViewer(QWidget):
         self.open_button.deleteLater()
 
     def init_viewer(self):
-        """Initialize the full image sequence viewer UI."""
         self.image_label = QLabel()
         self.layout.addWidget(self.image_label)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -134,7 +137,6 @@ class ImageSequenceViewer(QWidget):
         self.display_frame(0)
 
     def display_frame(self, frame_index):
-        """Display the specified frame."""
         image = self.images[frame_index]
 
         height, width = image.shape
@@ -148,23 +150,22 @@ class ImageSequenceViewer(QWidget):
         self.slider.setValue(frame_index)
 
     def slider_changed(self, value):
-        """Handle slider changes."""
         if not self.is_playing:
             self.current_frame = value
             self.display_frame(self.current_frame)
 
     def start_playback(self):
-        """Start playing the image sequence."""
         if not self.timer.isActive():
             self.is_playing = True
             self.timer.start(10)
 
     def pause_playback(self):
-        """Pause playback."""
         self.is_playing = False
         self.timer.stop()
 
     def next_frame(self):
-        """Advance to the next frame."""
+        """Advance to next frame.
+
+        After the last frame is reached, cycles back to the start."""
         self.current_frame = (self.current_frame + 1) % len(self.images)
         self.display_frame(self.current_frame)
