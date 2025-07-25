@@ -422,7 +422,7 @@ class ComparePlotWindow(QWidget):
             for exp in group.experiments.values():
                 Zxxs = []
                 for emb in exp.embryos:
-                    stft = emb.trace.calculate_STFT(emb.trace.dff)
+                    stft = emb.trace.calculate_STFT(emb.trace.aligned_dff)
                     if stft is None:
                         continue
                     f, t, Zxx = stft
@@ -435,7 +435,7 @@ class ComparePlotWindow(QWidget):
                 average_magnitude = np.mean(magnitudes, axis=0)
 
             self.ax[i].pcolormesh(
-                t_zero,
+                t_zero // 60,
                 f_zero,
                 average_magnitude,
                 vmin=0,
