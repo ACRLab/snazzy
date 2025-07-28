@@ -26,6 +26,8 @@ KEY_TYPES = {
     "manual_remove": list,
     "manual_widths": dict,
     "manual_trim_idx": int,
+    "manual_phase1_end": int,
+    "manual_dsna_start": int,
     "wlen": int,
     "embryos": dict,
     "ISI_factor": float,
