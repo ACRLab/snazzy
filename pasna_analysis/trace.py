@@ -164,8 +164,6 @@ class Trace:
         The resulting time and dff have the same length.
 
         Parameters:
-            emb (Embryo):
-                The embryo to process.
             duration (int):
                 Target num of frames for time and dff.
             onset_pad (int):
@@ -664,9 +662,9 @@ class Trace:
                 STFT magnitude (excludes phase).
         """
         dff = np.where(dff == None, 1e-11, dff).astype(float)
-        f, t, Zxx = spsig.stft(dff, fs, nperseg=fft_size, noverlap=noverlap)
-
-        return f, t, Zxx
+        return spsig.stft(
+            dff, fs, detrend="constant", nperseg=fft_size, noverlap=noverlap
+        )
 
     def apply_hipass_filter(self, time, dff, cutoff, fs=1 / 6, numtaps=501):
         """Apply a high pass finite impulse response filter to the dff signal.
