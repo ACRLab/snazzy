@@ -33,14 +33,12 @@ class Experiment:
 
         self.exp_params = self.config.get_exp_params()
 
-        data = DataLoader(exp_path)
+        self.data_loader = DataLoader(exp_path)
         # persist config to file if it only exists in memory
         if not self.config.config_path.exists():
             self.config.initialize_config_file()
 
-        self.name = data.name
-        self.act_paths = data.activities()
-        self.len_paths = data.lengths()
+        self.name = self.data_loader.name
         self.filtered_out = set(self.exp_params.get("to_remove", []))
         self._embryos = self._create_embryos()
 
@@ -104,14 +102,20 @@ class Experiment:
     def _create_embryos(self) -> dict[str, Embryo]:
         embryos = {}
 
+        emb_size_data = self.data_loader.load_csv(
+            self.directory.joinpath("full-length.csv")
+        )
         to_exclude = self.exp_params.get("to_exclude", [])
-        for act_path, len_path in zip(self.act_paths, self.len_paths):
+
+        for act_path, len_path in self.data_loader.get_data_path_pairs():
             emb_name = act_path.stem
             emb_id = utils.emb_id(emb_name)
             if emb_id in to_exclude:
                 continue
 
-            emb = Embryo(act_path, len_path, self.config)
+            act_data = self.data_loader.load_csv(act_path)
+            len_data = self.data_loader.load_csv(len_path)
+            emb = Embryo(act_data, len_data, emb_size_data, emb_name, self.config)
 
             try:
                 first_peak_threshold = self.exp_params.get("first_peak_threshold", 0)

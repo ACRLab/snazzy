@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 from numpy.polynomial import Polynomial
 from scipy.interpolate import interp1d
@@ -13,20 +11,17 @@ class Embryo:
 
     def __init__(
         self,
-        activity_csv: Path,
-        vnc_len_csv: Path,
+        activity_data: np.ndarray,
+        vnc_len_data: np.ndarray,
+        emb_size_data: np.ndarray,
+        name: str,
         config: Config,
     ):
-        if activity_csv.stem != vnc_len_csv.stem:
-            raise ValueError(
-                "CSV files for activity and VNC length should refer to the same embryo."
-            )
-        self.name = activity_csv.stem
-        self.activity = self.import_data(activity_csv)
-        self.vnc_length = self.import_data(vnc_len_csv)
+        self.name = name
+        self.activity = activity_data
+        self.vnc_length = vnc_len_data
         self.vnc_length_filtered = gaussian_filter1d(self.vnc_length[:, 1], sigma=3)
-        emb_size_csv = vnc_len_csv.parents[1].joinpath("full-length.csv")
-        self.size = self.get_emb_size(emb_size_csv)
+        self.size = self.get_emb_size(emb_size_data)
         self.dev_time_interpolator = None
         self.time_interpolator = None
         self.trace = Trace(
@@ -39,23 +34,15 @@ class Embryo:
     @property
     def lin_developmental_time(self):
         if self._lin_dev_time is None:
-            return self.lin_developmental_time()
+            return self._lin_developmental_time()
         return self._lin_dev_time
-
-    def import_data(self, csv_path: Path) -> np.ndarray:
-        data = np.loadtxt(csv_path, delimiter=",", skiprows=1)
-        # csv files with a single row are read as 1D, but rest of the code expects 2D
-        if data.ndim == 1:
-            data = data[np.newaxis, :]
-        return data
 
     def developmental_time(self) -> np.ndarray:
         """Returns emb_size:VNC_size ratio."""
         return self.size / self.vnc_length_filtered
 
-    def lin_developmental_time(self) -> np.ndarray:
+    def _lin_developmental_time(self) -> np.ndarray:
         """Returns the linearized (1st deg polynomial fit) developmental time."""
-        # which time scale to use??
         vnc_time = self.vnc_length[:, 0]
         linear_fit = Polynomial.fit(x=vnc_time, y=self.developmental_time(), deg=1)
         activity_time = self.activity[:, 0]
@@ -64,7 +51,7 @@ class Embryo:
 
     def get_time_bins(self, bins):
         """Given an array of bins in developmental time, return the corresponding time bins."""
-        lin_dev_time = self.lin_developmental_time()
+        lin_dev_time = self.lin_developmental_time
         insert_idxs = np.searchsorted(lin_dev_time, bins)
         bin_idxs = np.unique(insert_idxs)
         bin_idxs[-1] -= 1
@@ -105,9 +92,8 @@ class Embryo:
         """Returns the number that identifies an embryo."""
         return int(self.name[3:])
 
-    def get_emb_size(self, csv_path: Path) -> np.ndarray:
+    def get_emb_size(self, emb_size_data: np.ndarray) -> float:
         """Extracts embryo size."""
         id = self.get_id()
-        emb_sizes = self.import_data(csv_path)
-        emb = emb_sizes[emb_sizes[:, 0] == id]
+        emb = emb_size_data[emb_size_data[:, 0] == id]
         return emb[0, 1]

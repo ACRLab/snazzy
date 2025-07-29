@@ -1,55 +1,70 @@
 from pathlib import Path
 
-from pasna_analysis import utils
+import numpy as np
 
 
 class DataLoader:
-    """Used to access data about the current experiment.
+    """Access data about the current experiment.
 
     Attributes
     ----------
     path: Path
-        The path that contains the `pasnascope` output. Must follow the folder\
+        The path that contains `pasnascope` output. Must follow the folder\
         structure described in this project's README.
     """
+
+    REQUIRED_DIRS = ["activity", "lengths"]
+    REQUIRED_FILES = ["full-length.csv"]
 
     def __init__(self, path: Path):
         self.path = Path(path)
         self.name = path.stem
         self.check_files()
+        self.check_embs_match()
 
     def check_files(self):
-        """Asserts that the expected file structure is found."""
-        required_dirs = ["activity", "lengths"]
-        required_files = ["full-length.csv"]
+        """Asserts that folder structure matches `pasnascope` output."""
         if not self.path.exists():
             raise ValueError(f"Path not found: {self.path}")
-        paths = ((self.path / f) for f in required_dirs + required_files)
+        paths = (
+            (self.path / f)
+            for f in DataLoader.REQUIRED_DIRS + DataLoader.REQUIRED_FILES
+        )
         if not all(path.exists() for path in paths):
             raise ValueError(
                 "Could not find expected files. Is this really a directory from `pasnascope`?"
             )
 
-    def embryos(self) -> list[str]:
-        """Returns a list of available embryos."""
-        activity_dir = self.path.joinpath("activity")
-        return sorted([e.stem for e in activity_dir.iterdir()], key=utils.emb_id)
+    def check_embs_match(self):
+        """Each embryo must have a file in `activity` and `lengths` dirs."""
+        for act_file, len_file in self.get_data_path_pairs():
+            if act_file.name != len_file.name:
+                raise ValueError(
+                    "Could not process this dataset. Mismatch between embryo data in activity and length directory."
+                )
 
-    def activities(self) -> list[Path]:
-        """Returns a list of activity csv files."""
-        activity_dir = self.path.joinpath("activity")
-        return sorted(list(activity_dir.iterdir()), key=utils.emb_id)
+    def get_data_path_pairs(self):
+        """Iterator with pairs of activity and lenght filepaths."""
+        return zip(
+            self.get_filenames_sorted_by_emb_number("activity"),
+            self.get_filenames_sorted_by_emb_number("lengths"),
+        )
 
-    def lengths(self) -> list[Path]:
-        """Returns a list of VNC length csv files."""
-        length_dir = self.path.joinpath("lengths")
-        return sorted(list(length_dir.iterdir()), key=utils.emb_id)
+    def get_filenames_sorted_by_emb_number(self, dir_name: str) -> list[Path]:
+        dir = self.path.joinpath(dir_name)
+        return sorted([e for e in dir.iterdir()], key=self.get_emb_id)
 
-    def get_embryo_files_by_id(self, id: int) -> tuple[Path]:
-        """Returns a tuple with activity and length files for a given `id`.
+    def get_emb_id(self, emb_path: Path) -> int:
+        """Return an embryo id based on a filepath.
 
-        If no files are found, returns None for each file."""
-        emb = f"emb{id}"
-        a = next((e for e in self.activities() if e.stem == emb), None)
-        l = next((e for e in self.lengths() if e.stem == emb), None)
-        return a, l
+        Filepaths that represent embryo data have the format embXX.csv."""
+        emb_name = emb_path.stem
+        return int(emb_name[3:])
+
+    def load_csv(self, csv_path: Path) -> np.ndarray:
+        """Read csv content as a 2D nparray."""
+        data = np.loadtxt(csv_path, delimiter=",", skiprows=1)
+        # csv files with a single row are read as 1D, but rest of the code expects 2D
+        if data.ndim == 1:
+            data = data[np.newaxis, :]
+        return data

@@ -31,7 +31,7 @@ def test_time_bins_represent_bin_lower_bound(emb, bin_params):
 
     _, idx_offset = emb.get_time_bins(bins)
 
-    initial_dt = emb.lin_developmental_time()[0]
+    initial_dt = emb.lin_developmental_time[0]
     assert bins[idx_offset] <= initial_dt
 
 
@@ -43,7 +43,7 @@ def test_time_bins_have_correct_idx_offset(emb, bin_params):
 
     _, idx_offset = emb.get_time_bins(bins)
 
-    initial_dt = emb.lin_developmental_time()[0]
+    initial_dt = emb.lin_developmental_time[0]
     assert bins[idx_offset] <= initial_dt < bins[idx_offset + 1]
 
 
