@@ -331,7 +331,7 @@ class Model:
         trace = embryo.trace
 
         if use_dev_time:
-            time = embryo.lin_developmental_time()
+            time = embryo.lin_developmental_time
         else:
             time = trace.time / 60
 

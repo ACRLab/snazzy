@@ -559,7 +559,7 @@ class MainWindow(QMainWindow):
         emb_name = embryo.name
 
         if self.use_dev_time:
-            dev_time = embryo.lin_developmental_time()
+            dev_time = embryo.lin_developmental_time
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
@@ -578,7 +578,7 @@ class MainWindow(QMainWindow):
         emb_name = embryo.name
 
         if self.use_dev_time:
-            dev_time = embryo.lin_developmental_time()
+            dev_time = embryo.lin_developmental_time
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
@@ -639,7 +639,7 @@ class MainWindow(QMainWindow):
 
             trace = emb.trace
             if self.use_dev_time:
-                dev_time = emb.lin_developmental_time()
+                dev_time = emb.lin_developmental_time
                 time = dev_time[: trace.trim_idx]
             else:
                 time = trace.time[: trace.trim_idx] / 60
@@ -875,7 +875,7 @@ class MainWindow(QMainWindow):
         emb = self.model.selected_embryo
 
         if self.use_dev_time:
-            dev_time = emb.lin_developmental_time()
+            dev_time = emb.lin_developmental_time
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             x = int(idx)
         else:
@@ -912,7 +912,7 @@ class MainWindow(QMainWindow):
         emb = self.model.selected_embryo
 
         if self.use_dev_time:
-            dev_time = emb.lin_developmental_time()
+            dev_time = emb.lin_developmental_time
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             x = int(idx)
         else:
@@ -952,7 +952,7 @@ class MainWindow(QMainWindow):
         peak_index, bound_index = divmod(il_obj.line_index, 2)
 
         if self.use_dev_time:
-            dev_time = emb.lin_developmental_time()
+            dev_time = emb.lin_developmental_time
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             new_line_pos = int(idx)
         else:
