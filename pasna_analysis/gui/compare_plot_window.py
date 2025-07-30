@@ -434,16 +434,17 @@ class ComparePlotWindow(QWidget):
                 magnitudes = np.abs(Zxxs)
                 average_magnitude = np.mean(magnitudes, axis=0)
 
+            max_mag = np.max(average_magnitude)
             self.ax[i].pcolormesh(
                 t_zero // 60,
                 f_zero,
                 average_magnitude,
-                vmin=0,
-                vmax=0.03,
-                cmap="plasma",
+                cmap="turbo",
                 shading="nearest",
                 snap=True,
+                norm=matplotlib.colors.LogNorm(vmin=0.01 * max_mag),
             )
+            self.ax[i].set_ylim(0, 0.016)
             self.ax[i].set_title(group.name)
             self.ax[i].set_ylabel("Hz")
             self.ax[i].set_xlabel("time (mins)")
