@@ -307,7 +307,7 @@ def plot_pointplot(
 ):
     with plt.rc_context(rc):
         fig, ax = plt.subplots()
-        sns.set(style="whitegrid", palette="colorblind", rc=rc)
+        sns.set_theme(style="whitegrid", palette="colorblind", rc=rc)
         sns.pointplot(
             data=dataframe, x=x, y=y, hue=category, linestyle=linestyle, ax=ax
         )
@@ -333,7 +333,7 @@ def plot_cdf(dataframe, x, category, rc):
     with plt.rc_context(rc):
         fig_height = rc["figure.figsize"][1]
         fig, ax = plt.subplots(figsize=(fig_height, fig_height))
-        sns.set(style="whitegrid", palette="colorblind", rc=rc)
+        sns.set_theme(style="whitegrid", palette="colorblind", rc=rc)
         sns.ecdfplot(data=dataframe, x=x, hue=category, ax=ax)
         legend = ax.get_legend()
         if legend is not None:
