@@ -233,8 +233,9 @@ class MainWindow(QMainWindow):
 
     def display_embryo_movie(self):
         exp = self.model.selected_experiment
+        embryos = exp.all_embryos()
         try:
-            self.viewer = ImageSequenceViewer(exp.directory, exp)
+            self.viewer = ImageSequenceViewer(exp.directory, embryos)
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
