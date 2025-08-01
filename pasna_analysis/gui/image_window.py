@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 )
 import pyqtgraph as pg
 
-from pasna_analysis import Experiment
+from pasna_analysis import Embryo
 
 
 class ImageWindow(QWidget):
@@ -48,7 +48,7 @@ def normalize_16bit_to_8bit(img: np.ndarray, lower_p=0.25, upper_p=99.75) -> np.
 
 
 class ImageSequenceViewer(QWidget):
-    def __init__(self, directory: Path, exp: Experiment):
+    def __init__(self, directory: Path, embryos: list[Embryo]):
         super().__init__()
         self.directory = directory
 
@@ -58,7 +58,7 @@ class ImageSequenceViewer(QWidget):
                 f"Embryo movies should be saved in {embs_path}. Could not find this directory."
             )
 
-        self.dff_traces = {e.name: e.trace.dff for e in exp.embryos}
+        self.dff_traces = {e.name: e.trace.dff for e in embryos}
 
         self.setWindowTitle("Image Sequence Viewer")
         self.setGeometry(100, 100, 800, 600)
