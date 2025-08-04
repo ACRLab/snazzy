@@ -16,6 +16,7 @@ dependencies:
   - scikit-learn=1.6.1
   - scikit-image=0.25.0
   - pip:
+    - coverage==7.10.2
     - ipympl==0.9.4
     - ipython-genutils==0.2.0
     - pyqt6==6.8.0
