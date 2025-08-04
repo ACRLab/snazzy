@@ -15,6 +15,7 @@ def plot_raw_signals(embryos, rc, title=None):
         fig, axes = plt.subplots(
             len(embryos),
             3,
+            squeeze=False,
             figsize=(fig_width, 2.5 * (len(embryos))),
             gridspec_kw={"width_ratios": [2, 10, 10]},
         )
@@ -160,6 +161,7 @@ def plot_traces(
         fig, axes = plt.subplots(
             len(embryos),
             2,
+            squeeze=False,
             figsize=(fig_width, fig_height * (len(embryos))),
             gridspec_kw={"width_ratios": [1, 20]},
         )
@@ -225,6 +227,7 @@ def plot_specs(
         fig, axes = plt.subplots(
             len(embryos),
             2,
+            squeeze=False,
             figsize=(fig_width, fig_height * (len(embryos))),
             gridspec_kw={"width_ratios": [1, 20]},
         )
