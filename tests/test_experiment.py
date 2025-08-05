@@ -88,3 +88,8 @@ def test_ignores_invalid_kwargs(capsys):
     captured = capsys.readouterr()
 
     assert "WARN" in captured.out
+
+
+def test_raises_when_get_missing_embryo(exp):
+    with pytest.raises(ValueError):
+        exp.get_embryo("emb55")

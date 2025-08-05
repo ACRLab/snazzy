@@ -23,6 +23,11 @@ def test_raises_when_missing_files():
         DataLoader(MISSING_DATA_DIR)
 
 
+def test_raises_when_missing_whole_directory():
+    with pytest.raises(ValueError):
+        DataLoader(Path("./tests/assets/data/missingDir"))
+
+
 def test_raises_when_files_dont_match(tmp_path):
     activities_dir = tmp_path / "activity"
     lengths_dir = tmp_path / "lengths"
