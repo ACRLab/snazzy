@@ -43,8 +43,23 @@ def test_can_update_params(config):
     assert exp_params.get("first_peak_threshold", None) == expected_fpt
 
 
+def test_raises_when_invalid_update_params(config):
+    invalid_data = {"key-does-not-exist": None}
+
+    with pytest.raises(KeyError):
+        config.update_params(invalid_data)
+
+
 def test_can_save_manual_data_for_new_embryo(config):
-    emb_data = dict(emb_name="emb11", wlen=10, added_peaks=[100, 150, 200])
+    emb_data = dict(
+        emb_name="emb11",
+        wlen=10,
+        added_peaks=[100, 150, 200],
+        removed_peaks=[50],
+        manual_widths={"100": [80, 125]},
+        manual_trim_idx=1500,
+        manual_phase1_end=500,
+    )
 
     assert emb_data["emb_name"] not in config.data["embryos"]
 
