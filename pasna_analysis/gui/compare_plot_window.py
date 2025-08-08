@@ -51,7 +51,6 @@ class ComparePlotWindow(QWidget):
             "Peak amplitudes by episode": self.peak_amplitudes_by_ep,
             "Dev time by episode": self.dt_by_ep,
             "Episode intervals": self.ep_intervals,
-            "Baseline / burst ratio per episode": self.baseline_ratio,
             "Episode durations": self.ep_durations,
             "Decay times": self.decay_times,
             "Rise times": self.rise_times,
@@ -73,7 +72,7 @@ class ComparePlotWindow(QWidget):
         notification = QMessageBox(self)
         notification.setWindowTitle("Save plots")
         notification.setText("All plots were saved.")
-        notification.exec()
+        notification.open()
 
     def clear_axes(self, rows=1, cols=1):
         """Clears the canvas and creates a new axes object for a new plot."""
@@ -82,10 +81,15 @@ class ComparePlotWindow(QWidget):
 
     def create_buttons(self):
         for label, fn in self.btns.items():
-            button = QPushButton(label)
+            button = QPushButton(label, parent=self.sidebar_widget)
             button.clicked.connect(fn)
             button.setMaximumWidth(250)
-            self.sidebar.addWidget(button)
+            self.sidebar_layout.addWidget(button)
+
+    def _save_plot(self, save_dir, filename):
+        if save_dir is None or filename is None:
+            raise ValueError("Cannot save the image: path to save not provided")
+        self.canvas.print_figure(save_dir / filename)
 
     def dt_first_peak(self, save=False, save_dir=None):
         """Developmental time at first peak."""
@@ -118,9 +122,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "dev_time_first_peak.png")
+            self._save_plot(save_dir, "dev_time_first_peak.png")
 
     def dt_hatching(self, save=False, save_dir=None):
         """Developmental times when hatching."""
@@ -152,9 +154,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "dt_hatching.png")
+            self._save_plot(save_dir, "dt_hatching.png")
 
     def sna_duration(self, save=False, save_dir=None):
         """Number of episodes"""
@@ -178,9 +178,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "sna_duration.png")
+            self._save_plot(save_dir, "sna_duration.png")
 
     def num_episodes(self, save=False, save_dir=None):
         """Number of episodes"""
@@ -201,9 +199,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "num_episodes.png")
+            self._save_plot(save_dir, "num_episodes.png")
 
     def cdf_dt(self, save=False, save_dir=None):
         """Cummulative distribution function of peak developmental times."""
@@ -226,9 +222,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "cdf_dev_time.png")
+            self._save_plot(save_dir, "cdf_dev_time.png")
 
     def peak_amplitudes_by_ep(self, save=False, save_dir=None):
         """Peak amplitudes for each episode."""
@@ -262,9 +256,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "peak_amplitudes_by_ep.png")
+            self._save_plot(save_dir, "peak_amplitudes_by_ep.png")
 
     def dt_by_ep(self, save=False, save_dir=None):
         """Developmental time for each episode."""
@@ -298,9 +290,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "dev_time_by_ep.png")
+            self._save_plot(save_dir, "dev_time_by_ep.png")
 
     def ep_intervals(self, save=False, save_dir=None):
         """Intervals between each episode."""
@@ -334,43 +324,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "episode_intervals.png")
-
-    def baseline_ratio(self, save=False, save_dir=None):
-        """Quiescent / active ratio per episode"""
-        self.clear_axes()
-        num_of_peaks = 15
-        data = {"group": [], "qa_ratio": [], "idx": []}
-
-        for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
-                trace = emb.trace
-                for i, (ps, pe) in zip(range(num_of_peaks), trace.peak_bounds_times):
-                    try:
-                        next_ps = trace.peak_bounds_times[i + 1][0]
-                    except IndexError:
-                        break
-                qa = (next_ps - pe) / (next_ps - ps)
-                data["group"].append(group.name)
-                data["qa_ratio"].append(qa)
-                data["idx"].append(i)
-
-        sns.pointplot(
-            data=data, x="idx", y="qa_ratio", hue="group", linestyle="None", ax=self.ax
-        )
-        self.ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
-        self.ax.set_title("Baseline ratio per episode")
-        self.ax.set_xlabel("Peak #")
-        self.ax.set_ylabel("t_base / episode")
-
-        if not save:
-            self.canvas.draw()
-        else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "baseline_ratio.png")
+            self._save_plot(save_dir, "episode_intervals.png")
 
     def decay_times(self, save=False, save_dir=None):
         """Decay times.
@@ -404,9 +358,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "decay_times.png")
+            self._save_plot(save_dir, "decay_times.png")
 
     def average_spectrogram(self, save=False, save_dir=None):
         self.canvas.figure.clear()
@@ -455,9 +407,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "average_spectrogram.png")
+            self._save_plot(save_dir, "average_spectrogram.png")
 
     def ep_durations(self, save=False, save_dir=None):
         """Duration of each episode."""
@@ -483,9 +433,7 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "peak_durations.png")
+            self._save_plot(save_dir, "peak_durations.png")
 
     def rise_times(self, save=False, save_dir=None):
         """Peak rise times.
@@ -514,6 +462,4 @@ class ComparePlotWindow(QWidget):
         if not save:
             self.canvas.draw()
         else:
-            if save_dir is None:
-                raise ValueError("Cannot save the image: path to save not provided.")
-            self.canvas.print_figure(save_dir / "peak_durations.png")
+            self._save_plot(save_dir, "peak_durations.png")
