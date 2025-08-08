@@ -29,9 +29,10 @@ class ComparePlotWindow(QWidget):
         plot_layout = QHBoxLayout()
         layout.addLayout(plot_layout)
 
-        self.sidebar = QVBoxLayout()
-        self.sidebar.setAlignment(Qt.AlignmentFlag.AlignTop)
-        plot_layout.addLayout(self.sidebar)
+        self.sidebar_widget = QWidget(self)
+        self.sidebar_layout = QVBoxLayout(self.sidebar_widget)
+        self.sidebar_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        plot_layout.addWidget(self.sidebar_widget)
 
         self.canvas = FigureCanvasQTAgg(Figure(figsize=(16, 10)))
         sns.set_theme(style="whitegrid", palette="colorblind", font_scale=1.5)
