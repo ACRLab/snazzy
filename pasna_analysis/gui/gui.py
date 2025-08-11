@@ -2,6 +2,7 @@ from functools import partial
 from pathlib import Path
 import sys
 import traceback
+from typing import Callable
 
 import numpy as np
 import pyqtgraph as pg
@@ -87,7 +88,9 @@ class MainWindow(QMainWindow):
             else self.model.selected_group.name
         )
 
-    def _show_experiment_dialog(self, config: Config, group_name: str):
+    def _show_experiment_dialog(
+        self, config: Config, group_name: str, on_accepted: Callable[[dict], None]
+    ):
         exp_params = config.get_exp_params()
         pd_params = config.get_pd_params()
         dff_strategy = pd_params.get("dff_strategy", "")
@@ -97,12 +100,16 @@ class MainWindow(QMainWindow):
             **exp_params,
             "dff_strategy": dff_strategy,
         }
-        dialog = ExperimentParamsDialog(
+        self.exp_params_dialog = ExperimentParamsDialog(
             dialog_params, exp_path=config.rel_path, parent=self
         )
-        if not dialog.exec():
-            return
-        return dialog.get_values()
+
+        self.exp_params_dialog.accepted.connect(
+            lambda: on_accepted(self.exp_params_dialog.get_values())
+        )
+        self.exp_params_dialog.rejected.connect(lambda: None)
+
+        self.exp_params_dialog.open()
 
     # TODO: it should be easier to update Config from the GUI
     def _update_config(self, config: Config, dialog_values):
@@ -140,19 +147,21 @@ class MainWindow(QMainWindow):
             config = Config(directory)
             group_name = self._get_group_name(is_new_group)
 
-            dialog_values = self._show_experiment_dialog(config, group_name)
-            if not dialog_values:
-                return
+            def on_dialog_accepted(dialog_values):
+                group_name = dialog_values["group_name"]
+                self._update_config(config, dialog_values)
 
-            group_name = dialog_values["group_name"]
-            self._update_config(config, dialog_values)
+                if should_reset_model:
+                    self.model.set_initial_state()
 
-            if should_reset_model:
-                self.model.set_initial_state()
+                self._present_loading()
 
-            self._present_loading()
+                self._start_experiment_worker(config, group_name)
 
-            self._start_experiment_worker(config, group_name)
+            self._show_experiment_dialog(
+                config, group_name, on_accepted=on_dialog_accepted
+            )
+
         except Exception as e:
             traceback.print_exc()
             self.show_error_message(str(e))
