@@ -254,7 +254,7 @@ class MainWindow(QMainWindow):
         exp = self.model.selected_experiment
         img_path = exp.directory / "emb_numbers.png"
         try:
-            self.image_window = ImageWindow(str(img_path))
+            self.image_window = ImageWindow(exp.name, str(img_path))
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
