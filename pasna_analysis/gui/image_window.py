@@ -19,10 +19,14 @@ from pasna_analysis import Embryo
 
 
 class ImageWindow(QWidget):
-    def __init__(self, image_path):
+    def __init__(self, exp_name, image_path):
         super().__init__()
         self.setWindowTitle("All embryos")
         self.setGeometry(200, 200, 600, 400)
+
+        title = QLabel(self)
+        title.setText(f"Experiment: {exp_name}")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         label = QLabel(self)
         pixmap = QPixmap(image_path)
@@ -32,6 +36,7 @@ class ImageWindow(QWidget):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout = QVBoxLayout()
+        layout.addWidget(title)
         layout.addWidget(label)
         self.setLayout(layout)
 
