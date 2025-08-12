@@ -200,10 +200,7 @@ class MainWindow(QMainWindow):
             return
         self.model.select_group(group)
 
-        self.clear_layout(self.bottom_layout)
-        self.paint_graphs()
-        self.render_trace()
-        self.plot_all_traces()
+        self.update_UI()
 
     def display_plots(self):
         curr_group = self.model.selected_group
@@ -281,6 +278,8 @@ class MainWindow(QMainWindow):
 
             for i, group in enumerate(self.model.groups):
                 select_group.insertItem(i, group.name)
+
+            select_group.setCurrentText(self.model.selected_group.name)
 
             return select_group
 
@@ -373,31 +372,33 @@ class MainWindow(QMainWindow):
 
     def paint_controls(self):
         # Sliders are only avaialable if a single experiment is open
-        if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
-            self.freq_slider = LabeledSlider(
-                "Frequency cutoff",
-                min_value=0.0001,
-                max_value=0.005,
-                initial_value=0.0025,
-                step_size=0.0001,
-            )
+        if len(self.model.groups) > 1 or self.model.has_combined_experiments():
+            return
 
-            self.rel_h_slider = LabeledSlider(
-                "Relative height",
-                min_value=0.3,
-                max_value=1,
-                initial_value=0.9,
-                step_size=0.01,
-            )
+        self.freq_slider = LabeledSlider(
+            "Frequency cutoff",
+            min_value=0.0001,
+            max_value=0.005,
+            initial_value=0.0025,
+            step_size=0.0001,
+        )
 
-            self.top_layout.addWidget(self.freq_slider)
-            self.top_layout.addWidget(self.rel_h_slider)
+        self.rel_h_slider = LabeledSlider(
+            "Relative height",
+            min_value=0.3,
+            max_value=1,
+            initial_value=0.9,
+            step_size=0.01,
+        )
 
-            self.button = QPushButton("Apply Changes")
-            self.button.clicked.connect(self.update_all_embs)
-            self.top_layout.addWidget(self.button)
+        self.top_layout.addWidget(self.freq_slider)
+        self.top_layout.addWidget(self.rel_h_slider)
 
-            self.calibrate_sliders()
+        self.button = QPushButton("Apply Changes")
+        self.button.clicked.connect(self.update_all_embs)
+        self.top_layout.addWidget(self.button)
+
+        self.calibrate_sliders()
 
     def toggle_emb_visibility(self, emb_name, should_remove):
         self.model.toggle_emb_visibility(emb_name, should_remove)
