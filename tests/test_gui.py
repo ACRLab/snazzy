@@ -87,15 +87,15 @@ def test_when_save_dir_not_provided_compare_plot_raises(qtbot, group_model):
 
 def test_can_render_FOV(qtbot):
     image_path = VALID_DIR / "emb_numbers.png"
-    window = ImageWindow(str(image_path))
+    exp_name = VALID_DIR.stem
+    window = ImageWindow(exp_name=exp_name, image_path=str(image_path))
 
     qtbot.addWidget(window)
 
-    label = window.findChild(QLabel)
+    labels = window.findChildren(QLabel)
+    assert len(labels) >= 2
 
-    assert label is not None, "Could not find QLabel."
-
-    pixmap = label.pixmap()
+    pixmap = labels[1].pixmap()
     assert pixmap is not None
     assert not pixmap.isNull()
 
