@@ -204,7 +204,7 @@ class Model:
 
         exp.config.save_manual_peak_data(emb_name, manual_widths=manual_widths)
 
-    def calc_peaks_all_embs(self, pd_params):
+    def calc_peaks_all_embs(self, pd_params=None):
         """Calculates peaks for all embryos in a given experiment.
 
         Persists the parameters used to calculate peaks in pd_params.json.
@@ -214,7 +214,7 @@ class Model:
         If there are combined experiments, the GUI will only present them."""
         exp = self.selected_experiment
         if pd_params is None:
-            pd_params = exp.pd_params
+            pd_params = self.get_pd_params()
 
         for emb in exp.all_embryos():
             emb.trace.detect_peaks(pd_params["freq"])
