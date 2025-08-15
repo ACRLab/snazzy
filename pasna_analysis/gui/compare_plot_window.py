@@ -9,6 +9,7 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
+from pasna_analysis import FrequencyAnalysis
 from pasna_analysis.gui import GroupModel
 
 matplotlib.use("QtAgg")
@@ -375,7 +376,7 @@ class ComparePlotWindow(QWidget):
             for exp in group.experiments.values():
                 Zxxs = []
                 for emb in exp.embryos:
-                    stft = emb.trace.calculate_STFT(emb.trace.aligned_dff)
+                    stft = FrequencyAnalysis.calculate_STFT(emb.trace.aligned_dff)
                     if stft is None:
                         continue
                     f, t, Zxx = stft
