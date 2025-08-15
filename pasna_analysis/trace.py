@@ -5,7 +5,7 @@ import numpy as np
 import scipy.signal as spsig
 from scipy.stats import zscore
 
-from pasna_analysis import Config, TracePhases
+from pasna_analysis import Config, FrequencyAnalysis, TracePhases
 
 
 class BaselineStrategies(Enum):
@@ -403,20 +403,6 @@ class Trace:
 
         return order0_idxes + p2_start
 
-    def get_filtered_signal(self, freq_cutoff, low_pass=True):
-        """Applies a low or high pass filter and returns the inverse result."""
-        N = len(self.dff[: self.trim_idx])
-        freqs = np.fft.rfftfreq(N, 1 / self.fs)
-        fft = np.fft.rfft(self.dff[: self.trim_idx])
-        if low_pass:
-            mask = freqs < freq_cutoff
-        else:
-            mask = freqs > freq_cutoff
-        filtered_fft = fft * mask
-        filtered_signal = np.fft.irfft(filtered_fft, n=N)
-
-        return filtered_signal
-
     def filter_peaks_by_local_context(
         self, signal, peak_indices, window_size=300, value=75, method="percentile"
     ):
@@ -500,7 +486,9 @@ class Trace:
         Peaks found in the freq domain are used as anchor points in the actual
         signal to determine peak indices.
         """
-        filtered_dff = self.get_filtered_signal(freq_cutoff)
+        _, filtered_dff = FrequencyAnalysis.apply_lopass_filter(
+            self.time[: self.trim_idx], self.dff[: self.trim_idx], freq_cutoff
+        )
 
         fft_height = self.pd_params["fft_height"]
         fft_prominence = self.pd_params["fft_prominence"]
@@ -637,94 +625,6 @@ class Trace:
             )
             local_peaks.append(len(peak_indices))
         return local_peaks
-
-    def calculate_STFT(self, dff, fs=1 / 6, fft_size=600, noverlap=450):
-        """Calculate the Short Time Fourier Transform for a dff signal.
-
-        It replaces None values with 1e-11.
-
-        Parameters:
-            dff (arr):
-                Preprocessed dff.
-            fs (float):
-                Sampling rate.
-            fft_size (int):
-                Num frames in each segment.
-            noverlap (int):
-                Num frames to overlap between segments.
-
-        Returns:
-            f (arr):
-                STFT frequency bins.
-            t (arr):
-                STFT time columns.
-            magnitude (array):
-                STFT magnitude (excludes phase).
-        """
-        dff = np.where(dff == None, 1e-11, dff).astype(float)
-        return spsig.stft(
-            dff, fs, detrend="constant", nperseg=fft_size, noverlap=noverlap
-        )
-
-    def apply_hipass_filter(self, time, dff, cutoff, fs=1 / 6, numtaps=501):
-        """Apply a high pass finite impulse response filter to the dff signal.
-
-        Parameters:
-            time (arr)
-                Timepoints associated to each dff point.
-            dff (arr)
-                dff values.
-            fs (float):
-                Sampling rate.
-            fft_size (int):
-                Num frames in each segment.
-            numtaps (int):
-                Num of coefficients in the filter.
-
-        Returns:
-            hipass_time (arr):
-                input time with filter applied.
-            hipass_dff (arr):
-                input dff with filter applied.
-        """
-        delay = int((numtaps - 1) / 2)
-        padded_dff = np.pad(dff, (0, delay), mode="constant")
-        fir_hipass = spsig.firwin(
-            numtaps, cutoff=cutoff, fs=fs, pass_zero=False
-        )  # filter coeffs
-        hipass_dff = spsig.lfilter(fir_hipass, [1.0], padded_dff)[delay:-delay]
-        hipass_time = time[: len(hipass_dff)]
-        return hipass_time, hipass_dff
-
-    def apply_lopass_filter(self, time, dff, cutoff, fs=1 / 6, numtaps=501):
-        """Apply a low pass finite impulse response filter to the dff signal.
-
-        Parameters:
-            time (arr)
-                Timepoints associated to each dff point.
-            dff (arr)
-                dff values.
-            fs (float):
-                Sampling rate.
-            fft_size (int):
-                Num frames in each segment.
-            numtaps (int):
-                Num of coefficients in the filter
-
-        Returns:
-            lopass_time (arr):
-                input time with filter applied
-            lopass_dff (arr):
-                input dff with filter applied
-        """
-        delay = int((numtaps - 1) / 2)
-        padded_dff = np.pad(dff, (0, delay), mode="constant")
-        fir_hipass = spsig.firwin(
-            numtaps, cutoff=cutoff, fs=fs, pass_zero=True
-        )  # filter coeffs
-        lopass_dff = spsig.lfilter(fir_hipass, [1.0], padded_dff)[delay:-delay]
-        lopass_time = time[: len(lopass_dff)]
-        return lopass_time, lopass_dff
 
     def get_dsna_start(self, freq):
         if not self.exp_params.get("has_dsna", False):

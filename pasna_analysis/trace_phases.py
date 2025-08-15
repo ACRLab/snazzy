@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from pasna_analysis import FrequencyAnalysis
+
 
 class TracePhases:
     """Calculate phase boundaries for a Trace.
@@ -78,7 +80,9 @@ class TracePhases:
                 A 2D list where each nested list has features of a given peak.
                 The only phase 1 feature used is HF filtered RMS.
         """
-        high_pass = self.trace.get_filtered_signal(hf_cutoff, low_pass=False)
+        high_pass = FrequencyAnalysis.get_filtered_signal(
+            self.trace.dff, hf_cutoff, low_pass=False
+        )
 
         rel_height = self.trace.pd_params["peak_width"]
         peak_idxes = self.trace.get_all_peak_idxes()
@@ -104,7 +108,9 @@ class TracePhases:
             features(list):
                 A 2D list where each nested list has features of a given peak.
         """
-        low_pass = self.trace.get_filtered_signal(lf_cutoff, low_pass=True)
+        low_pass = FrequencyAnalysis.get_filtered_signal(
+            self.trace.dff, lf_cutoff, low_pass=True
+        )
 
         rel_height = self.trace.pd_params["peak_width"]
         peak_idxes = self.trace.get_all_peak_idxes()

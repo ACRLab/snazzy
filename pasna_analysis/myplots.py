@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+from pasna_analysis import FrequencyAnalysis
+
 
 def set_darkbg(dark):
     plt.rcdefaults()
@@ -95,9 +97,8 @@ def plot_trace(
         # y axis
         plt.ylabel("ΔF/F")
         plt.ylim(ymin, ymax)
-        if (
-            abs(ymin - round(ymin)) < 0.2
-        ):  # if the ymin is close to a whole number, just round
+        # if the ymin is close to a whole number, just round
+        if abs(ymin - round(ymin)) < 0.2:
             ymin = round(ymin)
         dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
         plt.yticks(dff_ticks, dff_ticks)
@@ -244,7 +245,7 @@ def plot_specs(
 
             trace = emb.trace
             dff = trace.aligned_dff
-            f, t, Zxx = trace.calculate_STFT(dff)
+            f, t, Zxx = FrequencyAnalysis.calculate_STFT(dff)
 
             mag = abs(Zxx)
             spec = ax.pcolormesh(
