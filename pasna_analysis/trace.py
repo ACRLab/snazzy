@@ -236,7 +236,10 @@ class Trace:
                 window centered at each element.
         """
         if window_size % 2 == 0:
-            raise ValueError("window_size must be odd")
+            print(
+                f"WARN: window_size should be an odd number. Using ws={window_size-1}"
+            )
+            window_size -= 1
         if n_lowest > window_size:
             raise ValueError("n_lowest cannot be greater than window_size")
 
@@ -328,7 +331,7 @@ class Trace:
         if (peak_times[1] - peak_times[0]) > ISI_factor * avg_ISI:
             self._peak_idxes = np.array(self._peak_idxes[1:])
 
-    def apply_low_threshold(self, params):
+    def remove_below_threshold(self, params):
         """Removes all peaks below a percentage of the max amplitude."""
         if len(self.peak_amplitudes) == 0:
             return
@@ -379,7 +382,7 @@ class Trace:
 
         stages = [
             (self.remove_transients, {}),
-            (self.apply_low_threshold, {}),
+            (self.remove_below_threshold, {}),
             (self.reconcile_manual_peaks, {}),
             (self.update_dsna_start, {"freq": freq}),
         ]
@@ -469,6 +472,11 @@ class Trace:
 
             local_peaks, peak_data = spsig.find_peaks(window, height=(None, None))
             local_peak_heights = peak_data["peak_heights"]
+            if not any(local_peak_heights):
+                print(
+                    f"WARN: [{self.name}] could not port peaks at idx {idx}. Skipping this peak.."
+                )
+                continue
             max_peak = np.max(local_peak_heights)
 
             leftmost_peak = next(
