@@ -144,11 +144,27 @@ def plot_trace(
 
 
 def plot_spec(
-    f, t, Zxx, mymap, rc, display_colorbar=True, xmin=0, xmax=360, ymin=0, ymax=0.03
+    f,
+    t,
+    Zxx,
+    mymap,
+    rc,
+    display_colorbar=True,
+    xmin=0,
+    xmax=360,
+    ymin=0,
+    ymax=0.03,
+    vmax=None,
+    vmin=None,
 ):
     with plt.rc_context(rc):
         fig = plt.figure()
         mag = abs(Zxx)
+        max_mag = np.max(mag)
+        if vmax is None:
+            vmax = max_mag
+        if vmin is None:
+            vmin = 0.01 * vmax
         spec = plt.pcolormesh(
             t,
             f,
@@ -156,7 +172,7 @@ def plot_spec(
             cmap=mymap,
             shading="nearest",
             snap=True,
-            norm=colors.LogNorm(vmin=0.001, vmax=0.1),
+            norm=colors.LogNorm(vmin=vmin, vmax=vmax),
         )
 
         # x axis
@@ -258,6 +274,8 @@ def plot_specs(
     xmax=360,
     ymin=0,
     ymax=0.03,
+    vmax=None,
+    vmin=None,
 ):
     with plt.rc_context(rc):
         fig_width = rc["figure.figsize"][0]
@@ -285,6 +303,11 @@ def plot_specs(
             f, t, Zxx = FrequencyAnalysis.calculate_STFT(dff)
 
             mag = abs(Zxx)
+            max_mag = np.max(mag)
+            if vmax is None:
+                vmax = max_mag
+            if vmin is None:
+                vmin = 0.01 * vmax
             spec = ax.pcolormesh(
                 t,
                 f,
@@ -292,7 +315,7 @@ def plot_specs(
                 cmap=mymap,
                 shading="nearest",
                 snap=True,
-                norm=colors.LogNorm(vmin=0.001, vmax=0.1),
+                norm=colors.LogNorm(vmin=vmin, vmax=vmax),
             )
 
             # x axis
