@@ -68,6 +68,43 @@ def plot_raw_signals(embryos, rc, title=None):
     plt.show()
 
 
+def plot_trace_with_overlay(
+    time,
+    dff,
+    time_overlay,
+    overlay,
+    rc,
+    color=None,
+    xmin=0,
+    xmax=360,
+    xinterval=60,
+    ymin=-0.1,
+    ymax=1,
+    yinterval=1,
+):
+    with plt.rc_context(rc):
+        if color is None:
+            color = plt.rcParams["axes.prop_cycle"].by_key()["color"][9]
+
+        fig = plt.figure()
+        plt.plot(time, dff, color=color)
+        plt.plot(time_overlay, overlay, color="orange")
+
+        plt.xlabel("Time (mins)")
+        plt.xlim(xmin, xmax)
+        minute_ticks = np.arange(xmin, xmax + xinterval, xinterval, int)
+        plt.xticks(minute_ticks, minute_ticks)
+
+        plt.ylabel("ΔF/F")
+        plt.ylim(ymin, ymax)
+        if abs(ymin - round(ymin)) < 0.2:
+            ymin = round(ymin)
+        dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
+        plt.yticks(dff_ticks, dff_ticks)
+        fig.tight_layout()
+        plt.show()
+
+
 def plot_trace(
     time,
     dff,
