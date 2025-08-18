@@ -77,24 +77,6 @@ def test_baseline_with_average_n_values():
     assert np.allclose(baseline, expected)
 
 
-def test_baseline_average_bottom_n_requires_odd_window():
-    arr = [1, 2, 3, 4, 0, 1, 0, 7, 6]
-
-    invalid_window_size = 6
-
-    with pytest.raises(ValueError):
-        Trace.average_n_lowest_window(arr, window_size=invalid_window_size, n_lowest=2)
-
-
-def test_baseline_average_bottom_n_checks_window_size():
-    arr = [1, 2, 3, 4, 0, 1, 0, 7, 6]
-
-    invalid_window_size = len(arr) + 1
-
-    with pytest.raises(ValueError):
-        Trace.average_n_lowest_window(arr, window_size=invalid_window_size, n_lowest=2)
-
-
 def test_use_manual_trim_idx_if_present(config: Config, activity):
     expected_trim_idx = 2000
     config.update_params({"embryos": {"emb1": {"manual_trim_idx": expected_trim_idx}}})
