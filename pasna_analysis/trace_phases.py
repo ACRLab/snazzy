@@ -88,11 +88,9 @@ class TracePhases:
         peak_idxes = self.trace.get_all_peak_idxes()
         peak_bounds = self.trace.compute_peak_bounds(rel_height, peak_idxes)
         features = []
-        for s, e in peak_bounds:
+        for pi, (s, e) in zip(peak_idxes, peak_bounds):
             rms = np.sqrt(np.mean(np.power(high_pass[s:e], 2)))
-            # down the pipeline `features` must be 2D so each rms value is
-            # passed in a list, even though it's a single feature
-            features.append([rms])
+            features.append([self.trace.dff[pi], rms])
 
         return features
 
@@ -225,7 +223,6 @@ class TracePhases:
         dist_matrix: np.ndarray,
         change_index: int,
         features: list,
-        feature_names: list[str] | None = None,
         from_start: bool = True,
     ):
         """Visualize change index with DFF trace and feat dist matrix."""
@@ -251,21 +248,12 @@ class TracePhases:
         scaler = MinMaxScaler()
         scaled_features = scaler.fit_transform(features)
 
-        for i, feat in enumerate(zip(*scaled_features)):
-            if feature_names is not None:
-                axs["features"].plot(
-                    feat,
-                    linestyle="None",
-                    marker="o",
-                    markerfacecolor="None",
-                    label=feature_names[i],
-                )
-            else:
-                axs["features"].plot(
-                    feat, linestyle="None", marker="o", markerfacecolor="None"
-                )
-        if feature_names is not None:
-            axs["features"].legend()
+        feat1, feat2 = list(zip(*scaled_features))
+        axs["features"].plot(
+            feat1, feat2, linestyle="None", marker="o", markerfacecolor="None"
+        )
+        axs["features"].set_ylabel("Peak Amplitude")
+        axs["features"].set_xlabel("RMS High Frequency Content")
 
         sns.heatmap(
             dist_matrix,
