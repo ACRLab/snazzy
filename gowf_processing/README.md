@@ -1,6 +1,6 @@
-# Pasnascope
+# GOWF - Processing
  
-Image processing pipeline for pasnascope imaging.
+Raw data processing for the GOWF pipeline.
  
 ### Installation
  
