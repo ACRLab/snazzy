@@ -1,4 +1,4 @@
-from pasnascope import slice_img
+from gowf_processing import slice_img
 import random
 
 

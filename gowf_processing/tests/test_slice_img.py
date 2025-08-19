@@ -1,4 +1,4 @@
-from pasnascope import slice_img
+from gowf_processing import slice_img
 
 
 def test_add_padding_clips_to_shape():

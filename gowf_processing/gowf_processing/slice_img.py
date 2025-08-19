@@ -9,7 +9,7 @@ from skimage.morphology import binary_closing, octagon
 from skimage.exposure import equalize_hist
 from tifffile import imwrite, TiffFile
 
-from pasnascope import utils
+from gowf_processing import utils
 
 
 def get_metadata(img_path):

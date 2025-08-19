@@ -1,5 +1,5 @@
 from pathlib import Path
-from pasnascope import centerline_errors
+from gowf_processing import centerline_errors
 
 
 def test_matching_embryo_pairs_maps_strs_to_paths():

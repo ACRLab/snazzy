@@ -2,8 +2,8 @@ from pathlib import Path
 
 from tifffile import imread
 
-from pasnascope.animations import custom_animation
-from pasnascope import roi, utils
+from gowf_processing.animations import custom_animation
+from gowf_processing import roi, utils
 
 data_dir = Path("./data")
 experiments = [f.stem for f in data_dir.iterdir() if f.is_dir()]

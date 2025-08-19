@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tifffile import imread
 
-from pasnascope import centerline_errors, vnc_length
+from gowf_processing import centerline_errors, vnc_length
 
 
 def heatmap(data, row_labels, col_labels, ax, cbarlabel="", **kwargs):

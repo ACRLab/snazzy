@@ -1,5 +1,5 @@
 import numpy as np
-from pasnascope import roi
+from gowf_processing import roi
 
 
 def test_works_with_binary_image():

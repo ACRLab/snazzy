@@ -2,8 +2,8 @@ from pathlib import Path
 
 from tifffile import imread
 
-from pasnascope import utils
-from pasnascope.animations import custom_animation
+from gowf_processing import utils
+from gowf_processing.animations import custom_animation
 
 
 data_dir = Path("./data")
