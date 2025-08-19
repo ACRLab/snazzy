@@ -1,4 +1,4 @@
-from pasnascope import roi
+from gowf_processing import roi
 import numpy as np
 
 

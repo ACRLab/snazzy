@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import ndimage as ndi
 from skimage.draw import disk, ellipse
-from pasnascope.centerline import binarize, get_DT_maxima
+from gowf_processing.centerline import binarize, get_DT_maxima
 
 
 def view_DT_3D_plot(image, metric=None):

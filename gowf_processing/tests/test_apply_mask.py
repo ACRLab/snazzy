@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from pasnascope import activity
+from gowf_processing import activity
 
 base_dir = "./tests/images/"
 

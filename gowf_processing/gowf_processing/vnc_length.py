@@ -5,7 +5,7 @@ import numpy as np
 from skimage.measure import find_contours, regionprops
 from scipy.spatial.distance import pdist
 
-from pasnascope import centerline, roi, utils
+from gowf_processing import centerline, roi, utils
 
 
 def measure_VNC(masks):

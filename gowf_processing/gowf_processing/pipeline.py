@@ -5,7 +5,7 @@ import shutil
 import numpy as np
 from tifffile import imread
 
-from pasnascope import (
+from gowf_processing import (
     activity,
     find_hatching,
     full_embryo_length,

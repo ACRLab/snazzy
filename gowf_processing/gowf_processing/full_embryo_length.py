@@ -11,7 +11,7 @@ from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_holes, binary_opening, disk
 from tifffile import imread
 
-from pasnascope import utils
+from gowf_processing import utils
 
 
 def binarize(image):

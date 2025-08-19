@@ -5,7 +5,10 @@ from skimage.filters import threshold_otsu
 from skimage.measure import label, regionprops, find_contours
 from skimage.morphology import binary_erosion, disk, remove_small_objects
 
-from pasnascope.animations.custom_animation import CentroidAnimation, ContourAnimation
+from gowf_processing.animations.custom_animation import (
+    CentroidAnimation,
+    ContourAnimation,
+)
 
 
 def get_single_roi(img):

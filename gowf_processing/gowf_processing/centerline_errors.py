@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tifffile import imread
 
-from pasnascope import find_hatching, utils, vnc_length
+from gowf_processing import find_hatching, utils, vnc_length
 
 
 def get_random_files(path, n=5):
