@@ -1,4 +1,4 @@
-name: pscope_analysis
+name: golf-env
 channels:
   - conda-forge
   - defaults
