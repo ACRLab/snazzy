@@ -494,8 +494,8 @@ class Trace:
         Peaks found in the freq domain are used as anchor points in the actual
         signal to determine peak indices.
         """
-        _, filtered_dff = FrequencyAnalysis.apply_lopass_filter(
-            self.time[: self.trim_idx], self.dff[: self.trim_idx], freq_cutoff
+        filtered_dff = FrequencyAnalysis.apply_lopass_filter(
+            self.dff[: self.trim_idx], freq_cutoff
         )
 
         fft_height = self.pd_params["fft_height"]
