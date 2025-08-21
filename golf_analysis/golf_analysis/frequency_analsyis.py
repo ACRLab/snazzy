@@ -64,12 +64,10 @@ class FrequencyAnalysis:
         )
 
     @staticmethod
-    def apply_hipass_filter(time, signal, cutoff, fs=1 / 6, numtaps=501):
+    def apply_hipass_filter(signal, cutoff, fs=1 / 6, numtaps=501):
         """Apply a high pass finite impulse response filter to the signal.
 
         Parameters:
-            time (ndarray)
-                Timepoints associated to each signal point.
             signal (ndarray)
                 signal values.
             fs (float):
@@ -80,25 +78,23 @@ class FrequencyAnalysis:
                 Num of coefficients in the filter.
 
         Returns:
-            hipass_time (ndarray):
-                input time with filter applied.
             hipass_dff (ndarray):
                 input signal with filter applied.
         """
         delay = int((numtaps - 1) / 2)
         padded_dff = np.pad(signal, (0, delay), mode="constant")
+
         fir_hipass = spsig.firwin(numtaps, cutoff=cutoff, fs=fs, pass_zero=False)
-        hipass_dff = spsig.lfilter(fir_hipass, [1.0], padded_dff)[delay:-delay]
-        hipass_time = time[: len(hipass_dff)]
-        return hipass_time, hipass_dff
+        padded_hipass_dff = spsig.lfilter(fir_hipass, [1.0], padded_dff)
+        adjusted_hipass_dff = padded_hipass_dff[delay:]
+
+        return adjusted_hipass_dff
 
     @staticmethod
-    def apply_lopass_filter(time, signal, cutoff, fs=1 / 6, numtaps=501):
+    def apply_lopass_filter(signal, cutoff, fs=1 / 6, numtaps=501):
         """Apply a low pass finite impulse response filter to the signal.
 
         Parameters:
-            time (ndarray)
-                Timepoints associated to each signal point.
             signal (ndarray)
                 signal values.
             fs (float):
@@ -109,14 +105,14 @@ class FrequencyAnalysis:
                 Num of coefficients in the filter
 
         Returns:
-            lopass_time (ndarray):
-                input time with filter applied
             lopass_dff (ndarray):
                 input signal with filter applied
         """
         delay = int((numtaps - 1) / 2)
         padded_dff = np.pad(signal, (0, delay), mode="constant")
+
         fir_lopass = spsig.firwin(numtaps, cutoff=cutoff, fs=fs, pass_zero=True)
-        lopass_dff = spsig.lfilter(fir_lopass, [1.0], padded_dff)[delay:-delay]
-        lopass_time = time[: len(lopass_dff)]
-        return lopass_time, lopass_dff
+        padded_lopass_dff = spsig.lfilter(fir_lopass, [1.0], padded_dff)
+        adjusted_lopass_dff = padded_lopass_dff[delay : delay + len(signal)]
+
+        return adjusted_lopass_dff

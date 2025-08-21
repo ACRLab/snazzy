@@ -71,7 +71,6 @@ def plot_raw_signals(embryos, rc, title=None):
 def plot_trace_with_overlay(
     time,
     dff,
-    time_overlay,
     overlay,
     rc,
     color=None,
@@ -88,7 +87,7 @@ def plot_trace_with_overlay(
 
         fig = plt.figure()
         plt.plot(time, dff, color=color)
-        plt.plot(time_overlay, overlay, color="orange")
+        plt.plot(time, overlay, color="orange")
 
         plt.xlabel("Time (mins)")
         plt.xlim(xmin, xmax)
