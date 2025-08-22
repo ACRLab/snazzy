@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from golf_processing import slice_img
+
+FIRST_FRAMES = Path("./tests/images/first_frames.tif")
 
 
 def test_add_padding_clips_to_shape():
@@ -18,3 +22,9 @@ def test_add_padding_when_resulting_bbox_inside():
 
     actual = slice_img.add_padding(boundaries, shape, pad=20)
     assert actual == expected_boundaries
+
+
+def test_can_mark_neighbors():
+    coords = slice_img.calculate_slice_coordinates(FIRST_FRAMES)
+    number_of_embryos = 4
+    assert len(coords) == number_of_embryos
