@@ -1,13 +1,13 @@
-import os
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+import os
 
-import numpy as np
 from nd2 import ND2File
 from skimage.filters import threshold_triangle
 from skimage.morphology import binary_closing, octagon
 from skimage.exposure import equalize_hist
 from tifffile import imwrite, TiffFile
+import numpy as np
 
 from golf_processing import utils
 
@@ -148,6 +148,43 @@ def sort_by_grid_pos(extremes, n_cols):
     return {i: extremes[idx] for i, idx in enumerate(indices, 1)}
 
 
+def filter_by_embryos(extremes, selected_embryos):
+    """Filter the extremes dict, by only keeping the selected_embryos."""
+    return {k: extremes[k] for k in selected_embryos if k in extremes}
+
+
+def read_mmap(mmap_path, num_frames=None):
+    offset, dtype, shape = get_metadata(mmap_path)
+    if num_frames:
+        shape = (num_frames, *shape[1:])
+    return np.memmap(mmap_path, dtype, "r", offset, shape)
+
+
+def create_tasks(extremes, frame_shape, pad, channels, active_ch, dest, overwrite):
+    """"""
+    tasks = []
+    for id, extreme in extremes.items():
+        x0, x1, y0, y1 = add_padding(extreme, frame_shape, pad)
+        for ch in range(channels):
+            file_name = output_file_name(id, ch, active_ch)
+            output = dest.joinpath(file_name)
+            if output.exists() and not overwrite:
+                print(
+                    f"{file_name} already found. To overwrite the file, pass `overwrite=True`."
+                )
+            else:
+                tasks.append((ch, x0, x1, y0, y1, output))
+    return tasks
+
+
+def submit_tasks(img, tasks):
+    num_threads = os.cpu_count()
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(save_movie, img, *task) for task in tasks]
+        for future in futures:
+            future.result()
+
+
 def cut_movies(
     extremes,
     img_path,
@@ -165,45 +202,31 @@ def cut_movies(
         extremes: dict for `emb_number: [min_r, max_r, min_c, max_c]`.
         img_path: path to the raw image that will be cut.
         dest: directory where the movies will be saved.
+        embryos: list of embryo numbers. Used to select a subgroup of embryos.
         active_ch: indicates the image active channel. Defaults to 1 and it
         is expected to be equal to 1 or 2.
         channels: (defaults to 2) number of channels imaged.
-        embs: list of embryo numbers. Used to select a subgroup of embryos.
         pad: amount of padding to add to each movie, in pixels
         overwrite: boolean to determine if movies should be overwritten."""
-    try:
-        if type(embryos) == list:
-            extremes = {k: extremes[k] for k in embryos if k in extremes}
-    except KeyError:
-        print("All indices provided in `embryos` must match embryo numbers.")
-        return
+    if embryos:
+        extremes = filter_by_embryos(extremes, embryos)
     if active_ch not in [1, 2]:
         raise ValueError(f"Active channel should be 1 or 2, got {active_ch}.")
     if channels not in [1, 2]:
         raise ValueError(f"Can only parse 1 or 2 channels, but got {channels}")
 
+    img = read_mmap(img_path)
+    frame_shape = img.shape[2:]
+
     dest_path = Path(dest)
-    offset, dtype, shape = get_metadata(img_path)
-    img = np.memmap(img_path, dtype=dtype, mode="r", shape=shape, offset=offset)
-    tasks = []
-    for id, extreme in extremes.items():
-        x0, x1, y0, y1 = add_padding(extreme, shape[2:], pad)
-        for ch in range(channels):
-            file_name = output_file_name(id, ch, active_ch)
-            output = dest_path.joinpath(file_name)
-            if output.exists() and not overwrite:
-                print(
-                    f"{file_name} already found. To overwrite the file, pass `overwrite=True`."
-                )
-            else:
-                tasks.append((img, ch, x0, x1, y0, y1, output))
+    tasks = create_tasks(
+        extremes, frame_shape, pad, channels, active_ch, dest_path, overwrite
+    )
+
     if len(tasks) == 0:
         return
-    num_threads = os.cpu_count()
-    with ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(save_movie, *task) for task in tasks]
-        for future in futures:
-            future.result()
+
+    submit_tasks(img, tasks)
 
 
 def output_file_name(id, ch, active_ch):
@@ -248,11 +271,7 @@ def calculate_slice_coordinates(img_path, n_cols=3, thres_adjust=0):
 
 def get_initial_frames_from_mmap(img_path, n=10):
     """Returns the first n frames from the file at `img_path`."""
-    offset, dtype, shape = get_metadata(img_path)
-    # Change first dimension to load just the 10 first images
-    shape = (n, *shape[1:])
-    img = np.memmap(img_path, dtype=dtype, mode="r", shape=shape, offset=offset)
-    return img
+    return read_mmap(img_path, num_frames=n)
 
 
 def get_first_image_from_mmap(img_path):
