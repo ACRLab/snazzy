@@ -1,14 +1,9 @@
-import numpy as np
 import math
+import numpy as np
 
 from skimage.filters import threshold_otsu
-from skimage.measure import label, regionprops, find_contours
-from skimage.morphology import binary_erosion, disk, remove_small_objects
-
-from golf_processing.animations.custom_animation import (
-    CentroidAnimation,
-    ContourAnimation,
-)
+from skimage.measure import find_contours, label
+from skimage.morphology import remove_small_objects
 
 
 def get_single_roi(img):
@@ -43,7 +38,7 @@ def get_single_roi(img):
     return np.logical_not(largest_label)
 
 
-def get_roi(img, window=10, mask=None):
+def get_roi(img, window=10):
     """The ROI for an image, after downsampling the slices by `window`."""
     if img.ndim != 3:
         raise ValueError("img should be a 3D array.")
@@ -55,86 +50,22 @@ def get_roi(img, window=10, mask=None):
     # calculates a new ROI in steps of `window`:
     for i in range(0, num_slices - window, window):
         avg_slc = np.average(img[i : i + window], axis=0)
-        if mask is not None:
-            avg_slc[mask] = 0
         rois[i // window] = get_single_roi(avg_slc)
 
     return rois
 
 
-def global_roi(img):
-    """Creates a single ROI for all the slices in the image.
-
-    It's faster than calculating one ROI for each slice, and can be used if
-    the embryo does not move."""
-    avg_img = np.average(img, axis=0)
-    return get_single_roi(avg_img)
-
-
-def cache_rois(img, file_path):
-    """Saves ROI as a numpy file."""
-    rois = get_roi(img)
-
-    with open(file_path, "wb+") as f:
-        np.save(f, rois)
-
-    print(f"Saved ROIs in `{file_path}`.")
-
-
-def get_initial_mask(img, n):
-    """Create a mask based on the first n frames of the movies.
-
-    The mask is eroded to give space to account for the embryo flickering."""
-    init = np.average(img[:n], axis=0)
-    first_mask = get_single_roi(init)
-    binary_erosion(first_mask, footprint=disk(10), out=first_mask)
-    return first_mask
-
-
-def get_contours(img, window=10, mask=None):
+def get_contours(img, window=10):
     """Returns the contours of each image, based on their ROI."""
-    rois = get_roi(img, window=window, mask=mask)
+    rois = get_roi(img, window=window)
 
     contours = []
 
     for roi in rois:
-        # TODO: repeat the previous contour in no ROI is found?
         if roi is None:
+            contours.append(contours[-1])
             continue
         contour = find_contours(roi)
         if len(contour) > 0:
             contours.append(contour[0])
     return contours
-
-
-def get_contour(img):
-    """Returns the contour for a single image."""
-    return find_contours(img)[0]
-
-
-def plot_contours(img):
-    """Plots image with contours overlayed."""
-    contours = get_contours(img)
-    pa = ContourAnimation(img[200:400], contours, interval=300)
-    pa.display()
-
-
-def get_centroids(img):
-    """Get the centroid of each slice of a ROI within an image."""
-    centroids = []
-
-    for slc in img:
-        roi = get_single_roi(slc)
-        # largest_label is a boolean mask, regionprops needs a binary image
-        regions = regionprops(roi.astype(np.uint8))
-        props = regions[0]
-        y0, x0 = props.centroid
-        centroids.append([y0, x0])
-
-    return centroids
-
-
-def plot_centroids(img):
-    centroids = get_centroids(img)
-    ca = CentroidAnimation(img, centroids, interval=150)
-    ca.display()
