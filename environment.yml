@@ -1,4 +1,4 @@
-name: golf-env
+name: snazzy-env
 channels:
   - conda-forge
   - defaults

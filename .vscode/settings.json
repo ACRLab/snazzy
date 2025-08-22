@@ -3,7 +3,7 @@
     "python-envs.defaultPackageManager": "ms-python.python:conda",
     "python-envs.pythonProjects": [],
     "python.analysis.extraPaths": [
-        "./golf_analysis",
-        "./golf_processing"
+        "./snazzy_analysis",
+        "./snazzy_processing"
     ]
 }
