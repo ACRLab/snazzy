@@ -752,7 +752,6 @@ class MainWindow(QMainWindow):
         self._setup_trim_line(time, trace)
         self._setup_dsna_line(trimmed_time, trace)
         self._plot_peak_widths(trimmed_time, trace)
-        self._plot_detected_oscillations(trimmed_time, trace, dff)
         self._set_plot_titles(emb_name, exp_name)
 
     def _clear_current_plot(self):
@@ -861,16 +860,6 @@ class MainWindow(QMainWindow):
                 line.addMarker("<|") if i % 2 == 0 else line.addMarker("|>")
             line.sigPositionChangeFinished.connect(self.change_peak_bounds)
             self.plot_widget.addItem(line)
-
-    def _plot_detected_oscillations(self, time, trace, dff):
-        op = trace.detect_oscillations()
-        if op is None:
-            print("No oscillations found")
-            return
-        op_times = time[op]
-        op_amps = dff[op]
-        scatter = pg.ScatterPlotItem(op_times, op_amps, size=8, brush=QColor("orange"))
-        self.plot_widget.addItem(scatter)
 
     def _set_plot_titles(self, emb_name, exp_name):
         if self.model.has_combined_experiments():

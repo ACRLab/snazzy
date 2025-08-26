@@ -389,23 +389,6 @@ class Trace:
 
         self.process_peaks(stages)
 
-    def detect_oscillations(self, after_ep=2, offset=10):
-        # oscillations only happen in phase 2, which should be at least after ep 2:
-        if len(self.peak_idxes) <= after_ep:
-            return None
-
-        mask = np.zeros_like(self.dff, dtype=np.bool_)
-        peak_bounds = self.peak_bounds_indices
-        for s, e in peak_bounds:
-            mask[s : e + offset] = 1
-        p2_start = self.peak_idxes[after_ep]
-        dff = self.dff.copy()
-        dff[mask] = 0
-        dff = dff[p2_start : self.trim_idx]
-        order0_idxes = spsig.find_peaks(dff, height=0.1, distance=5, prominence=0.07)[0]
-
-        return order0_idxes + p2_start
-
     def filter_peaks_by_local_context(
         self, signal, peak_indices, window_size=300, value=75, method="percentile"
     ):
