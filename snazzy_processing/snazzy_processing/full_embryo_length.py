@@ -6,10 +6,10 @@ import numpy as np
 from scipy.ndimage import binary_fill_holes
 from skimage.draw import ellipse
 from skimage.exposure import equalize_hist
-from skimage.filters import threshold_triangle, threshold_multiotsu, gaussian
+from skimage.filters import gaussian, threshold_multiotsu, threshold_triangle
 from skimage.measure import label, regionprops
-from skimage.morphology import remove_small_holes, binary_opening, disk
-from tifffile import imread
+from skimage.morphology import binary_opening, disk, remove_small_holes
+import tifffile
 
 from snazzy_processing import utils
 
@@ -21,6 +21,7 @@ def binarize(image):
     bin_img = image > thr
 
     labels = label(bin_img, connectivity=1)
+    # skips the background value
     largest_label = labels == np.argmax(np.bincount(labels.flat)[1:]) + 1
 
     remove_small_holes(largest_label, 50, out=largest_label)
@@ -31,16 +32,17 @@ def binarize(image):
 
 def binarize_low_embryo_background(image):
     """Returns a binary image with a single label, assuming that background values are _higher_ than non-VNC pixels in the embryo."""
-    image = gaussian(image, sigma=2, out=image)
-    thr = threshold_multiotsu(image, classes=3)
-    img = np.digitize(image, thr)
+    blurred_image = gaussian(image, sigma=2)
+    thr = threshold_multiotsu(blurred_image, classes=3)
+    img = np.digitize(blurred_image, thr)
 
     labels = label(img, connectivity=1, background=1)
+    # skips the background value
     largest_label = labels == np.argmax(np.bincount(labels.flat)[1:]) + 1
 
-    binary_fill_holes(largest_label, output=largest_label)
+    filled_label = binary_fill_holes(largest_label, output=None)
 
-    return largest_label
+    return filled_label
 
 
 def length_from_regions_props(img, pixel_width=1.62):
@@ -53,7 +55,28 @@ def length_from_regions_props(img, pixel_width=1.62):
     return regions[0].axis_major_length * pixel_width
 
 
-def measure(img_path, low_non_VNC=False, start=1000, end=1100):
+def read_and_preprocess_image(img_path, start=None, end=None, interval=100):
+    # try to sample frames from the middle of the movie
+    if start is None and end is None:
+        with tifffile.TiffFile(img_path) as tif:
+            shape = tif.series[0].shape
+        start = shape[0] // 2
+        end = start + interval if shape[0] > start + interval else shape[0]
+
+    img = tifffile.imread(img_path, key=range(start, end))
+    img = np.average(img, axis=0)
+    return equalize_hist(img)
+
+
+def label_and_get_len(img, low_non_VNC):
+    if low_non_VNC:
+        bin_img = binarize_low_embryo_background(img)
+    else:
+        bin_img = binarize(img)
+    return length_from_regions_props(bin_img)
+
+
+def measure(img_path, low_non_VNC=False, start=None, end=None, interval=100):
     """Calculates the embryo length, based on a movie fragment.
 
     It's best to use an interval of 50 to 100 frames, and to pick frames
@@ -63,14 +86,11 @@ def measure(img_path, low_non_VNC=False, start=1000, end=1100):
     matches the binary image. This is a valid estimate because the
     embryo shape is fairly regular and resembles an ellipse.
     """
-    img = imread(img_path, key=range(start, end))
-    img = np.average(img, axis=0)
-    img = equalize_hist(img)
-    if low_non_VNC:
-        bin_img = binarize_low_embryo_background(img)
-    else:
-        bin_img = binarize(img)
-    return length_from_regions_props(bin_img)
+    img = read_and_preprocess_image(img_path, start, end, interval)
+
+    emb_length = label_and_get_len(img, low_non_VNC)
+
+    return emb_length
 
 
 def export_csv(lengths, embryo_names, output):
