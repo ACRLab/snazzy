@@ -19,8 +19,11 @@ def measure_vnc_length(embs_src, res_dir, interval):
     """Calculates VNC length for all embryos in a directory."""
     embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
     output = res_dir.joinpath("lengths")
-    output.mkdir(parents=True, exist_ok=True)
     embs = [emb for emb in embs if not already_created(emb, output)]
+
+    if not embs:
+        return 0
+
     lengths = []
     ids = []
 
@@ -31,11 +34,14 @@ def measure_vnc_length(embs_src, res_dir, interval):
             ids.append(id)
             lengths.append(vnc_len)
 
+    output.mkdir(parents=True, exist_ok=True)
     vnc_length.export_csv(ids, lengths, output, interval)
     return len(ids)
 
 
 def already_created(emb, output):
+    if not output.exists():
+        return False
     id = utils.emb_number(emb)
     output_path = output.joinpath(f"emb{id}.csv")
     return output_path.exists()
@@ -56,6 +62,7 @@ def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
     output = res_dir.joinpath("full-length.csv")
     full_lengths = []
     embryo_names = []
+
     if output.exists():
         print(f"The file {output.stem} already exists, and won't be overwritten.")
         return 0
@@ -66,13 +73,14 @@ def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
 
     # NOTE: temporary fix -> warn when measuments deviate too much from others
     # This happens sparsely due to the VNC position inside the embryo
-    z_scores = np.abs(full_lengths - np.mean(full_lengths)) / np.std(full_lengths)
-    threshold = 2
-    outliers = np.where(z_scores > threshold)[0]
-    for i in outliers:
-        print(
-            f"Embryo {embryo_names[i]} full length measurement should be manually checked."
-        )
+    if len(full_lengths) > 1:
+        z_scores = np.abs(full_lengths - np.mean(full_lengths)) / np.std(full_lengths)
+        threshold = 2
+        outliers = np.where(z_scores > threshold)[0]
+        for i in outliers:
+            print(
+                f"Embryo {embryo_names[i]} full length measurement should be manually checked."
+            )
 
     full_embryo_length.export_csv(full_lengths, embryo_names, output)
     return len(full_lengths)
@@ -84,10 +92,12 @@ def calc_activities(embs_src, res_dir, window):
     struct = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
 
     output = res_dir.joinpath("activity")
-    output.mkdir(parents=True, exist_ok=True)
 
     active = [emb for emb in active if not already_created(emb, output)]
     struct = [emb for emb in struct if not already_created(emb, output)]
+
+    if not active or not struct:
+        return 0
 
     embryos = []
     ids = []
@@ -104,6 +114,7 @@ def calc_activities(embs_src, res_dir, window):
             ids.append(id)
             embryos.append(signal)
 
+    output.mkdir(parents=True, exist_ok=True)
     if embryos:
         activity.export_csv(ids, embryos, output)
     return len(ids)
