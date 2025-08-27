@@ -145,16 +145,26 @@ def view_centerline_dist(image, img_title="", thres_rel=0.6, min_dist=5):
         print(f"Cound not find centerline for the given DT points.")
         return None
 
+    rows, cols = image.shape
+    x_start = 0
+    x_end = cols - 1
+    y_start, y_end = [int(y) for y in estimator.predict([[x_start], [x_end]])]
+
+    rr, cc = line(y_start, x_start, y_end, x_end)
+
+    mask = binary_image[rr, cc] == 1
+
+    rr_m, cc_m = rr[mask], cc[mask]
+    rr = np.clip(rr, 0, rows - 1)
+
     inliers = estimator.inlier_mask_
     outliers = np.logical_not(inliers)
 
-    mask = centerline_mask(image.shape, estimator.predict)
-
     fig, ax = plt.subplots()
     ax.scatter(x[inliers], y[inliers], color="green")
-    ax.scatter(x[outliers], y[outliers], color="red")
-    ax.imshow(image)
-    ax.imshow(mask, alpha=0.3)
+    ax.scatter(x[outliers], y[outliers], color="orange")
+    ax.imshow(binary_image)
+    ax.plot(cc_m, rr_m, color="red", linewidth=1)
     ax.set_title(img_title)
     ax.set_axis_off()
     fig.canvas.header_visible = False
