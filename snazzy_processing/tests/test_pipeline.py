@@ -11,7 +11,7 @@ EMB_SRC = BASE_DIR.joinpath("embryo_movies")
 
 def test_skips_embryo_if_already_processed():
     with patch("snazzy_processing.pipeline.already_created", lambda x, y: True):
-        processed_lens = pipeline.measure_vnc_length(EMB_SRC, EMB_SRC, interval=20)
+        processed_lens = pipeline.measure_vnc_length(EMB_SRC, EMB_SRC, downsampling=20)
         processed_acts = pipeline.calc_activities(EMB_SRC, EMB_SRC, window=10)
 
         assert processed_lens == 0
@@ -74,11 +74,10 @@ def test_calculate_activity_single_emb():
     img_len = 101
     interval = 10
 
-    id, emb = pipeline.calc_activity(act_path, stct_path, interval)
+    id, signals = pipeline.calc_activity(act_path, stct_path, interval)
 
     assert id == 1
-    assert len(emb) == 2
-    assert len(emb[1]) == img_len
+    assert signals.shape == (img_len, 2)
 
 
 def test_calculate_activity_raises_if_embs_not_match():
