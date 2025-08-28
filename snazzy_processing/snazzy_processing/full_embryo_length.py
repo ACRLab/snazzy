@@ -1,4 +1,3 @@
-import csv
 import math
 
 import matplotlib.pyplot as plt
@@ -11,7 +10,7 @@ from skimage.measure import label, regionprops
 from skimage.morphology import binary_opening, disk, remove_small_holes
 import tifffile
 
-from snazzy_processing import utils
+from snazzy_processing import csv_handler
 
 
 def binarize(image):
@@ -56,8 +55,8 @@ def length_from_regions_props(img, pixel_width=1.62):
 
 
 def read_and_preprocess_image(img_path, start=None, end=None, interval=100):
-    # try to sample frames from the middle of the movie
     if start is None and end is None:
+        # try to sample frames from the middle of the movie
         with tifffile.TiffFile(img_path) as tif:
             shape = tif.series[0].shape
         start = shape[0] // 2
@@ -91,29 +90,6 @@ def measure(img_path, low_non_VNC=False, start=None, end=None, interval=100):
     emb_length = label_and_get_len(img, low_non_VNC)
 
     return emb_length
-
-
-def export_csv(lengths, embryo_names, output):
-    """Generates a csv file with embryo full length data.
-
-    Parameters:
-        lengts: list of lists, where each nested list represents VNC lengths for a single embryo. Must have same length as the `embryos`.
-        embryo_names: list of embryo names
-        output: path to the output csv file.
-    """
-    header = ["ID", "full_length"]
-    if output.exists():
-        print(
-            f"Warning: The file `{output.stem}` already exists. Select another file name or delete the original file."
-        )
-        return False
-    with open(output, "w") as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        for emb_name, length in zip(embryo_names, lengths):
-            id = utils.emb_number(emb_name)
-            writer.writerow((id, length))
-    return True
 
 
 def view_full_embryo_length(img, original_img):
@@ -157,6 +133,22 @@ def view_full_embryo_length(img, original_img):
     plt.show()
 
 
+def get_output_data(ids, lengths):
+    return np.concatenate((ids[:, None], lengths[:, None]), axis=1)
+
+
+def export_csv(ids, lengths, output_path):
+    lengths = np.asarray(lengths)
+
+    ids = np.asarray(ids)
+
+    data = get_output_data(ids, lengths)
+
+    csv_handler.write_file(output_path, data, ["ID", "full_length"])
+
+    return True
+
+
 def get_annotated_data(csv_path):
     """Reads annotated data from a csv file."""
-    return np.genfromtxt(csv_path, delimiter=",", skip_header=1)
+    return csv_handler.read(csv_path)

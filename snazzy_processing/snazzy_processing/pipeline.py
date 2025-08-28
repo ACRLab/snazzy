@@ -15,11 +15,11 @@ from snazzy_processing import (
 )
 
 
-def measure_vnc_length(embs_src, res_dir, interval):
+def measure_vnc_length(embs_src, res_dir, downsampling):
     """Calculates VNC length for all embryos in a directory."""
     embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
-    output = res_dir.joinpath("lengths")
-    embs = [emb for emb in embs if not already_created(emb, output)]
+    output_dir = res_dir.joinpath("lengths")
+    embs = [emb for emb in embs if not already_created(emb, output_dir)]
 
     if not embs:
         return 0
@@ -28,14 +28,14 @@ def measure_vnc_length(embs_src, res_dir, interval):
     ids = []
 
     with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(calculate_length, emb, interval) for emb in embs]
+        futures = [executor.submit(calculate_length, emb, downsampling) for emb in embs]
         for future in as_completed(futures):
             id, vnc_len = future.result()
             ids.append(id)
             lengths.append(vnc_len)
 
-    output.mkdir(parents=True, exist_ok=True)
-    vnc_length.export_csv(ids, lengths, output, interval)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    vnc_length.export_csv(ids, lengths, output_dir, downsampling)
     return len(ids)
 
 
@@ -47,12 +47,12 @@ def already_created(emb, output):
     return output_path.exists()
 
 
-def calculate_length(emb, interval):
+def calculate_length(emb, downsampling):
     id = utils.emb_number(emb.stem)
     hp = find_hatching.find_hatching_point(emb)
-    hp -= hp % interval
+    hp -= hp % downsampling
 
-    img = imread(emb, key=range(0, hp, interval))
+    img = imread(emb, key=range(0, hp, downsampling))
     vnc_len = vnc_length.measure_VNC_centerline(img)
     return id, vnc_len
 
@@ -61,28 +61,28 @@ def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
     embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
     output = res_dir.joinpath("full-length.csv")
     full_lengths = []
-    embryo_names = []
+    ids = []
 
     if output.exists():
         print(f"The file {output.stem} already exists, and won't be overwritten.")
         return 0
 
     for emb in embs:
-        embryo_names.append(emb.stem)
+        ids.append(utils.emb_number(emb.stem))
         full_lengths.append(full_embryo_length.measure(emb, low_non_VNC))
 
-    # NOTE: temporary fix -> warn when measuments deviate too much from others
-    # This happens sparsely due to the VNC position inside the embryo
+    # Warn when measuments deviate too much from others
+    # Can happen due to odd VNC positions or wrong bounding boxes
     if len(full_lengths) > 1:
         z_scores = np.abs(full_lengths - np.mean(full_lengths)) / np.std(full_lengths)
         threshold = 2
         outliers = np.where(z_scores > threshold)[0]
         for i in outliers:
             print(
-                f"Embryo {embryo_names[i]} full length measurement should be manually checked."
+                f"Embryo {ids[i]} full length measurement should be manually checked."
             )
 
-    full_embryo_length.export_csv(full_lengths, embryo_names, output)
+    full_embryo_length.export_csv(ids, full_lengths, output)
     return len(full_lengths)
 
 
@@ -91,15 +91,15 @@ def calc_activities(embs_src, res_dir, window):
     active = sorted(embs_src.glob("*ch1.tif"), key=utils.emb_number)
     struct = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
 
-    output = res_dir.joinpath("activity")
+    output_dir = res_dir.joinpath("activity")
 
-    active = [emb for emb in active if not already_created(emb, output)]
-    struct = [emb for emb in struct if not already_created(emb, output)]
+    active = [emb for emb in active if not already_created(emb, output_dir)]
+    struct = [emb for emb in struct if not already_created(emb, output_dir)]
 
     if not active or not struct:
         return 0
 
-    embryos = []
+    signals = []
     ids = []
     # NOTE: number of workers is limited here because it was crashing jupyter
     # on a machine with low RAM. More workers will result in faster processing
@@ -112,11 +112,11 @@ def calc_activities(embs_src, res_dir, window):
         for future in as_completed(futures):
             id, signal = future.result()
             ids.append(id)
-            embryos.append(signal)
+            signals.append(signal)
 
-    output.mkdir(parents=True, exist_ok=True)
-    if embryos:
-        activity.export_csv(ids, embryos, output)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    if signals:
+        activity.export_csv(ids, signals, output_dir)
     return len(ids)
 
 
@@ -136,8 +136,9 @@ def calc_activity(act, stct, window):
     signal_active = activity.get_activity(masked_active)
     signal_struct = activity.get_activity(masked_struct)
 
-    emb = [signal_active, signal_struct]
-    return id, emb
+    signals = np.ma.column_stack((signal_active, signal_struct))
+
+    return id, signals
 
 
 def clean_up_files(embs_src, first_frames_path, tif_path):

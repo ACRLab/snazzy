@@ -1,8 +1,6 @@
-import csv
-
 import numpy as np
 
-from snazzy_processing import centerline
+from snazzy_processing import centerline, csv_handler
 
 
 def measure_VNC_centerline(
@@ -39,46 +37,33 @@ def predict_next(previous):
     return m * len(x) + c
 
 
-def get_length_from_csv(
-    file_path, columns=(1,), end=None, in_pixels=False, pixel_width=1.62
-):
+def get_length_from_csv(file_path, columns=(1,)):
     """Reads CSV data as a nparray.
 
     Expects the lengths to be in actual metric units, instead of pixels."""
-    data = np.genfromtxt(file_path, delimiter=",", skip_header=1, usecols=columns)
-    lengths = data
-    if in_pixels:
-        lengths *= pixel_width
-    if end is None:
-        return lengths
-    else:
-        return lengths[:end]
+    return csv_handler.read(file_path, usecols=columns)
 
 
-def export_csv(ids, vnc_lengths, output_dir, downsampling, frame_interval=6):
-    """Generates a csv file with VNC Length data.
+def get_output_data(lengths, downsampling, frame_interval):
+    N, t = lengths.shape
+    time = np.arange(t) * frame_interval * downsampling
+    time = time[None, :, None]
+    time = np.repeat(time, N, axis=0)
 
-    Parameters:
-        embryos: list of embryo names
-        vnc_lengts: list of lists, where each nested list represents VNC lengths for a single embryo. Must have same length as the `embryos`.
-        output: path to the output csv file.
-        downsampling: interval used to calculate VNC lengths.
-        frame_interval: time (seconds) between two image captures.
-    """
-    header = ["time", "length"]
-    for id, lengths in zip(ids, vnc_lengths):
-        output_path = output_dir.joinpath(f"emb{id}.csv")
-        if output_path.exists():
-            print(f"File {output_path.stem} already exists. Skipping..")
-            continue
-        with open(output_path, "w") as f:
-            writer = csv.writer(f)
-            writer.writerow(header)
-            for t, length in enumerate(lengths):
-                writer.writerow(format_csv_row(t, downsampling, frame_interval, length))
+    lengths = lengths[:, :, None]
+
+    return np.concatenate((time, lengths), axis=2)
+
+
+def export_csv(ids, lengths, output_dir, downsampling, frame_interval=6):
+    max_len = max(len(l) for l in lengths)
+    padded = [np.pad(l, (0, max_len - len(l)), constant_values=0) for l in lengths]
+    lengths = np.asarray(padded)
+
+    csv_paths = [output_dir.joinpath(f"emb{id}.csv") for id in ids]
+
+    data = get_output_data(lengths, downsampling, frame_interval)
+
+    csv_handler.write_files(csv_paths, data, ["time", "length"])
+
     return True
-
-
-def format_csv_row(t, downsampling, frame_interval, length):
-    """Columns in the csv file: [time, length]."""
-    return [t * downsampling * frame_interval, f"{length:.2f}"]

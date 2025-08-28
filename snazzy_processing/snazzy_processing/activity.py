@@ -1,7 +1,8 @@
-import csv
 import math
 
 import numpy as np
+
+from snazzy_processing import csv_handler
 
 
 def apply_mask(img, mask):
@@ -32,27 +33,24 @@ def get_activity(masked_img):
     return masked_img.mean(axis=(1, 2))
 
 
-def export_csv(ids, embryos, output_dir, frame_interval=6):
-    """Generates a csv file to be use by the `pasna_fly` package.
+def get_output_data(signals, frame_interval=6):
+    if signals.ndim != 3:
+        raise ValueError("Expected a 3D array with shape (N, t, 3)")
+    N, t, _ = signals.shape
+    time = np.arange(t) * frame_interval
+    time = time[None, :, None]
+    time = np.repeat(time, N, axis=0)
 
-    Parameters:
-        embryos: list of embryos, where each embryo is represented by a list
-        [active, structural]. Active and structural are lists with the
-        measurements of the activity for each frame.
-        output: path to the output csv file.
-        frame_interval: time (seconds) between two image captures.
-    """
-    header = ["time", "gcamp", "tomato"]
-    for id, embryo in zip(ids, embryos):
-        with open(output_dir.joinpath(f"emb{id}.csv"), "w") as f:
-            writer = csv.writer(f)
-            writer.writerow(header)
-            for frame, (act, strct) in enumerate(zip(*embryo)):
-                row = format_csv_row(frame, frame_interval, act, strct)
-                writer.writerow(row)
+    return np.concatenate([time, signals], axis=2)
+
+
+def export_csv(ids, signals, output_dir, frame_interval=6):
+    signals = np.asarray(signals)
+
+    csv_paths = [output_dir.joinpath(f"emb{id}.csv") for id in ids]
+
+    data = get_output_data(signals, frame_interval)
+
+    csv_handler.write_files(csv_paths, data, ["time", "gcamp", "tomato"])
+
     return True
-
-
-def format_csv_row(frame, interval, act, strct):
-    """Expected output for the csv file is: [Time(HH:mm:ss), id, sig1, sig2]"""
-    return [frame * interval, f"{act:.2f}", f"{strct:.2f}"]
