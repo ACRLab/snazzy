@@ -76,3 +76,55 @@ def test_can_calculate_channel_signals():
     assert active_ch is not None
     assert struct_ch is not None
     assert active_ch.shape == struct_ch.shape
+
+
+def test_output_data_includes_time():
+    signals_shape = (2, 50, 2)
+    signals = np.arange(0, 200).reshape(signals_shape)
+
+    output = activity.get_output_data(signals, frame_interval=5)
+
+    N, t, _ = signals_shape
+    assert output.shape == (N, t, 3)
+    # time data is added at index 0, so the rest should be equal
+    # the original signals array
+    assert np.array_equal(output[:, :, 1:], signals)
+
+
+def test_output_data_uses_frame_interval():
+    signals_shape = (2, 50, 2)
+    frame_interval = 4
+    signals = np.arange(0, 200).reshape(signals_shape)
+
+    output = activity.get_output_data(signals, frame_interval)
+
+    assert np.array_equal(np.arange(0, 50), output[0, :, 0] / frame_interval)
+
+
+def test_can_write_data_when_single_embryo(tmp_path):
+    ids = [1]
+    signals = np.arange(300).reshape((1, 100, 3))
+
+    activity.export_csv(ids, signals, tmp_path)
+
+    files = [f for f in tmp_path.iterdir() if f.suffix == ".csv"]
+
+    assert len(files) == 1
+
+
+def test_can_write_data_for_many_embryos(tmp_path):
+    n_embs = 5
+    ids = [i for i in range(1, n_embs + 1)]
+    signals = np.arange(750).reshape((n_embs, 50, 3))
+
+    activity.export_csv(ids, signals, tmp_path)
+
+    files = [f for f in tmp_path.iterdir() if f.suffix == ".csv"]
+
+    assert len(files) == n_embs
+
+
+def test_export_csv_raises_when_no_embryos(tmp_path):
+    # will raise when `activity.get_output_data` is called
+    with pytest.raises(ValueError):
+        activity.export_csv([], [], tmp_path)
