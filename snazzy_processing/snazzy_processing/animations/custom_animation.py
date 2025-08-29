@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib import animation
+import matplotlib.pyplot as plt
 
 
 class PauseAnimation:
@@ -21,9 +22,9 @@ class PauseAnimation:
         self.ani = animation.FuncAnimation(
             fig=fig,
             func=self.update,
-            frames=len(self.image),
+            frames=len(self.image) - 1,
             interval=self.interval,
-            repeat=False,
+            repeat=True,
         )
 
         self.frame_num = ax.text(0, 5, str(0), color="w")
