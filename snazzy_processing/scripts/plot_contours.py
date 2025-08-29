@@ -43,8 +43,9 @@ print("Select downsample amount to calculate the contours:")
 window = int(input())
 
 img = imread(structs[idx]) if ch == 2 else imread(active[idx])
-contours = roi.get_contours(img, window=window, mask=None)
+struct_img = img if ch == 2 else imread(structs[idx])
+contours = roi.get_contours(struct_img, window=window)
 print(f"Contours within plot_contours: {len(contours)}")
 
-ca = custom_animation.ContourAnimation(img, contours, 20)
+ca = custom_animation.ContourAnimation(img, contours, 1)
 ca.display()
