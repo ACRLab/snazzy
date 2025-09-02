@@ -44,26 +44,18 @@ def get_length_from_csv(file_path, columns=(1,)):
     return csv_handler.read(file_path, usecols=columns)
 
 
-def get_output_data(lengths, downsampling, frame_interval):
-    N, t = lengths.shape
+def get_output_data(length_data, downsampling, frame_interval):
+    t = length_data.size
     time = np.arange(t) * frame_interval * downsampling
-    time = time[None, :, None]
-    time = np.repeat(time, N, axis=0)
 
-    lengths = lengths[:, :, None]
-
-    return np.concatenate((time, lengths), axis=2)
+    return np.column_stack((time, length_data))
 
 
 def export_csv(ids, lengths, output_dir, downsampling, frame_interval=6):
-    max_len = max(len(l) for l in lengths)
-    padded = [np.pad(l, (0, max_len - len(l)), constant_values=0) for l in lengths]
-    lengths = np.asarray(padded)
-
     csv_paths = [output_dir.joinpath(f"emb{id}.csv") for id in ids]
 
-    data = get_output_data(lengths, downsampling, frame_interval)
-
-    csv_handler.write_files(csv_paths, data, ["time", "length"])
+    for length_data, csv_path in zip(lengths, csv_paths):
+        data = get_output_data(length_data, downsampling, frame_interval)
+        csv_handler.write_file(csv_path, data, ["time", "length"])
 
     return True
