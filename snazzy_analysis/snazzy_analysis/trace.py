@@ -40,7 +40,6 @@ class Trace:
 
         self._peak_idxes = None
         self._peak_bounds_indices = None
-        self._order_zero_savgol = None
         self.filtered_dff = None
         self.dsna_start = None
 
@@ -121,14 +120,6 @@ class Trace:
     @property
     def rms(self):
         return np.sqrt(np.mean((self.dff[: self.trim_idx]) ** 2))
-
-    @property
-    def order_zero_savgol(self):
-        if self._order_zero_savgol is None:
-            self._order_zero_savgol = spsig.savgol_filter(
-                self.dff[: self.trim_idx], 21, 4, deriv=0
-            )
-        return self._order_zero_savgol
 
     def get_all_peak_idxes(self):
         if self._peak_idxes is None:

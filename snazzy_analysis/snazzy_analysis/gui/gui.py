@@ -574,7 +574,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
-            x = int(x) * 10
+            x = int(x * 10)
 
         new_peak, new_peaks = self.model.add_peak(x, emb_name, trace)
 
@@ -593,7 +593,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
-            x = int(x) * 10
+            x = int(x * 10)
 
         removed_peaks, new_peaks = self.model.remove_peak(x, emb_name, trace)
 
