@@ -5,7 +5,7 @@ import pytest
 
 from snazzy_analysis import Config, Experiment
 
-VALID_DIR = Path("./tests/assets/data/20250210")
+VALID_DIR = Path(__file__).parent.joinpath("assets", "data", "20250210")
 
 
 @pytest.fixture

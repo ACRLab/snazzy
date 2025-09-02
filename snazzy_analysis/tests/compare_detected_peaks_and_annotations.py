@@ -11,7 +11,7 @@ from peak_annot_parser import (
     GroundTruthWindowData,
 )
 
-ANNOT_DIR = "./tests/assets/annotated_data/"
+ANNOT_DIR = Path(__file__).parent.joinpath("assets", "annotated_data")
 
 
 def load_data(annotated_path, exp_dir, annot_type):

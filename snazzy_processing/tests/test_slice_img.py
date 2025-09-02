@@ -2,7 +2,7 @@ from pathlib import Path
 
 from snazzy_processing import slice_img
 
-FIRST_FRAMES = Path("./tests/images/first_frames.tif")
+FIRST_FRAMES = Path(__file__).parent.joinpath("images", "first_frames.tif")
 
 
 def test_add_padding_clips_to_shape():

@@ -5,8 +5,7 @@ import pytest
 
 from snazzy_analysis import BaselineStrategies, Config, Trace
 
-VALID_DIR = Path("./tests/assets/data/20250210")
-print(VALID_DIR.absolute())
+VALID_DIR = Path(__file__).parent.joinpath("assets", "data", "20250210")
 
 
 def read_from_csv(csv_path):

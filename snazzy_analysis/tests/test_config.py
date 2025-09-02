@@ -6,8 +6,9 @@ import pytest
 
 from snazzy_analysis import Config
 
-DATASET_1 = Path("./tests/assets/data/20250210")
-DATASET_2 = Path("./tests/assets/data/20250220")
+DATA_DIR = Path(__file__).parent.joinpath("assets", "data")
+DATASET_1 = DATA_DIR.joinpath("20250210")
+DATASET_2 = DATA_DIR.joinpath("20250220")
 GROUP_NAME = "WT"
 
 

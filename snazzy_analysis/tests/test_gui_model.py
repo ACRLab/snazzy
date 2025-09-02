@@ -5,8 +5,9 @@ import pytest
 
 from snazzy_analysis import Config
 
-DATASET_1 = Path("./tests/assets/data/20250210")
-DATASET_2 = Path("./tests/assets/data/20250220")
+DATA_DIR = Path(__file__).parent.joinpath("assets", "data")
+DATASET_1 = DATA_DIR.joinpath("20250210")
+DATASET_2 = DATA_DIR.joinpath("20250220")
 GROUP_NAME = "WT"
 
 
@@ -169,7 +170,7 @@ def test_can_remove_peak(model_single_exp):
 
 def test_can_add_and_remove_peak(model_single_exp):
     emb_name = "emb1"
-    new_peak_index = 313
+    new_peak_index = 353
     curr_trace = model_single_exp.selected_experiment.get_embryo(emb_name).trace
 
     model_single_exp.add_peak(new_peak_index, emb_name, curr_trace)

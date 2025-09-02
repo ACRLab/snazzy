@@ -5,10 +5,11 @@ import pytest
 
 from snazzy_analysis import DataLoader
 
-VALID_DIR = Path("./tests/assets/data/20250210")
+DATA_DIR = Path(__file__).parent.joinpath("assets", "data")
+VALID_DIR = DATA_DIR.joinpath("20250210")
 # MISSING_DATA_DIR does not have full_length.csv file.
-MISSING_DATA_DIR = Path("./tests/assets/data/20250101")
-SINGLE_EMB_DIR = Path("./tests/assets/data/20250230")
+MISSING_DATA_DIR = DATA_DIR.joinpath("20250101")
+SINGLE_EMB_DIR = DATA_DIR.joinpath("20250230")
 
 
 def test_creates_instance_when_dir_matches_expected_structure():
