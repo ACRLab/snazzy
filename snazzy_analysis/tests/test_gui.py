@@ -13,7 +13,7 @@ from snazzy_analysis.gui.gui import (
 )
 from snazzy_analysis.gui.model import GroupModel, ExperimentModel
 
-VALID_DIR = Path("./tests/assets/data/20250210")
+VALID_DIR = Path(__file__).parent.joinpath("assets", "data", "20250210")
 
 
 @pytest.fixture
