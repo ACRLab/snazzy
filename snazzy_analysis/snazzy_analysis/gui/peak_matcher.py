@@ -12,7 +12,7 @@ def local_peak_at(x, signal, wlen):
 
 
 class PeakMatcher:
-    def add_peak(self, x: int, trace: Trace, manual_remove: list[int], wlen: int = 10):
+    def add_peak(self, x: int, trace: Trace, manual_remove: list[int], wlen: int = 5):
         """Adds a new peak in the vicinity of `x`.
 
         The new peak is calculated as the local maximum near `x`, in a window of 2*wlen points.
@@ -36,7 +36,7 @@ class PeakMatcher:
                 Updated list of manually removed peaks
         """
         window = slice(x - wlen, x + wlen)
-        new_peak = local_peak_at(x, trace.order_zero_savgol[window], wlen)
+        new_peak = local_peak_at(x, trace.dff[window], wlen)
         new_arr = np.append(trace.peak_idxes, new_peak)
         new_arr.sort()
 

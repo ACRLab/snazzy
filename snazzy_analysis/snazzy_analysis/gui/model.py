@@ -225,7 +225,7 @@ class Model:
             {"pd_params": pd_params, "exp_params": {"to_remove": to_remove}}
         )
 
-    def add_peak(self, x, emb_name, trace, wlen=10):
+    def add_peak(self, x, emb_name, trace, wlen=5):
         # load corrected data to reconcile with the new add
         exp = self.selected_experiment
         corrected_peaks = exp.config.get_corrected_peaks(emb_name)
