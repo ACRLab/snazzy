@@ -15,7 +15,7 @@ from snazzy_processing import (
 )
 
 
-def measure_vnc_length(embs_src, res_dir, downsampling):
+def measure_vnc_length(embs_src, res_dir, downsampling, threshold_method="multiotsu"):
     """Calculates VNC length for all embryos in a directory."""
     embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
     output_dir = res_dir.joinpath("lengths")
@@ -28,7 +28,10 @@ def measure_vnc_length(embs_src, res_dir, downsampling):
     ids = []
 
     with ProcessPoolExecutor() as executor:
-        futures = [executor.submit(calculate_length, emb, downsampling) for emb in embs]
+        futures = [
+            executor.submit(calculate_length, emb, downsampling, threshold_method)
+            for emb in embs
+        ]
         for future in as_completed(futures):
             id, vnc_len = future.result()
             ids.append(id)
@@ -47,13 +50,13 @@ def already_created(emb, output):
     return output_path.exists()
 
 
-def calculate_length(emb, downsampling):
+def calculate_length(emb, downsampling, threshold_method="multiotsu"):
     id = utils.emb_number(emb.stem)
     hp = find_hatching.find_hatching_point(emb)
     hp -= hp % downsampling
 
     img = imread(emb, key=range(0, hp, downsampling))
-    vnc_len = vnc_length.measure_VNC_centerline(img)
+    vnc_len = vnc_length.measure_VNC_centerline(img, threshold_method=threshold_method)
     return id, vnc_len
 
 

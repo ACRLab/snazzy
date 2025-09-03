@@ -1,22 +1,28 @@
 import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy import ndimage as ndi
 from skimage.draw import line
 from skimage.feature import peak_local_max
-from skimage.filters import threshold_multiotsu
+from skimage.filters import threshold_otsu, threshold_multiotsu
 from skimage.measure import label
 from skimage.morphology import binary_opening, disk, remove_small_holes
 from sklearn import linear_model
 
 
-def binarize(image):
-    """Returns a binary image using a low threshold."""
+def binarize(image, threshold_method="multiotsu"):
+    """Create a binary image from the largest region after thresholding."""
     if image.ndim != 2:
         raise ValueError("Image can only have 2 dimensions.")
-    thr = threshold_multiotsu(image)
-    bin_img = image > thr[0]
+
+    if threshold_method == "multiotsu":
+        thr = threshold_multiotsu(image)
+        bin_img = image > thr[0]
+    elif threshold_method == "otsu":
+        thr = threshold_otsu(image)
+        bin_img = image > thr
+    else:
+        raise ValueError(f"Unsupported threshold method: {threshold_method}.")
 
     remove_small_holes(bin_img, 200, out=bin_img)
     binary_opening(bin_img, footprint=disk(5), out=bin_img)
@@ -38,10 +44,9 @@ def get_DT_maxima(image, thres_rel=0.6, min_dist=5):
     )
 
 
-def get_DT_image(image, metric="chessboard"):
+def get_DT_image(binary_image, metric="chessboard"):
     """Returns the distance transform image for visualization."""
-    image = binarize(image)
-    return ndi.distance_transform_cdt(image, metric=metric)
+    return ndi.distance_transform_cdt(binary_image, metric=metric)
 
 
 def apply_ransac(coords):
@@ -49,8 +54,6 @@ def apply_ransac(coords):
     y = coords.T[0]
     x = coords.T[1].reshape(-1, 1)
 
-    # NOTE: evaluate best threshold
-    # thres = np.median(np.abs(x - np.median(x)))
     thres = 15
     # if the number of inliers for a given trial is <= 1,
     # `_regression.r2_score` will raise a warning. This is expected to happen
@@ -126,9 +129,8 @@ def centerline_dist(bin_image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     return distance
 
 
-def view_centerline_dist(image, img_title="", thres_rel=0.6, min_dist=5):
+def view_centerline_dist(binary_image, ax, thres_rel=0.6, min_dist=5):
     """Returns the centerline length estimation based on EDT maxima points."""
-    binary_image = binarize(image)
     coords = get_DT_maxima(binary_image, thres_rel, min_dist)
 
     if coords.shape[0] <= 2:
@@ -145,7 +147,7 @@ def view_centerline_dist(image, img_title="", thres_rel=0.6, min_dist=5):
         print(f"Cound not find centerline for the given DT points.")
         return None
 
-    rows, cols = image.shape
+    rows, cols = binary_image.shape
     x_start = 0
     x_end = cols - 1
     y_start, y_end = [int(y) for y in estimator.predict([[x_start], [x_end]])]
@@ -160,12 +162,8 @@ def view_centerline_dist(image, img_title="", thres_rel=0.6, min_dist=5):
     inliers = estimator.inlier_mask_
     outliers = np.logical_not(inliers)
 
-    fig, ax = plt.subplots()
     ax.scatter(x[inliers], y[inliers], color="green")
     ax.scatter(x[outliers], y[outliers], color="orange")
     ax.imshow(binary_image)
     ax.plot(cc_m, rr_m, color="red", linewidth=1)
-    ax.set_title(img_title)
     ax.set_axis_off()
-    fig.canvas.header_visible = False
-    plt.show()
