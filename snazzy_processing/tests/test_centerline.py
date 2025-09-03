@@ -31,6 +31,17 @@ def test_binarize_raises_if_not_2D_image(emb_img_3d):
         centerline.binarize(emb_img_3d)
 
 
+def test_binarize_raises_if_threshold_method_not_supported(emb_img):
+    with pytest.raises(ValueError):
+        centerline.binarize(emb_img, threshold_method="unsupported_method")
+
+
+def test_binarize_regular_otsu(emb_img):
+    bin_img = centerline.binarize(emb_img, threshold_method="otsu")
+
+    assert ((bin_img == 0) | (bin_img == 1)).all()
+
+
 def test_cannot_measure_centerline_on_3D_image(emb_img_3d):
     with pytest.raises(ValueError):
         centerline.centerline_dist(emb_img_3d)

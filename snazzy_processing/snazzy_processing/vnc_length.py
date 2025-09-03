@@ -4,12 +4,17 @@ from snazzy_processing import centerline, csv_handler
 
 
 def measure_VNC_centerline(
-    image, pixel_width=1.62, thres_rel=0.6, min_dist=5, outlier_thres=0.09
+    image,
+    pixel_width=1.62,
+    thres_rel=0.6,
+    min_dist=5,
+    outlier_thres=0.09,
+    threshold_method="multiotsu",
 ):
     """Calculates the centerline distance for a 3D image."""
     vnc_lengths = np.zeros(image.shape[0])
     for i, img in enumerate(image):
-        bin_img = centerline.binarize(img)
+        bin_img = centerline.binarize(img, threshold_method=threshold_method)
         dist = centerline.centerline_dist(
             bin_img, pixel_width=pixel_width, thres_rel=thres_rel, min_dist=min_dist
         )
