@@ -127,9 +127,10 @@ class JsonViewer(QWidget):
         return obj
 
     def parse_value(self, key, value):
-        # all lists in Config at the moment are list[int]
-        if key.startswith("["):
+        if key.startswith("[") and value.startswith("emb"):
             return str(value)
+        if key.startswith("["):
+            return int(value)
         if key not in KEY_TYPES:
             raise ValueError(f"Got a key that is not part of config params: {key}.")
         try:
