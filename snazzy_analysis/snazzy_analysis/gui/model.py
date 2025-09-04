@@ -355,7 +355,7 @@ class Model:
         exp = self.selected_experiment
         if exp is None:
             return None
-        return exp.config.data
+        return exp.config.load_data()
 
     def get_next_emb_name(self, forward: bool) -> tuple[str, str]:
         """Return the next valid exp_name and emb_name of the currenlty selected group.
