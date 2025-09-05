@@ -56,10 +56,10 @@ def length_from_regions_props(img, pixel_width=1.62):
 
 def read_and_preprocess_image(img_path, start=None, end=None, interval=100):
     if start is None and end is None:
-        # try to sample frames from the middle of the movie
+        # try to sample frames from the start of the movie
         with tifffile.TiffFile(img_path) as tif:
             shape = tif.series[0].shape
-        start = shape[0] // 2
+        start = 0
         end = start + interval if shape[0] > start + interval else shape[0]
 
     img = tifffile.imread(img_path, key=range(start, end))
