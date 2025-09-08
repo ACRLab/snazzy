@@ -62,7 +62,7 @@ class ComparePlotWindow(QWidget):
     def save_all_plots(self):
         for group in self.groups:
             for exp in group.experiments.values():
-                exp_dir = exp.directory.parent
+                exp_dir = exp.directory
                 timestamp = datetime.now().strftime("%m%d%Y_%H:%M:%S")
                 save_path = exp_dir / "plots" / timestamp
                 save_path.mkdir(parents=True, exist_ok=True)
