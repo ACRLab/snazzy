@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from snazzy_analysis.gui import Model
 
 import pytest
 
@@ -14,18 +13,13 @@ GROUP_NAME = "WT"
 
 @pytest.fixture(scope="module")
 def config():
-    config = Config(DATASET_1, rel_root_path="tests")
+    config = Config(DATASET_1)
 
     return config
 
 
 def test_use_default_parameters_if_pd_params_does_not_exist(config):
     assert config.data == config.default_params
-
-
-def test_keep_track_of_exp_path(config):
-    assert "exp_path" in config.data
-    assert config.data["exp_path"] == "tests/assets/data/20250210"
 
 
 def test_can_persist_params(config):

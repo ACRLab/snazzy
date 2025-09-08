@@ -5,8 +5,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
-from snazzy_analysis import utils
-
 
 class PdParamsEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -71,7 +69,6 @@ class EmbryoParams(BaseModel):
 
 
 class ConfigObj(BaseModel):
-    exp_path: str | None
     exp_params: ExpParams = Field(default_factory=ExpParams)
     pd_params: PDParams = Field(default_factory=PDParams)
     embryos: dict[str, EmbryoParams] = Field(default_factory=dict)
@@ -88,19 +85,15 @@ class Config:
         exp_path (Path):
             Path to the `peak_detection_params.json` file.
             If not found, will hold the default params in memory.
-        rel_root_path (str):
-            Name of the directory used to determine the relative path.
     """
 
-    def __init__(self, exp_path: Path, rel_root_path="data"):
+    def __init__(self, exp_path: Path):
         self.exp_path = exp_path
-        self.rel_path = utils.convert_to_relative_path(exp_path, rel_root_path)
-        self.config_path = self.exp_path / "peak_detection_params.json"
+        self.config_path = exp_path / "peak_detection_params.json"
 
         self.default_params = ConfigObj().dict()
 
         self.data = self.load_data()
-        self.data["exp_path"] = str(self.rel_path)
 
     def __str__(self):
         return pprint.pformat(self.data, sort_dicts=False)
