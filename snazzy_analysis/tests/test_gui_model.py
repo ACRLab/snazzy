@@ -13,7 +13,7 @@ GROUP_NAME = "WT"
 
 @pytest.fixture(scope="module")
 def model_single_exp():
-    config = Config(DATASET_1, rel_root_path="tests")
+    config = Config(DATASET_1)
     model = Model()
     model.create_experiment(config, GROUP_NAME)
 
@@ -22,11 +22,11 @@ def model_single_exp():
 
 @pytest.fixture(scope="module")
 def model_two_exps():
-    config = Config(DATASET_1, rel_root_path="tests")
+    config = Config(DATASET_1)
     model = Model()
     model.create_experiment(config, GROUP_NAME)
 
-    config2 = Config(DATASET_2, rel_root_path="tests")
+    config2 = Config(DATASET_2)
     model.create_experiment(config2, GROUP_NAME)
 
     return model

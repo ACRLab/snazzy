@@ -100,9 +100,7 @@ class MainWindow(QMainWindow):
             **exp_params,
             "dff_strategy": dff_strategy,
         }
-        self.exp_params_dialog = ExperimentParamsDialog(
-            dialog_params, exp_path=config.rel_path, parent=self
-        )
+        self.exp_params_dialog = ExperimentParamsDialog(dialog_params, parent=self)
 
         self.exp_params_dialog.accepted.connect(
             lambda: on_accepted(self.exp_params_dialog.get_values())

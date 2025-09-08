@@ -27,10 +27,10 @@ class ExperimentParamsDialog(QDialog):
 
     Embryos are presented as embryo ids, to make the input easier to change.
     Internally, pasna_analysis uses embryo names, so when data is coming in / going
-    out it has to alternate between emb_names and emb_ids.
+    out it has to be converted.
     """
 
-    def __init__(self, properties, exp_path, parent=None):
+    def __init__(self, properties, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Experiment parameters")
         self.setFixedWidth(540)
@@ -40,17 +40,10 @@ class ExperimentParamsDialog(QDialog):
         self.adjust_emb_names(properties)
 
         layout = QVBoxLayout()
-        layout.addLayout(self._create_exp_path_row(exp_path))
         for row_layout in self._create_property_rows(properties):
             layout.addLayout(row_layout)
         layout.addLayout(self._create_button_row())
         self.setLayout(layout)
-
-    def _create_exp_path_row(self, exp_path):
-        layout = QHBoxLayout()
-        label = QLabel(f"Experiment path: {exp_path}")
-        layout.addWidget(label)
-        return layout
 
     def _create_property_rows(self, properties):
         layouts = []
