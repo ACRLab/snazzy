@@ -1,4 +1,4 @@
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import shutil
 
@@ -27,7 +27,7 @@ def measure_vnc_length(embs_src, res_dir, downsampling, threshold_method="multio
     lengths = []
     ids = []
 
-    with ProcessPoolExecutor() as executor:
+    with ThreadPoolExecutor() as executor:
         futures = [
             executor.submit(calculate_length, emb, downsampling, threshold_method)
             for emb in embs
@@ -55,7 +55,8 @@ def calculate_length(emb, downsampling, threshold_method="multiotsu"):
     hp = find_hatching.find_hatching_point(emb)
     hp -= hp % downsampling
 
-    img = imread(emb, key=range(0, hp, downsampling))
+    key = list(range(0, hp, downsampling))
+    img = imread(emb, key=key)
     vnc_len = vnc_length.measure_VNC_centerline(img, threshold_method=threshold_method)
     return id, vnc_len
 
@@ -107,7 +108,7 @@ def calc_activities(embs_src, res_dir, window):
     # NOTE: number of workers is limited here because it was crashing jupyter
     # on a machine with low RAM. More workers will result in faster processing
     # but also more RAM usage
-    with ProcessPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [
             executor.submit(calc_activity, act, stct, window)
             for act, stct in zip(active, struct)

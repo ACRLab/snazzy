@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 import pytest
 from PyQt6.QtCore import Qt
@@ -13,6 +14,10 @@ from snazzy_analysis.gui.gui import (
     MainWindow,
 )
 from snazzy_analysis.gui.model import GroupModel, ExperimentModel
+
+pytestmark = pytest.mark.skipif(
+    not sys.platform.startswith("linux"), reason="Running headless tests on linux only."
+)
 
 VALID_DIR = Path(__file__).parent.joinpath("assets", "data", "20250210")
 
