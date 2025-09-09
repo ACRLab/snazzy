@@ -30,3 +30,5 @@ dependencies:
     - statannotations==0.7.1
     - sphinx-book-theme==1.1.2
     - sphinx==7.3.7
+    - -e ./snazzy_analysis
+    - -e ./snazzy_processing
