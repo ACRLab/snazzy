@@ -21,7 +21,6 @@ class Experiment:
         self,
         exp_path: str | Path,
         config: Config | None = None,
-        verbose: bool = False,
         **kwargs,
     ):
         exp_path = Path(exp_path)
@@ -41,11 +40,6 @@ class Experiment:
         self.name = self.data_loader.name
         self.filtered_out = set(self.exp_params.get("to_remove", []))
         self._embryos = self._create_embryos()
-
-        if verbose:
-            print(f"Parameters used for experiment {self.name}:")
-            print("-" * 50)
-            print(self.config)
 
     @property
     def embryos(self) -> list[Embryo]:
