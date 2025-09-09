@@ -1,14 +1,9 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
-    QLabel,
-    QSlider,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtWidgets import QLabel, QSlider, QVBoxLayout, QWidget
 
 
 class FloatSlider(QSlider):
-    def __init__(self, min_value, max_value, initial_value, step_size=0.1):
+    def __init__(self, min_value, max_value, initial_value, step_size):
         super().__init__(Qt.Orientation.Horizontal)
 
         self.min_value = min_value
@@ -32,29 +27,13 @@ class FloatSlider(QSlider):
 
 
 class LabeledSlider(QWidget):
-    def __init__(
-        self,
-        name,
-        min_value,
-        max_value,
-        initial_value,
-        step_size=None,
-        custom_slot=None,
-    ):
+    def __init__(self, name, min_value, max_value, initial_value, step_size):
         super().__init__()
 
         self.layout = QVBoxLayout()
 
-        if step_size is None:
-            self.slider = QSlider(Qt.Orientation.Horizontal)
-            self.slider.setRange(min_value, max_value)
-            self.slider.setValue(initial_value)
-        else:
-            self.slider = FloatSlider(min_value, max_value, initial_value, step_size)
+        self.slider = FloatSlider(min_value, max_value, initial_value, step_size)
         self.slider.valueChanged.connect(self.update_value_label)
-
-        if custom_slot:
-            self.slider.valueChanged.connect(custom_slot)
 
         self.name_label = QLabel(name)
         self.value_label = QLabel(str(initial_value))
@@ -65,11 +44,8 @@ class LabeledSlider(QWidget):
 
         self.setLayout(self.layout)
 
-    def update_value_label(self, value):
-        if type(self.slider) == FloatSlider:
-            self.value_label.setText(f"{self.slider.value():.4f}")
-        else:
-            self.value_label.setText(str(value))
+    def update_value_label(self):
+        self.value_label.setText(f"{self.slider.value():.4f}")
 
     def value(self):
         return self.slider.value()
