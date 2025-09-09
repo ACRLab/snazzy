@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 
 import matplotlib
 import matplotlib.axes
@@ -12,7 +13,10 @@ from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout, 
 from snazzy_analysis import FrequencyAnalysis, utils
 from snazzy_analysis.gui import GroupModel
 
-matplotlib.use("QtAgg")
+if os.environ.get("CI") or os.environ.get("HEADLESS"):
+    matplotlib.use("Agg")
+else:
+    matplotlib.use("QtAgg")
 
 
 class ComparePlotWindow(QWidget):
