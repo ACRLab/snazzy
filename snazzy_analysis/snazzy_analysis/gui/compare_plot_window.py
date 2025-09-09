@@ -9,7 +9,7 @@ import seaborn as sns
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QHBoxLayout, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
-from snazzy_analysis import FrequencyAnalysis
+from snazzy_analysis import FrequencyAnalysis, utils
 from snazzy_analysis.gui import GroupModel
 
 matplotlib.use("QtAgg")
@@ -46,6 +46,7 @@ class ComparePlotWindow(QWidget):
         self.btns = {
             "Dev times at first peak": self.dt_first_peak,
             "Dev times when hatching": self.dt_hatching,
+            "Peak area under the curve": self.plot_AUC,
             "SNA duration": self.sna_duration,
             "Number of episodes": self.num_episodes,
             "CDF of developmental peak times": self.cdf_dt,
@@ -180,6 +181,44 @@ class ComparePlotWindow(QWidget):
             self.canvas.draw()
         else:
             self._save_plot(save_dir, "sna_duration.png")
+
+    def plot_AUC(self, save=False, save_dir=None):
+        """Binned area under the curve."""
+        self.clear_axes()
+        data = {"group": [], "auc": [], "bin": []}
+
+        n_bins = 6
+        first_bin = 1.8
+        bin_width = 0.2
+        bins = [first_bin + j * bin_width for j in range(n_bins)]
+        for group in self.groups:
+            for _, emb in group.iter_all_embryos():
+                trace = emb.trace
+
+                if len(trace.peak_idxes) == 0:
+                    continue
+
+                dev_time_at_peaks = emb.get_DT_from_time(trace.peak_times)
+
+                bin_idxs = utils.split_in_bins(dev_time_at_peaks, bins)
+                if not isinstance(bin_idxs, np.ndarray):
+                    continue
+
+                data["group"].append(group.name)
+                data["auc"].extend(trace.peak_aucs)
+                data["bin"].extend(bin_idxs)
+
+        bins.append(first_bin + bin_width * n_bins)
+        x_labels = [f"{s:.1f}~{e:.1f}" for (s, e) in zip(bins[:-1], bins[1:])]
+        ax = sns.pointplot(data=data, x="bin", y="auc", linestyle="None", ax=self.ax)
+        ax.set_xticks(ticks=list(range(n_bins)), labels=x_labels)
+        ax.set_title(f"Binned AUC")
+        ax.set_ylabel("AUC [activity*t]")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            self._save_plot(save_dir, "area_under_curve.png")
 
     def num_episodes(self, save=False, save_dir=None):
         """Number of episodes"""

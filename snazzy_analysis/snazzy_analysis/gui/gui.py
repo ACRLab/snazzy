@@ -31,11 +31,10 @@ from snazzy_analysis.gui import (
     GraphSwitcher,
     ImageSequenceViewer,
     ImageWindow,
-    JsonViewer,
     InteractivePlotWidget,
+    JsonViewer,
     LabeledSlider,
     Model,
-    PlotWindow,
     PhaseBoundariesWindow,
     RemovableSidebar,
     Worker,
@@ -201,13 +200,6 @@ class MainWindow(QMainWindow):
         self.update_UI()
 
     def display_plots(self):
-        curr_group = self.model.selected_group
-        embs = list(emb for exp_name, emb in curr_group.iter_all_embryos())
-        curr_trace = self.model.selected_trace
-        self.pw = PlotWindow(embs, curr_group.name, curr_trace)
-        self.pw.show()
-
-    def display_compare_plots(self):
         groups = self.model.groups
         self.cpw = ComparePlotWindow(groups)
         self.cpw.show()
@@ -501,10 +493,6 @@ class MainWindow(QMainWindow):
         display_plots_action = QAction("View plots", self)
         display_plots_action.triggered.connect(self.display_plots)
         plot_menu.addAction(display_plots_action)
-
-        display_comp_plots_action = QAction("View comparison plots", self)
-        display_comp_plots_action.triggered.connect(self.display_compare_plots)
-        plot_menu.addAction(display_comp_plots_action)
 
         next_emb_action = QAction(self)
         next_emb_action.setShortcut(QKeySequence("Ctrl+N"))
