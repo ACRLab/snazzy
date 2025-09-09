@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QLabel
 from snazzy_analysis import Experiment
 from snazzy_analysis.gui.gui import (
     ComparePlotWindow,
+    ExperimentParamsDialog,
     ImageWindow,
     JsonViewer,
     MainWindow,
@@ -65,6 +66,22 @@ def test_can_create_experiment_via_menu(qtbot, monkeypatch):
     assert window.model.selected_embryo.name == "emb1"
 
 
+def test_exp_dialog_parses_emb_ids(qtbot):
+    props = {"to_remove": ["emb1", "emb2"]}
+    exp_dialog = ExperimentParamsDialog(props)
+    qtbot.addWidget(exp_dialog)
+
+    assert props["to_remove"] == [1, 2]
+
+
+def test_exp_dialog_parses_emb_ids_when_receives_only_digits(qtbot):
+    props = {"to_remove": ["1", "2"]}
+    exp_dialog = ExperimentParamsDialog(props)
+    qtbot.addWidget(exp_dialog)
+
+    assert props["to_remove"] == [1, 2]
+
+
 def test_can_generate_plots(qtbot, group_model):
     window = ComparePlotWindow([group_model])
     qtbot.addWidget(window)
@@ -102,6 +119,7 @@ def test_can_render_FOV(qtbot):
 
 def test_can_render_json_config(qtbot, exp):
     config_data = exp.config.data
+    config_data["exp_params"]["to_remove"] = ["emb1", "emb2"]
 
     json_viewer = JsonViewer(config_data)
     qtbot.addWidget(json_viewer)
