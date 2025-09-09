@@ -10,9 +10,9 @@ VALID_DIR = Path(__file__).parent.joinpath("assets", "data", "20250210")
 
 @pytest.fixture
 def emb():
-    to_exclude = [3, 4]
+    to_exclude = ["emb3", "emb4"]
     config = Config(VALID_DIR)
-    config.update_params({"exp_params": {"to_exclude": [to_exclude]}})
+    config.update_params({"exp_params": {"to_exclude": to_exclude}})
     exp = Experiment(VALID_DIR, config)
     return exp.get_embryo("emb1")
 
@@ -59,3 +59,16 @@ def test_time_bins_ignores_extra_bins(emb, bin_params):
 
     assert len(time_bins) < len(bins)
     assert len(time_bins) == 6
+
+
+def test_can_estimate_time_from_dev_time(emb):
+    dev_time = emb.developmental_time()
+
+    time_from_dt = emb.get_time_from_DT(dev_time)
+
+    assert type(time_from_dt) == np.ndarray
+
+    # for a single dev_time value, the function returns a single timepoint:
+    single_timepoint_from_dt = emb.get_time_from_DT(2)
+
+    assert type(single_timepoint_from_dt) == float
