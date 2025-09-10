@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 
 
 class PauseAnimation:
-    """Creates a plt animation with support to Pause when any key is pressed."""
+    """Creates a plt animation with support to Pause when a key is pressed.
+
+    If the key is registered by default, does not pause."""
+
+    # based on keymaps declared in matplotlibrc
+    DEFAULT_KEY_BINDINGS = "fhrcvposqgGlkL"
 
     def __init__(self, image, interval=200):
         self.image = image
@@ -35,7 +40,9 @@ class PauseAnimation:
         self.frame_num.set_text(str(frame))
         return self.img_plot
 
-    def toggle_pause(self, *args):
+    def toggle_pause(self, event):
+        if event.key in self.DEFAULT_KEY_BINDINGS:
+            return
         if self.paused:
             self.ani.resume()
         else:
