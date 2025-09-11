@@ -50,12 +50,12 @@ def get_threshold(img, thres_adjust=0):
     return threshold_triangle(img) + thres_adjust
 
 
-def within_boundaries(i, j, r, c):
-    """Checks if `i` and `j` are valid coords in a `r`x`c` matrix."""
-    return i >= 0 and i < r and j >= 0 and j < c
+def within_boundaries(r, c, rows, cols):
+    """Checks if `r` and `c` are valid coords in a `rows`x`cols` matrix."""
+    return r >= 0 and r < rows and c >= 0 and c < cols
 
 
-def mark_neighbors(img, x, y, s):
+def mark_neighbors(img, row, col, s):
     """Expands from the search box and marks points connected to any point
     within the search box.
 
@@ -64,39 +64,45 @@ def mark_neighbors(img, x, y, s):
         extremes: list with min and max pixel value for both dimensions
     """
     neighbors = [(-1, 0), (0, -1), (0, 1), (1, 0)]
-    r, c = img.shape
+    rows, cols = img.shape
     dq = utils.CounterDeque(img.shape)
 
-    for di in range(s):
-        for dj in range(s):
-            if within_boundaries(x + di, y + dj, r, c) and img[x + di, y + dj] == 1:
-                dq.append((x + di, y + dj))
+    for dr in range(s):
+        for dc in range(s):
+            if (
+                within_boundaries(row + dr, col + dc, rows, cols)
+                and img[row + dr, col + dc] == 1
+            ):
+                dq.append((row + dr, col + dc))
+
     while len(dq) > 0:
-        i, j = dq.pop()
-        if img[i, j] == 1:
-            dq.update_extremes(i, j)
+        r, c = dq.pop()
+        if img[r, c] == 1:
+            dq.update_extremes(r, c)
             # 255 represents a visited pixel
-            img[i, j] = 255
-            for ii, jj in neighbors:
-                if within_boundaries(i + ii, j + jj, r, c):
-                    if img[i + ii, j + jj] == 1:
-                        dq.append((i + ii, j + jj))
+            img[r, c] = 255
+            for dr, dc in neighbors:
+                nr = r + dr
+                nc = c + dc
+                if within_boundaries(nr, nc, rows, cols):
+                    if img[nr, nc] == 1:
+                        dq.append((nr, nc))
     return dq.counter, dq.extremes
 
 
 def get_bbox_boundaries(img, s=25, n_cols=3):
     """Gets bbox boundaries (max and min values for both coordinates)."""
     extremes = []
-    r, c = img.shape
+    rows, cols = img.shape
     # iterate over slices of size sxs
-    for i in range(0, r, s):
-        for j in range(0, c, s):
-            slc = img[i : i + s, j : j + s]
+    for r in range(0, rows, s):
+        for c in range(0, cols, s):
+            slc = img[r : r + s, c : c + s]
             # pixel value of 255 means it is marked as visited
             if 255 in slc:
                 continue
             if 1 in slc:
-                counter, extreme = mark_neighbors(img, i, j, s)
+                counter, extreme = mark_neighbors(img, r, c, s)
                 # minimum amount of pixels to be considered a VNC
                 if counter > 6000:
                     extremes.append(extreme)
@@ -104,7 +110,7 @@ def get_bbox_boundaries(img, s=25, n_cols=3):
     return extremes
 
 
-def increase_bbox(coords, w, h):
+def increase_bbox(coords, w, h, shape):
     """Increases the bbox boundaries by w and h.
 
     Args:
@@ -112,10 +118,15 @@ def increase_bbox(coords, w, h):
         w: int Number of pixels to increment in the bbox width (half each side)
         h: int Number of pixels to increment in the bbox height (half each side)
     """
-    new_coords = coords.copy()
-    for k, coord in new_coords.items():
+    new_coords = []
+    for coord in coords:
         x0, x1, y0, y1 = coord
-        new_coords[k] = x0 - h // 2, x1 + h // 2, y0 - w // 2, y1 + w // 2
+        r, c = shape
+        new_x0 = max(x0 - h // 2, 0)
+        new_x1 = min(x1 + h // 2, r)
+        new_y0 = max(y0 - w // 2, 0)
+        new_y1 = min(y1 + w // 2, c)
+        new_coords.append([new_x0, new_x1, new_y0, new_y1])
     return new_coords
 
 
@@ -134,7 +145,7 @@ def sort_by_grid_pos(extremes, n_cols):
     # add centroids to their respective bins
     for centroid in centroids:
         col = centroid[1]
-        bin_idx = (col) // bin_size
+        bin_idx = col // bin_size
         bins[bin_idx].append(centroid)
 
     # filter out possibly empty bins
@@ -144,8 +155,7 @@ def sort_by_grid_pos(extremes, n_cols):
         b.sort(key=lambda b: b[0])
     # extracts each index
     indices = [b[2] for bin in bins for b in bin]
-    # maps back the indices to each bounding box
-    return {i: extremes[idx] for i, idx in enumerate(indices, 1)}
+    return [extremes[i] for i in indices]
 
 
 def filter_by_embryos(extremes, selected_embryos):
@@ -160,11 +170,11 @@ def read_mmap(mmap_path, num_frames=None):
     return np.memmap(mmap_path, dtype, "r", offset, shape)
 
 
-def create_tasks(extremes, frame_shape, pad, channels, active_ch, dest, overwrite):
+def create_tasks(extremes, channels, active_ch, dest, overwrite):
     """"""
     tasks = []
     for id, extreme in extremes.items():
-        x0, x1, y0, y1 = add_padding(extreme, frame_shape, pad)
+        x0, x1, y0, y1 = extreme
         for ch in range(channels):
             file_name = output_file_name(id, ch, active_ch)
             output = dest.joinpath(file_name)
@@ -192,7 +202,6 @@ def cut_movies(
     embryos=None,
     active_ch=1,
     channels=2,
-    pad=20,
     overwrite=False,
 ):
     """Extracts movies from ch1 and ch2, based on the boundaries passed for
@@ -206,7 +215,6 @@ def cut_movies(
         active_ch: indicates the image active channel. Defaults to 1 and it
         is expected to be equal to 1 or 2.
         channels: (defaults to 2) number of channels imaged.
-        pad: amount of padding to add to each movie, in pixels
         overwrite: boolean to determine if movies should be overwritten."""
     if embryos:
         extremes = filter_by_embryos(extremes, embryos)
@@ -216,12 +224,9 @@ def cut_movies(
         raise ValueError(f"Can only parse 1 or 2 channels, but got {channels}")
 
     img = read_mmap(img_path)
-    frame_shape = img.shape[2:]
 
     dest_path = Path(dest)
-    tasks = create_tasks(
-        extremes, frame_shape, pad, channels, active_ch, dest_path, overwrite
-    )
+    tasks = create_tasks(extremes, channels, active_ch, dest_path, overwrite)
 
     if len(tasks) == 0:
         return
@@ -241,17 +246,9 @@ def save_movie(img, ch, x0, x1, y0, y1, output):
     imwrite(output, movie)
 
 
-def add_padding(points, shape, pad=20):
-    """Adds padding to the list of boundary points, pad//2 on each side."""
-    p = pad // 2
-    r, c = shape
-    x0, x1, y0, y1 = points
-    return [max(x0 - p, 0), min(x1 + p, r), max(y0 - p, 0), min(y1 + p, c)]
-
-
-def boundary_to_rect_coords(boundary, shape):
+def boundary_to_rect_coords(boundary):
     """Converts from `(x0, x1, y0, y1)` to `(x, y, w, h)`."""
-    [x0, x1, y0, y1] = add_padding(boundary, shape)
+    [x0, x1, y0, y1] = boundary
     return [x0, y0, y1 - y0, x1 - x0]
 
 
