@@ -59,7 +59,7 @@ class PDParams(BaseModel):
 
 
 class EmbryoParams(BaseModel):
-    wlen: int = 30
+    wlen: int = 2
     manual_peaks: list[int] = Field(default_factory=list)
     manual_remove: list[int] = Field(default_factory=list)
     manual_widths: dict[str, Any] = Field(default_factory={})
@@ -175,7 +175,7 @@ class Config:
 
         if not emb_name in self.data["embryos"]:
             self.data["embryos"][emb_name] = {
-                "wlen": 10,
+                "wlen": 2,
                 "manual_peaks": [],
                 "manual_remove": [],
                 "manual_widths": {},
