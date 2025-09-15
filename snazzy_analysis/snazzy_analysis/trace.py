@@ -344,21 +344,18 @@ class Trace:
         if corrected_peaks:
             to_add = corrected_peaks.get("manual_peaks", [])
             to_remove = corrected_peaks.get("manual_remove", [])
-            wlen = corrected_peaks.get("wlen", 10)
+            wlen = corrected_peaks.get("wlen", 2)
+
             filtered_peaks = [
                 p
                 for p in self._peak_idxes
                 if not any(abs(p - rp) < wlen for rp in to_remove)
             ]
-            filtered_add = [
-                ap
-                for ap in to_add
-                if not any(abs(p - ap) < wlen for p in filtered_peaks)
-            ]
+
             self.to_add = to_add
             self.to_remove = to_remove
             self._peak_idxes = np.array(
-                sorted(filtered_peaks + filtered_add), dtype=np.int64
+                sorted(list(set(filtered_peaks + to_add))), dtype=np.int64
             )
 
     def update_dsna_start(self, params):
