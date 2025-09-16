@@ -12,11 +12,6 @@ EMB_PATH = BASE_DIR.joinpath("embryo_movies", "emb1-ch2.tif")
 
 
 @pytest.fixture
-def emb_img():
-    return np.load(BASE_DIR / "embryo.npy")
-
-
-@pytest.fixture
 def avg_emb_img():
     return imread(BASE_DIR / "average-100-frames-ch2-embryo.tif")
 

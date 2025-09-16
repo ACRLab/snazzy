@@ -9,6 +9,11 @@ BASE_DIR = Path(__file__).parent.joinpath("images")
 EMB_SRC = BASE_DIR.joinpath("embryo_movies")
 
 
+@pytest.fixture(scope="session")
+def shared_dir(tmp_path_factory):
+    return tmp_path_factory.mktemp("shared_dir")
+
+
 def test_skips_embryo_if_already_processed():
     with patch("snazzy_processing.pipeline.already_created", lambda x, y: True):
         processed_lens = pipeline.measure_vnc_length(EMB_SRC, EMB_SRC, downsampling=20)
@@ -50,21 +55,29 @@ def test_cleanup_raises_when_missing_paths(tmp_path):
         pipeline.clean_up_files(embs_src, first_frames_path, tif_path)
 
 
-def test_pipeline_write_csv_files(tmp_path):
+def test_pipeline_write_csv_files(shared_dir):
     with patch("snazzy_processing.find_hatching.find_hatching_point", lambda x: 50):
-        processed_lens = pipeline.measure_vnc_length(EMB_SRC, tmp_path, 10)
-        processed_acts = pipeline.calc_activities(EMB_SRC, tmp_path, 10)
-        processed_full_lens = pipeline.measure_embryo_full_length(EMB_SRC, tmp_path)
+        processed_lens = pipeline.measure_vnc_length(EMB_SRC, shared_dir, 10)
+        processed_acts = pipeline.calc_activities(EMB_SRC, shared_dir, 10)
+        processed_full_lens = pipeline.measure_embryo_full_length(EMB_SRC, shared_dir)
 
-        assert tmp_path.joinpath("activity").exists()
-        assert tmp_path.joinpath("lengths").exists()
+        assert shared_dir.joinpath("activity").exists()
+        assert shared_dir.joinpath("lengths").exists()
 
         assert processed_lens == 1
         assert processed_acts == 1
         assert processed_full_lens == 1
 
-        assert len(list(tmp_path.joinpath("activity").iterdir())) == 1
-        assert len(list(tmp_path.joinpath("lengths").iterdir())) == 1
+        assert len(list(shared_dir.joinpath("activity").iterdir())) == 1
+        assert len(list(shared_dir.joinpath("lengths").iterdir())) == 1
+
+
+def test_pipeline_skips_if_already_exists(shared_dir):
+    with patch("snazzy_processing.find_hatching.find_hatching_point", lambda x: 50):
+        processed_lens = pipeline.measure_vnc_length(EMB_SRC, shared_dir, 25)
+
+    assert shared_dir.joinpath("lengths").exists()
+    assert processed_lens == 0
 
 
 def test_calculate_activity_single_emb():
