@@ -12,10 +12,11 @@ def local_peak_at(x, signal, wlen):
 
 
 class PeakMatcher:
-    def add_peak(self, x: int, trace: Trace, manual_remove: list[int], wlen: int = 5):
-        """Adds a new peak in the vicinity of `x`.
+    def add_peak(self, x: int, trace: Trace, manual_remove: list[int], wlen: int = 2):
+        """Add a new peak in the vicinity of `x`.
 
-        The new peak is calculated as the local maximum near `x`, in a window of 2*wlen points.
+        The new peak is calculated as the local maximum of a window centered at `x`,
+        that ranges `wlen` in each direction.
 
         Parameters:
             x (int):
@@ -37,6 +38,8 @@ class PeakMatcher:
         """
         window = slice(x - wlen, x + wlen)
         new_peak = local_peak_at(x, trace.dff[window], wlen)
+        if new_peak in trace.peak_idxes:
+            return new_peak, trace.peak_idxes, None
         new_arr = np.append(trace.peak_idxes, new_peak)
         new_arr.sort()
 
@@ -44,12 +47,9 @@ class PeakMatcher:
         # that manually removed entry must be erased:
         to_remove = None
         if manual_remove:
-            try:
-                peak = next(p for p in manual_remove if x - wlen <= p <= x + wlen)
-                i = manual_remove.index(peak)
+            if new_peak in manual_remove:
+                i = manual_remove.index(new_peak)
                 to_remove = manual_remove[:i] + manual_remove[i + 1 :]
-            except StopIteration:
-                pass
 
         return new_peak, new_arr, to_remove
 
@@ -59,9 +59,9 @@ class PeakMatcher:
         trace: Trace,
         manual_add: list[int],
         manual_widths: dict[str, Any],
-        wlen=10,
+        wlen=2,
     ):
-        """Removes peaks that are within `wlen` of `x`.
+        """Remove all peaks that are within ±`wlen` of `x`.
 
         Parameters:
             x (int):
@@ -82,8 +82,8 @@ class PeakMatcher:
                 Updated list with all peaks.
             to_add (list[int]):
                 Updated list of manually added peaks.
-            peak_width_to_remove (int):
-                Key that should be removed from manual widths dict.
+            filtered_peak_widths (int):
+                Updated manual widhts dict without the peaks that were removed.
         """
         target = (trace.peak_idxes >= x - wlen) & (trace.peak_idxes <= x + wlen)
         removed = trace.peak_idxes[target].tolist()
@@ -93,20 +93,17 @@ class PeakMatcher:
         # that manually added peak entry must be erased
         to_add = None
         if manual_add:
-            try:
-                # FIXME: if you remove more than one element, this update method fails
-                peak = next(p for p in manual_add if x - wlen <= p <= x + wlen)
-                i = manual_add.index(peak)
-                to_add = manual_add[:i] + manual_add[i + 1 :]
-            except StopIteration:
-                pass
-        peak_width_to_remove = None
-        if manual_widths:
-            try:
-                peak_width_to_remove = next(
-                    int(p) for p in manual_widths if x - wlen <= int(p) <= x + wlen
-                )
-            except StopIteration:
-                pass
+            filtered_manual_add = [
+                p for p in manual_add if p < x - wlen or p > x + wlen
+            ]
+            to_add = filtered_manual_add
 
-        return removed, new_arr, to_add, peak_width_to_remove
+        filtered_peak_widths = None
+        if manual_widths:
+            filtered_peak_widths = {
+                p: data
+                for p, data in manual_widths.items()
+                if int(p) < x - wlen or int(p) > x + wlen
+            }
+
+        return removed, new_arr, to_add, filtered_peak_widths

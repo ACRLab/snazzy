@@ -225,7 +225,7 @@ class Model:
             {"pd_params": pd_params, "exp_params": {"to_remove": to_remove}}
         )
 
-    def add_peak(self, x, emb_name, trace, wlen=5):
+    def add_peak(self, x, emb_name, trace, wlen=2):
         # load corrected data to reconcile with the new add
         exp = self.selected_experiment
         corrected_peaks = exp.config.get_corrected_peaks(emb_name)
@@ -246,7 +246,7 @@ class Model:
         )
         return new_peak, new_peaks
 
-    def remove_peak(self, x, emb_name, trace, wlen=10):
+    def remove_peak(self, x, emb_name, trace, wlen=2):
         # load corrected data to reconcile with the new add
         exp = self.selected_experiment
         corrected_peaks = exp.config.get_corrected_peaks(emb_name)
@@ -254,23 +254,23 @@ class Model:
         manual_widths = (
             None if not corrected_peaks else corrected_peaks["manual_widths"]
         )
+        wlen = wlen if not corrected_peaks else corrected_peaks["wlen"]
 
-        removed, new_arr, added_peaks, peak_width_to_remove = self.pm.remove_peak(
-            x, trace, manual_add, manual_widths
+        removed, new_arr, added_peaks, filtered_peak_widths = self.pm.remove_peak(
+            x, trace, manual_add, manual_widths, wlen
         )
         # update corrected peaks
         if corrected_peaks:
             to_remove = corrected_peaks["manual_remove"]
             removed = list(set(to_remove + removed))
             corrected_peaks["manual_remove"] = removed
-        if manual_widths and peak_width_to_remove:
-            del manual_widths[str(peak_width_to_remove)]
+            corrected_peaks["manual_widths"] = filtered_peak_widths
 
         exp.config.save_manual_peak_data(
             emb_name,
             added_peaks=added_peaks,
             removed_peaks=removed,
-            manual_widths=manual_widths,
+            manual_widths=filtered_peak_widths,
         )
         return removed, new_arr
 
