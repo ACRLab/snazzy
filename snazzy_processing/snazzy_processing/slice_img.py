@@ -118,15 +118,15 @@ def increase_bbox(coords, w, h, shape):
         w: int Number of pixels to increment in the bbox width (half each side)
         h: int Number of pixels to increment in the bbox height (half each side)
     """
-    new_coords = []
-    for coord in coords:
+    new_coords = {}
+    for emb_id, coord in coords.items():
         x0, x1, y0, y1 = coord
         r, c = shape
         new_x0 = max(x0 - h // 2, 0)
         new_x1 = min(x1 + h // 2, r)
         new_y0 = max(y0 - w // 2, 0)
         new_y1 = min(y1 + w // 2, c)
-        new_coords.append([new_x0, new_x1, new_y0, new_y1])
+        new_coords[emb_id] = [new_x0, new_x1, new_y0, new_y1]
     return new_coords
 
 
@@ -139,7 +139,7 @@ def sort_by_grid_pos(extremes, n_cols):
         for i, (r0, r1, c0, c1) in enumerate(extremes)
     ]
     # determine bin_size from the maximum column value
-    bin_size = (max((c for (r, c, i) in centroids)) // n_cols) + 1
+    bin_size = (max((c[1] for c in centroids)) // n_cols) + 1
 
     bins = [[] for _ in range(n_cols)]
     # add centroids to their respective bins
@@ -150,12 +150,14 @@ def sort_by_grid_pos(extremes, n_cols):
 
     # filter out possibly empty bins
     bins = [b for b in bins if len(b) > 0]
+
     # sort bins by row value
     for b in bins:
         b.sort(key=lambda b: b[0])
+
     # extracts each index
     indices = [b[2] for bin in bins for b in bin]
-    return [extremes[i] for i in indices]
+    return {k + 1: extremes[i] for k, i in enumerate(indices)}
 
 
 def filter_by_embryos(extremes, selected_embryos):
@@ -171,7 +173,6 @@ def read_mmap(mmap_path, num_frames=None):
 
 
 def create_tasks(extremes, channels, active_ch, dest, overwrite):
-    """"""
     tasks = []
     for id, extreme in extremes.items():
         x0, x1, y0, y1 = extreme

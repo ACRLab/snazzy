@@ -22,7 +22,7 @@ def test_can_mark_neighbors():
 
 
 def test_increase_bbox_does_not_mutate_coords():
-    coords = [[30, 80, 30, 80], [100, 300, 50, 250]]
+    coords = {1: [30, 80, 30, 80], 2: [100, 300, 50, 250]}
     orig_coords = coords.copy()
     shape = (300, 300)
 
@@ -34,18 +34,18 @@ def test_increase_bbox_does_not_mutate_coords():
 
 def test_increase_bbox_clips_to_shape():
     """Adding padding should not result in negative or OutOfBounds indices."""
-    coords = [[2, 200, 5, 490]]
-    expected_coords = [[0, 210, 0, 500]]
+    coords = {1: [2, 200, 5, 490]}
+    expected_coords = {1: [0, 210, 0, 500]}
     shape = (300, 500)
 
     actual = slice_img.increase_bbox(coords, w=20, h=20, shape=shape)
-    assert actual[0] == expected_coords[0]
+    assert actual == expected_coords
 
 
 def test_increase_bbox_when_resulting_bbox_inside():
-    coords = [[10, 200, 50, 490]]
-    expected_coords = [[0, 210, 40, 500]]
+    coords = {1: [10, 200, 50, 490]}
+    expected_coords = {1: [0, 210, 40, 500]}
     shape = (600, 600)
 
     actual = slice_img.increase_bbox(coords, w=20, h=20, shape=shape)
-    assert actual[0] == expected_coords[0]
+    assert actual == expected_coords
