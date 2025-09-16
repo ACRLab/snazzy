@@ -28,7 +28,7 @@ def shuffle_arr(arr):
 
 
 def test_sorts_a_full_grid(grid_3x3_bboxes):
-    expected = grid_3x3_bboxes.copy()
+    expected = {i + 1: coord for i, coord in enumerate(grid_3x3_bboxes)}
 
     shuffle_arr(grid_3x3_bboxes)
 
@@ -40,7 +40,7 @@ def test_sorts_a_full_grid(grid_3x3_bboxes):
 def test_sorts_a_grid_with_one_missing_embryo(grid_3x3_bboxes):
     """Removed embryo that would take pos 9."""
     bboxes = grid_3x3_bboxes[:-1]
-    expected = bboxes.copy()
+    expected = {i + 1: coord for i, coord in enumerate(bboxes)}
 
     shuffle_arr(bboxes)
 
@@ -50,10 +50,10 @@ def test_sorts_a_grid_with_one_missing_embryo(grid_3x3_bboxes):
 
 def test_sorts_a_grid_with_several_missing_embryos(grid_3x3_bboxes):
     """Removed embryos at index 0, 5, 6, and 7."""
-    keeping_idxs = [1, 2, 3, 4, 7]
+    keeping_idxs = [1, 2, 3, 4, 8]
     bboxes = [grid_3x3_bboxes[i] for i in keeping_idxs]
 
-    expected = bboxes.copy()
+    expected = {i + 1: coord for i, coord in enumerate(bboxes)}
 
     shuffle_arr(bboxes)
 
@@ -67,7 +67,7 @@ def test_sorts_a_grid_with_empty_column(grid_3x3_bboxes):
     pos = [0, 1, 2, 6, 7, 8]
     bboxes = [grid_3x3_bboxes[p] for p in pos]
 
-    expected = bboxes.copy()
+    expected = {i + 1: coord for i, coord in enumerate(bboxes)}
 
     shuffle_arr(bboxes)
 
