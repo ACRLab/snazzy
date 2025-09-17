@@ -185,3 +185,81 @@ def test_can_add_and_remove_peak(model_single_exp):
 
     assert new_peak_index not in manual_data["manual_peaks"]
     assert new_peak_index in manual_data["manual_remove"]
+
+
+def test_can_clear_manual_data_from_single_emb(model_single_exp):
+    emb_name = "emb1"
+    new_peak_index = 400
+    curr_trace = model_single_exp.selected_experiment.get_embryo(emb_name).trace
+
+    model_single_exp.add_peak(new_peak_index, emb_name, curr_trace)
+
+    another_emb_name = "emb3"
+    another_trace = model_single_exp.selected_experiment.get_embryo(
+        another_emb_name
+    ).trace
+    model_single_exp.add_peak(new_peak_index, another_emb_name, another_trace)
+
+    assert "embryos" in model_single_exp.selected_experiment.config.data
+
+    orig_config = model_single_exp.selected_experiment.config.data["embryos"]
+
+    assert emb_name in orig_config
+
+    model_single_exp.clear_manual_data_by_embryo(emb_name)
+
+    assert curr_trace.to_add == []
+    assert curr_trace.to_remove == []
+
+    manual_data = model_single_exp.selected_experiment.config.data["embryos"]
+
+    assert emb_name not in manual_data
+    assert another_emb_name in manual_data
+
+
+def test_can_clear_all_manual_data(model_single_exp):
+    emb_name = "emb1"
+    new_peak_index = 400
+    curr_trace = model_single_exp.selected_experiment.get_embryo(emb_name).trace
+
+    model_single_exp.add_peak(new_peak_index, emb_name, curr_trace)
+
+    another_emb_name = "emb3"
+    another_trace = model_single_exp.selected_experiment.get_embryo(
+        another_emb_name
+    ).trace
+    model_single_exp.add_peak(new_peak_index, another_emb_name, another_trace)
+
+    assert "embryos" in model_single_exp.selected_experiment.config.data
+
+    model_single_exp.clear_all_manual_data()
+
+    manual_data = model_single_exp.selected_experiment.config.data["embryos"]
+
+    assert emb_name not in manual_data
+    assert another_emb_name not in manual_data
+
+    assert manual_data == {}
+
+
+def test_clear_emb_manual_data_raises_if_emb_not_exists(model_single_exp):
+    emb_name = "emb1"
+    new_peak_index = 400
+    curr_trace = model_single_exp.selected_experiment.get_embryo(emb_name).trace
+
+    model_single_exp.add_peak(new_peak_index, emb_name, curr_trace)
+
+    with pytest.raises(ValueError):
+        model_single_exp.clear_manual_data_by_embryo("emb2")
+
+
+def test_clear_emb_manual_data_works_when_no_saved_data(model_single_exp):
+    emb_name = "emb1"
+    curr_trace = model_single_exp.selected_experiment.get_embryo(emb_name).trace
+
+    assert curr_trace.to_add == []
+    assert curr_trace.to_remove == []
+
+    model_single_exp.clear_manual_data_by_embryo("emb1")
+
+    assert curr_trace.to_remove == []
