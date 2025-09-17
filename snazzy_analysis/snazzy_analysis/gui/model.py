@@ -303,7 +303,27 @@ class Model:
         self.select_experiment(experiment)
         self.select_embryo(embryo)
 
-    def clear_manual_data(self):
+    def clear_manual_data_by_embryo(self, emb_name):
+        exp = self.selected_experiment
+
+        target_emb = None
+        for emb in exp.all_embryos():
+            if emb.name == emb_name:
+                target_emb = emb
+        if target_emb is None:
+            raise ValueError(f"Cannot find {emb_name} in selected experiment.")
+
+        target_emb.trace.to_add = []
+        target_emb.trace.to_remove = []
+
+        if "embryos" in exp.config.data:
+            emb_data = exp.config.data["embryos"]
+            if emb_name in emb_data:
+                del emb_data[emb_name]
+
+        exp.config.save_params()
+
+    def clear_all_manual_data(self):
         exp = self.selected_experiment
 
         for emb in exp.embryos:
