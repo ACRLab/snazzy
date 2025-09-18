@@ -901,8 +901,16 @@ class MainWindow(QMainWindow):
             dev_time = emb.lin_developmental_time
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             x = int(idx)
+            prev_value = dev_time[trace.trim_idx]
         else:
             x = int(il_obj.getXPos() * 10)
+            prev_value = trace.trim_idx // 10
+
+        # cannot allow trim_idx to be set after last timepoint, since it's
+        # used to index trace points and would cause IndexError
+        if x >= len(trace.time):
+            il_obj.setValue(prev_value)
+            return
 
         res = QMessageBox.question(
             self,
@@ -912,10 +920,6 @@ class MainWindow(QMainWindow):
         )
 
         if res == QMessageBox.StandardButton.Cancel:
-            if self.use_dev_time:
-                prev_value = dev_time[trace.trim_idx]
-            else:
-                prev_value = trace.trim_idx / 10
             il_obj.setValue(prev_value)
             return
 
