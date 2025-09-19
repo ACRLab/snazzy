@@ -420,3 +420,16 @@ class Model:
 
         self.select_experiment(experiment)
         self.select_embryo(embryo)
+
+    def get_index_from_time(self, time) -> int:
+        """Calculates signal index based on time.
+
+        Relies on the fact that the acquisition rate is constant.
+
+        Parameters:
+            time (float): time in minutes.
+        """
+        exp = self.selected_experiment
+        exp_params = exp.config.get_exp_params()
+
+        return int(time * 60) // exp_params["acquisition_period"]
