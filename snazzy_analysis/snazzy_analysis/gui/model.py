@@ -251,9 +251,7 @@ class Model:
         exp = self.selected_experiment
         corrected_peaks = exp.config.get_corrected_peaks(emb_name)
         manual_add = [] if not corrected_peaks else corrected_peaks["manual_peaks"]
-        manual_widths = (
-            None if not corrected_peaks else corrected_peaks["manual_widths"]
-        )
+        manual_widths = {} if not corrected_peaks else corrected_peaks["manual_widths"]
         wlen = wlen if not corrected_peaks else corrected_peaks["wlen"]
 
         removed, new_arr, added_peaks, filtered_peak_widths = self.pm.remove_peak(
