@@ -73,7 +73,7 @@ def test_remove_peak_has_no_effect_when_clicked_outside_peak_range(trace):
     assert removed == []
     assert np.array_equal(new_arr, trace.peak_idxes)
     assert to_add is None
-    assert filtered_peak_widths is None
+    assert filtered_peak_widths == {}
 
 
 def test_remove_peak_when_clicked_close_to_peak(trace):
@@ -88,7 +88,7 @@ def test_remove_peak_when_clicked_close_to_peak(trace):
     assert not np.array_equal(new_arr, trace.peak_idxes)
     assert new_arr.size == trace.peak_idxes.size - 1
     assert to_add is None
-    assert filtered_peak_widths is None
+    assert filtered_peak_widths == {}
 
 
 def test_remove_peak_also_updates_manually_added_peaks(trace):
@@ -102,7 +102,7 @@ def test_remove_peak_also_updates_manually_added_peaks(trace):
 
     assert removed == [10]
     assert to_add == [44]
-    assert filtered_peak_widths is None
+    assert filtered_peak_widths == {}
 
 
 def test_remove_peak_also_updates_peak_widths(trace):
