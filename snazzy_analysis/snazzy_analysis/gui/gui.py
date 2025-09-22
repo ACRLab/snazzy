@@ -560,7 +560,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
-            x = int(x * 10)
+            x = self.model.get_index_from_time(x)
 
         new_peak, new_peaks = self.model.add_peak(x, emb_name, trace)
 
@@ -579,7 +579,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, x) - 1
             x = int(idx)
         else:
-            x = int(x * 10)
+            x = self.model.get_index_from_time(x)
 
         removed_peaks, new_peaks = self.model.remove_peak(x, emb_name, trace)
 
@@ -865,7 +865,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             x = int(idx)
         else:
-            x = int(il_obj.getXPos() * 10)
+            x = self.model.get_index_from_time(il_obj.getXPos())
 
         res = QMessageBox.question(
             self,
@@ -878,7 +878,7 @@ class MainWindow(QMainWindow):
         if self.use_dev_time:
             prev_value = dev_time[prev_dsna_start]
         else:
-            prev_value = prev_dsna_start / 10
+            prev_value = self.model.get_index_from_time(prev_dsna_start)
 
         if res == QMessageBox.StandardButton.Cancel:
             il_obj.setValue(prev_value)
@@ -901,8 +901,16 @@ class MainWindow(QMainWindow):
             dev_time = emb.lin_developmental_time
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             x = int(idx)
+            prev_value = dev_time[trace.trim_idx]
         else:
-            x = int(il_obj.getXPos() * 10)
+            x = self.model.get_index_from_time(il_obj.getXPos())
+            prev_value = trace.time[trace.trim_idx]
+
+        # cannot allow trim_idx to be set after last timepoint, since it's
+        # used to index trace points and would cause IndexError
+        if x >= len(trace.time):
+            il_obj.setValue(prev_value)
+            return
 
         res = QMessageBox.question(
             self,
@@ -912,10 +920,6 @@ class MainWindow(QMainWindow):
         )
 
         if res == QMessageBox.StandardButton.Cancel:
-            if self.use_dev_time:
-                prev_value = dev_time[trace.trim_idx]
-            else:
-                prev_value = trace.trim_idx / 10
             il_obj.setValue(prev_value)
             return
 
@@ -942,7 +946,7 @@ class MainWindow(QMainWindow):
             idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
             new_line_pos = int(idx)
         else:
-            new_line_pos = int(il_obj.getXPos() * 10)
+            new_line_pos = self.model.get_index_from_time(il_obj.getXPos())
 
         self.model.update_peak_widths(peak_index, bound_index, new_line_pos)
 
@@ -958,7 +962,30 @@ class MainWindow(QMainWindow):
                 self.clear_layout(item.layout())
 
     def clear_manual_data(self):
-        self.model.clear_manual_data()
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Remove manual data")
+        msg.setText("Which data should be removed?")
+
+        curr_emb_name = self.model.selected_embryo.name
+
+        remove_curr = QPushButton(f"Current trace ({curr_emb_name})")
+        remove_all = QPushButton("All traces")
+        cancel = QPushButton("Cancel")
+
+        msg.addButton(cancel, QMessageBox.ButtonRole.NoRole)
+        msg.addButton(remove_all, QMessageBox.ButtonRole.DestructiveRole)
+        msg.addButton(remove_curr, QMessageBox.ButtonRole.DestructiveRole)
+
+        msg.exec()
+
+        selected_option = msg.clickedButton()
+
+        if selected_option is None or selected_option == cancel:
+            return
+        elif selected_option == remove_curr:
+            self.model.clear_manual_data_by_embryo(curr_emb_name)
+        elif selected_option == remove_all:
+            self.model.clear_all_manual_data()
 
         self.update_all_embs()
         self.show_notification("Clear manual data", "Manually added data was removed.")

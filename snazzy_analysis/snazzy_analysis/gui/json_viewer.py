@@ -16,6 +16,7 @@ KEY_TYPES = {
     "to_remove": list,
     "has_transients": bool,
     "has_dsna": bool,
+    "acquisition_period": int,
     "pd_params": dict,
     "freq": float,
     "trim_zscore": float,

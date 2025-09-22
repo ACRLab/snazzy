@@ -251,9 +251,7 @@ class Model:
         exp = self.selected_experiment
         corrected_peaks = exp.config.get_corrected_peaks(emb_name)
         manual_add = [] if not corrected_peaks else corrected_peaks["manual_peaks"]
-        manual_widths = (
-            None if not corrected_peaks else corrected_peaks["manual_widths"]
-        )
+        manual_widths = {} if not corrected_peaks else corrected_peaks["manual_widths"]
         wlen = wlen if not corrected_peaks else corrected_peaks["wlen"]
 
         removed, new_arr, added_peaks, filtered_peak_widths = self.pm.remove_peak(
@@ -303,7 +301,27 @@ class Model:
         self.select_experiment(experiment)
         self.select_embryo(embryo)
 
-    def clear_manual_data(self):
+    def clear_manual_data_by_embryo(self, emb_name):
+        exp = self.selected_experiment
+
+        target_emb = None
+        for emb in exp.all_embryos():
+            if emb.name == emb_name:
+                target_emb = emb
+        if target_emb is None:
+            raise ValueError(f"Cannot find {emb_name} in selected experiment.")
+
+        target_emb.trace.to_add = []
+        target_emb.trace.to_remove = []
+
+        if "embryos" in exp.config.data:
+            emb_data = exp.config.data["embryos"]
+            if emb_name in emb_data:
+                del emb_data[emb_name]
+
+        exp.config.save_params()
+
+    def clear_all_manual_data(self):
         exp = self.selected_experiment
 
         for emb in exp.embryos:
@@ -400,3 +418,16 @@ class Model:
 
         self.select_experiment(experiment)
         self.select_embryo(embryo)
+
+    def get_index_from_time(self, time) -> int:
+        """Calculates signal index based on time.
+
+        Relies on the fact that the acquisition rate is constant.
+
+        Parameters:
+            time (float): time in minutes.
+        """
+        exp = self.selected_experiment
+        exp_params = exp.config.get_exp_params()
+
+        return int(time * 60) // exp_params["acquisition_period"]

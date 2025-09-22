@@ -14,7 +14,7 @@ from snazzy_analysis import utils
 
 def convert_value(value: str, field_name: str):
     """Convert fields for the corresponding type based on field name."""
-    if field_name == "first_peak_threshold":
+    if field_name == "first_peak_threshold" or field_name == "acquisition_period":
         return int(value)
     elif field_name == "to_exclude" or field_name == "to_remove":
         return [f"emb{x.strip()}" for x in value.strip("[]").split(",") if x.strip()]
