@@ -1,18 +1,21 @@
-# Example Analysis
+Example Analysis
+================
 
 An example of how to use the GUI to analyze the data output from the raw image processing pipeline.
 
-## Open the GUI
+Open the GUI
+------------
 
 Open a terminal window and activate the conda environment:
 
-```
-conda activate pscope_analysis
-```
+.. code::
+
+    conda activate snazzy-env
 
 Refer to the Getting Started documentation if you haven't installed conda or haven't created an environment yet.
 
-## Load data
+Load data
+---------
 
 To load data in the GUI, select an entire folder that has pasnascope output.
 
@@ -22,14 +25,16 @@ The parameters that change more often are presented as a dialog window as soon a
 For the example dataset, we are not going to change any of these parameters.
 For more details about these parameters, refer to the GUI guide item 'Config Parameters'.
 
-## Visualizing data
+Visualizing data
+----------------
 
 When the data is loaded the GUI presents a sidebar with accepted and removed embryos, and the currenlty selected embryo.
 The sidebar can be used to select other embryos.
 For the selected trace, we can see the identified peaks.
 The signal from each channel can be inspected by clicking the button to the right of the trace plot.
 
-### Adjusting peaks
+Adjusting peaks
+---------------
 
 The first option to change peaks is to change the frequency filter value.
 Higher frequency values will result in more denoising, which will help if the signal has many fast oscillations that should be ignored.
@@ -46,7 +51,8 @@ Increasing the value in the slider will increase the peak width, while decreasin
 
 Once all peak data looks good, we can open other directories as another Group, to compare trace properties between them.
 
-## Comparing with another Experiment
+Comparing with another Experiment
+---------------------------------
 
 We can combine data from multiple experiments in two ways: either by adding more data from another experiment to the same Group, or by adding another Group and compare the different loaded Groups.
 In both modes, it's not possible to change the peak detection parameters, that's possbile only when a single experiment is loaded.
