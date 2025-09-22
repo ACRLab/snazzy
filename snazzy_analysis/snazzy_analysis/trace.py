@@ -162,12 +162,11 @@ class Trace:
 
         Returns:
             time_processed (arr):
-                Trimmed/extended time.
+                Trimmed/extended time (mins).
             dff_processed (arr):
                 Trimmed/extended dff.
         """
 
-        time = self.time / 60  # covert to mins
         dff = self.dff
 
         # trim dff from onset to hatching
@@ -181,15 +180,16 @@ class Trace:
             start_index = onset
         dff = dff[start_index : self.trim_idx]
 
-        # trim/extend dff to duration
         if duration > len(dff):
             pad_size = duration - len(dff)
             dff_processed = np.array(list(dff) + [0] * pad_size, dtype=object)
         else:
             dff_processed = dff[0:duration]
 
-        increment = time[1] - time[0]
-        time_processed = np.arange(0, duration / 10, increment)
+        acq_period = self.exp_params["acquisition_period"]
+        # acquisition period is in seconds, but time_processed should be mins
+        final_timepoint = duration * acq_period / 60
+        time_processed = np.arange(0, final_timepoint, acq_period / 60)
 
         return time_processed, dff_processed
 

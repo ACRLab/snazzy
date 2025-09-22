@@ -98,7 +98,7 @@ class PeakMatcher:
             ]
             to_add = filtered_manual_add
 
-        filtered_peak_widths = None
+        filtered_peak_widths = {}
         if manual_widths:
             filtered_peak_widths = {
                 p: data

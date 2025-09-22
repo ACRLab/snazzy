@@ -32,6 +32,8 @@ class ExpParams(BaseModel):
     has_dsna: boolean
         If an experiment has embryos with dSNA, automatically calculates dSNA start and ignores peaks
         that happen after that point.
+    acquisition_period: int
+        The time (in seconds) interval between acquiring two successive frames.
     """
 
     first_peak_threshold: int = 30
@@ -39,6 +41,7 @@ class ExpParams(BaseModel):
     to_remove: list[str] = Field(default_factory=list)
     has_transients: bool = True
     has_dsna: bool = False
+    acquisition_period: int = 6
 
 
 class PDParams(BaseModel):
