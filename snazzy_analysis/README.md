@@ -1,21 +1,6 @@
-# Pasna Analysis
+# Snazzy Analysis
  
-Data analysis for `pasnascope`'s pipeline output.
- 
-### Installation
- 
-Make a copy of this repo (e.g. with `git clone`), then `cd` into the root folder of the repo.
-Recreate the conda environment:
- 
-`conda env create --name pscope_analysis --file=environment.yml`
- 
-Activate the environment:
- 
-`conda activate pscope_analysis`
-
-Install the pasna_analysis package with `pip`:
-
-`pip install -e .`
+Data analysis for `snazzy_processing`'s pipeline output.
  
 ### Organization
  
@@ -29,16 +14,15 @@ Install the pasna_analysis package with `pip`:
 ### Analyses
  
 The analyses are primarily executed using the GUI.
-After activating the environment, run `pasna_analysis/gui/gui.py` to start the GUI.
+After activating the environment, run `python3 snazzy_analysis/gui/gui.py` to start the GUI.
 There are also jupyter notebooks available, which can be used alternatively and allows for image customization.
  
 ### Adding data
  
 Each experiment should have one corresponding folder inside `./data/`.
-The expected data is generated using the `pasnascope` package.
 The file structure inside the `data` folder should look like:
 The `embs` directory is used if you want to inspect movies inside the GUI.
-The files are generated with `pasnascope`, as long as the flag `clean_up_data` in there is set to `False`. 
+The files are generated with `snazzy_processing`, as long as the flag `clean_up_data` in there (inside snazzy_processing_pipeline.ipynb) is set to `False`. 
  
 ```
 |-- project_folder

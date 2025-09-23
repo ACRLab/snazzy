@@ -1,51 +1,31 @@
-# GOWF - Processing
+# SNAzzy Processing
  
-Raw data processing for the GOWF pipeline.
- 
-### Installation
- 
-Make a copy of this repo (e.g. with `git clone`), then `cd` into the root folder of the repo.
-Recreate the conda environment:
- 
-`conda env create --name pscope --file=environment.yml`
- 
-Activate the environment:
- 
-`conda activate pscope`
-
-Install the pasnascope package with `pip`:
-
-`pip install -e .`
+Raw data processing for the SNAzzy pipeline.
  
 ### Organization
  
-* `pasnascope`: contains the core code used in all analysis
-* `scripts`: Python code that combine the different modules in `pasnascope`, primarily for visualizing movies
+* `snazzy_processing`: contains the core code used in all analysis
+* `scripts`: Python code that combine the different modules in `snazzy_processing`, primarily for visualizing movies
 * `tests`: contains tests for the code
 * `data`: contains the data for the analysis. This folder is kept out of github, and should be populated in your local copy
 * `results`: contains the results of the analyses. It is also kept out of github and will be populated by performing the analyses
-* `notebooks`: contains examples and the front-end for using the `pasnascope` main module
+* `notebooks`: contains examples and the front-end for using the `snazzy_processing` main module
 * `docs`: project documentation
  
 ### Analyses
  
-The analyses can be executed using the provided jupyter notebooks, or running the files in the `scripts` directory.
-The recommended way to analyze your data is to go through the notebooks in the following order:
+The analyses can be executed using the provided jupyter notebooks.
+Use the notebook `snazzy_processing_pipeline.ipynb` to run the pipeline.
+The other notebooks are used to understand in details the pipeline stages.
 
-1. `process-raw-data.ipynb`
-2. `vnc-lengh.ipynb`
-3. `activity.ipynb`
-
-There are details on how to use the code in each one of the notebooks.
- 
 ### Adding data
  
-Each experiment should have one corresponding folder inside `./data/`.
-By running the code in `process-raw-data.ipynb`, the raw data will be parsed and saved inside `./data/experiment_name/embs`.
+Each experiment will have one corresponding folder inside `./data/`.
+By running the code in `snazzy_processing_pipeline.ipynb`, the raw data will be parsed and saved inside `./data/{experiment_name}/embs`.
 To compare the calculated VNC length against manual measurements, add an `annotated` folder inside the experiment directory.
 The measurements should be saved as a csv file.
 
-Given the description about, the file structure inside the `data` folder should look like:
+Given the description above, the file structure inside the `data` folder should look like:
  
 ```
 |-- project_folder
