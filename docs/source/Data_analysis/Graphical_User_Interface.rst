@@ -15,7 +15,7 @@ Loading the GUI
 ---------------
 
 First step to use the GUI is to activate the conda environment.
-Refer to the Getting Started session if you haven't created an environment yet.
+Refer to the `Getting Started <../Getting_Started.html>`__ session if you haven't created an environment yet.
 
 .. code:: bash
 
@@ -106,7 +106,7 @@ Visualizing traces
 Once the data is loaded, you should see something similar to this:
 
 .. image:: /_static/gui-screenshot.png
-   :alt: GUI Initial screen
+   :alt: GUI Screeshot with loaded data
 
 The top app bar has buttons to change the data presentation.
 Below the top app bar there are two sliders.
@@ -116,14 +116,26 @@ The sidebar presents which embryos are currently considered for plots and analys
 You can toggle the embryo status between these two categories.
 In the main view you will see the DFF trace of the currently selected embryo.
 The pink dots represent the peak indices.
+
+You can also visualize the signal from each channel, by clicking on the button in the right of the screen.
+This window will present the signal from each channel and also the hatching point, which can be changed manually by dragging the line. 
+
+Manually changing peak data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 By pressing ``shift`` + ``left mouse click`` you can add a new peak to the plot.
 Because we usually have many points over the X axis, it can be hard to click exactly where we want the peak index to land.
 To help with this, the actual peak index after clicking in the local maximum value for a small window around the point that was clicked. 
 By pressing ``CTRL`` + ``left mouse click`` you can remove a peak.
 It also works on a small X axis range just like when adding new peaks.
 
-You can also visualize the signal from each channel, by clicking on the button in the right of the screen.
-This window will present the signal from each channel and also the hatching point, which can be changed manually by dragging the line. 
+The peak width can also be adjusted.
+Click the button 'Adjust widths' to display handles on the peak boundaries.
+To change the width, just drag the line to the desired position.
+
+The manual data is saved in ``peak_detection_params.json``, in a key named ``embryos``.
+Click 'Clear manual data' to remove the manual data for the current sample of all samples at once.
+
 
 View embryo movies
 ------------------

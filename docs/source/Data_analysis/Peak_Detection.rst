@@ -1,19 +1,24 @@
 Peak Detection
 ==============
 
-Peak detection is one of the core features of ``pasna_analysis``.
+Peak detection is one of the core features of ``snazzy_analysis``.
 From the detected peaks, we derive most of the metrics used in this package: peak widths, amplitudes, rise times, decay times, and more.
 The algorithm consists of several steps, each with parameters that can be fine-tuned for optimal detection.
-To understand how to adjust these parameters effectively, it's important to first understand the entire peak detection algorithm.
 
-1. Peak Detection on a Low-Pass Filtered Signal
+Each step is implemented as a single function that takes a params dictionary and changes the data in ``Trace._peak_idxes``.
+If you want to change or extend the peak detection steps, just add another function that follows this interface as a new stage inside ``Trace.detect_peaks``.
+
+To understand how the different parameters influence the peak detection, it's important to first understand the entire peak detection algorithm.
+
+1. Peak Detection on Low-Passed Filtered Signal
 -----------------------------------------------
 
 The ΔF/F (DFF) trace is filtered in the frequency domain using a ``freq_cutoff`` parameter: all frequencies above this value are removed, and the remaining low-frequency components are used to reconstruct the filtered trace.
 This acts as a smoothing step, which almost completely removes oscillations and short-duration peaks that do not correspond to actual activity bursts.
 
 The ``freq_cutoff`` can be adjusted in the GUI using a slider, and the reconstructed signal is updated in real time.
-The default value of ``0.025 Hz`` works well for many traces, but traces with high-frequency noise may require a lower cutoff.
+The default value of ``0.0025 Hz`` works well for many traces, but traces with high-frequency noise may require a lower cutoff.
+Different types of samples will likely result in different traces and this value will have to be adjusted.
 
 Once we have the filtered trace, peaks are detected using the parameters ``fft_height`` and ``fft_prominence``.
 The ``fft_height`` parameter is especially important because the reconstructed signal often contains minor ripples before the first real burst.
@@ -24,7 +29,7 @@ These are easy to identify, as they usually do not correspond to peaks in the or
 -------------------------------------
 
 After detecting peaks in the filtered signal, the peak indices are mapped back to the original ΔF/F trace.
-This step is necessary because frequency-domain transformations can slightly shift peak positions.
+This step is necessary because the low-passed filter will result shift peak positions.
 The bursts of activity have a sharp rise and are followed closely by shorter oscillations.
 To properly mark bursts, we use the leftmost peak in each burst as the peak index.
 
