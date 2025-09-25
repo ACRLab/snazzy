@@ -58,7 +58,7 @@ class MainWindow(QMainWindow):
         self.filtered_dff = None
         self.display_filtered_dff = False
 
-        self.setWindowTitle("Pasna Analysis")
+        self.setWindowTitle("SNAzzy")
         self.setGeometry(100, 100, 1200, 600)
 
         self.paint_menu()
@@ -69,7 +69,7 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(self.layout)
 
         self.placeholder = QLabel(
-            "To get started, open a directory with pasnascope output."
+            "To get started, open a directory with snazzy_processing output."
         )
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
@@ -166,7 +166,7 @@ class MainWindow(QMainWindow):
     def handle_open_err(self, err: Exception):
         try:
             self.placeholder.setText(
-                "To get started, open a directory with pasnascope output."
+                "To get started, open a directory with snazzy_processing output."
             )
         except RuntimeError:
             pass
