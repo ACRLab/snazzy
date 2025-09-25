@@ -1,14 +1,16 @@
+from pathlib import Path
+
 import numpy as np
 
 from snazzy_processing import utils
 
 
-def percentual_err(measured, annotated):
+def percentual_err(measured: np.ndarray, annotated: np.ndarray):
     err = np.abs((measured - annotated)) / annotated
     return np.average(err), np.max(err)
 
 
-def compare(measured, annotated):
+def compare(measured: np.ndarray, annotated: np.ndarray):
     # make sure both nparrays have the same size:
     min_len = min(measured.shape[0], annotated.shape[0])
     annotated = annotated[:min_len]
@@ -16,17 +18,21 @@ def compare(measured, annotated):
     return percentual_err(measured, annotated)
 
 
-def point_wise_err(measured, annotated):
+def point_wise_err(measured: np.ndarray, annotated: np.ndarray):
     min_len = min(measured.shape[0], annotated.shape[0])
     annotated = annotated[:min_len]
     measured = measured[:min_len]
     return np.abs(measured - annotated) / annotated
 
 
-def get_matching_embryos(embryos, annotated, LUT=None):
+def get_matching_embryos(
+    embryos: list[Path], annotated: list[Path], LUT: None | dict[int, int] = None
+):
     """Maps embryo files to corresponding annotated files, based on the LUT.
 
-    The look-up table is only composed of numbers, so this function ports those numbers to the filename convention used here. Also makes sure that the embryos in the LUT actually exist as files.
+    The look-up table is a mapping of emb number to emb number, so this function
+    ports those numbers to the filename convention used here. Also makes sure
+    that the embryos in the LUT actually exist as files.
     """
     pairs = {}
 
@@ -51,6 +57,6 @@ def get_matching_embryos(embryos, annotated, LUT=None):
     return pairs
 
 
-def evaluate_CLE_global(measured, annotated):
+def evaluate_CLE_global(measured: list[Path], annotated: list[Path]):
     """Compares measured values against manually annotated data."""
     return {e: compare(measured[e], annotated[e]) for e in measured.keys()}
