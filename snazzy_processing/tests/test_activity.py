@@ -82,7 +82,7 @@ def test_output_data_includes_time():
     signals_shape = (2, 50, 2)
     signals = np.arange(0, 200).reshape(signals_shape)
 
-    output = activity.get_output_data(signals, frame_interval=5)
+    output = activity.add_timepoints(signals, frame_interval=5)
 
     N, t, _ = signals_shape
     assert output.shape == (N, t, 3)
@@ -96,7 +96,7 @@ def test_output_data_uses_frame_interval():
     frame_interval = 4
     signals = np.arange(0, 200).reshape(signals_shape)
 
-    output = activity.get_output_data(signals, frame_interval)
+    output = activity.add_timepoints(signals, frame_interval)
 
     assert np.array_equal(np.arange(0, 50), output[0, :, 0] / frame_interval)
 
@@ -125,6 +125,6 @@ def test_can_write_data_for_many_embryos(tmp_path):
 
 
 def test_export_csv_raises_when_no_embryos(tmp_path):
-    # will raise when `activity.get_output_data` is called
+    # will raise when `activity.add_timepoints` is called
     with pytest.raises(ValueError):
         activity.export_csv([], [], tmp_path)
