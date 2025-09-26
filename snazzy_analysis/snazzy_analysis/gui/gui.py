@@ -108,15 +108,15 @@ class MainWindow(QMainWindow):
 
         self.exp_params_dialog.open()
 
-    # TODO: it should be easier to update Config from the GUI
     def _update_config(self, config: Config, dialog_values):
         exp_params = config.get_exp_params()
         new_exp_params = {k: v for k, v in dialog_values.items() if k in exp_params}
-        pd_params = {"dff_strategy": dialog_values["dff_strategy"]}
-        new_config = {"exp_params": new_exp_params, "pd_params": pd_params}
+        dff_strategy = dialog_values["dff_strategy"]
+        new_config = {
+            "exp_params": new_exp_params,
+            "pd_params": {"dff_strategy": dff_strategy},
+        }
         config.update_params(new_config)
-
-        config.save_params()
 
     def _start_experiment_worker(self, config: Config, group_name: str):
         worker = Worker(

@@ -110,6 +110,7 @@ class Model:
                 f"Could not find any embryos with first peak after {first_peak_threshold} minutes."
             )
 
+        config.save_params()
         return self.add_experiment(ExperimentModel(exp), group_name)
 
     def add_experiment(self, experiment: ExperimentModel, group_name: str):
