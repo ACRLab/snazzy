@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from pathlib import Path
 import shutil
 
 import numpy as np
@@ -15,8 +16,23 @@ from snazzy_processing import (
 )
 
 
-def measure_vnc_length(embs_src, res_dir, downsampling, threshold_method="multiotsu"):
-    """Calculates VNC length for all embryos in a directory."""
+def measure_vnc_length(
+    embs_src: Path, res_dir: Path, downsampling: int, threshold_method="multiotsu"
+):
+    """Calculates VNC length for all embryos in a directory and saves as CSV.
+
+    Parameters:
+        embs_src (Path):
+            Directory with embryo files.
+        res_dir (Path):
+            Path to the results directory, where the csv files will be saved.
+        downsampling (int):
+            Step size to calculate ROI lengths.
+        threshold_method ('mulitotsu' | 'otsu'):
+            Threshold method used to calculate the ROI.
+            Refer to `centerline.binarize` for more details.
+            Defaults to 'multiotsu'.
+    """
     embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
     output_dir = res_dir.joinpath("lengths")
     embs = [emb for emb in embs if not already_created(emb, output_dir)]
@@ -42,7 +58,15 @@ def measure_vnc_length(embs_src, res_dir, downsampling, threshold_method="multio
     return len(ids)
 
 
-def already_created(emb, output):
+def already_created(emb: str, output: Path) -> bool:
+    """Check if the embryo was already processed based on tif file name.
+
+    Parameters:
+        emb (str):
+            File name, for example emb2-ch2.tif.
+        output (Path):
+            Path where to search if csv file was created.
+    """
     if not output.exists():
         return False
     id = utils.emb_number(emb)
@@ -50,7 +74,19 @@ def already_created(emb, output):
     return output_path.exists()
 
 
-def calculate_length(emb, downsampling, threshold_method="multiotsu"):
+def calculate_length(emb: Path, downsampling: int, threshold_method="multiotsu"):
+    """Calculates VNC length for an embryo.
+
+    Parameters:
+        emb (Path):
+            Path to emb tif file.
+        downsampling (int):
+            Step size to calculate ROI lengths.
+        threshold_method ('mulitotsu' | 'otsu'):
+            Threshold method used to calculate the ROI.
+            Refer to `centerline.binarize` for more details.
+            Defaults to 'multiotsu'.
+    """
     id = utils.emb_number(emb.stem)
     hp = find_hatching.find_hatching_point(emb)
     hp -= hp % downsampling
@@ -61,7 +97,22 @@ def calculate_length(emb, downsampling, threshold_method="multiotsu"):
     return id, vnc_len
 
 
-def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
+def measure_embryo_full_length(embs_src: Path, res_dir: Path, low_non_VNC=False) -> int:
+    """Calculates full embryo length for all embryos in a directory.
+
+    Parameters:
+        embs_src (Path):
+            Directory with embryo files.
+        res_dir (Path):
+            Path to the results directory, where the csv files will be saved.
+        low_non_VNC (bool):
+            Pass `False` if the signal in the vnc is lower than in the rest of the embryo.
+            Defaults to `True`.
+
+    Returns:
+        count (int):
+            Number of embryos that were processed
+    """
     embs = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
     output = res_dir.joinpath("full-length.csv")
     full_lengths = []
@@ -90,8 +141,21 @@ def measure_embryo_full_length(embs_src, res_dir, low_non_VNC=False):
     return len(full_lengths)
 
 
-def calc_activities(embs_src, res_dir, window):
-    """Calculate activity for active and structural channels"""
+def calc_activities(embs_src: Path, res_dir: Path, window: int):
+    """Calculates activity signal for all embryos in a directory.
+
+    Parameters:
+        embs_src (Path):
+            Directory with embryo files.
+        res_dir (Path):
+            Path to the results directory, where the csv files will be saved.
+        window (int):
+            Step interval to take each measurement.
+
+    Returns:
+        count (int):
+            Number of embryos that were processed
+    """
     active = sorted(embs_src.glob("*ch1.tif"), key=utils.emb_number)
     struct = sorted(embs_src.glob("*ch2.tif"), key=utils.emb_number)
 
@@ -124,7 +188,21 @@ def calc_activities(embs_src, res_dir, window):
     return len(ids)
 
 
-def calc_activity(act, stct, window):
+def calc_activity(act: Path, stct: Path, window: int) -> tuple[int, np.ma.MaskedArray]:
+    """Calculates activity signal for an embryo.
+
+    Parameters:
+        act (Path):
+            Directory with embryo files.
+        stct (Path):
+            Path to the results directory, where the csv files will be saved.
+        window (int):
+            Step interval to take each measurement.
+
+    Returns:
+        count (int):
+            Number of embryos that were processed
+    """
     id = utils.emb_number(act)
     if id != utils.emb_number(stct):
         raise ValueError(
@@ -145,7 +223,21 @@ def calc_activity(act, stct, window):
     return id, signals
 
 
-def clean_up_files(embs_src, first_frames_path, tif_path):
+def clean_up_files(
+    embs_src: Path | None, first_frames_path: Path | None, tif_path: Path | None
+):
+    """Remove files generated by the pipeline.
+
+    Passing None to any of the parameters if you want to keep them.
+
+    Parameters:
+        embs_src (Path):
+            Path where the individual movies are saved.
+        first_frames_path (Path):
+            Path where the image with first frames is saved.
+        tif_path (Path):
+            Path to the converted tif file.
+    """
     if embs_src:
         shutil.rmtree(embs_src)
     if first_frames_path.exists():
@@ -154,8 +246,16 @@ def clean_up_files(embs_src, first_frames_path, tif_path):
         tif_path.unlink(missing_ok=True)
 
 
-def log_params(path, **kwargs):
-    with open(path, "+a") as f:
+def log_params(output_path: Path, **kwargs):
+    """Write analysis parameters.
+
+    Parameters:
+        output_path (Path):
+            Path to write.
+        **kwargs (dict):
+            All parameters to be saved.
+    """
+    with open(output_path, "+a") as f:
         f.write("Starting a new analysis...\n")
         f.write(f"{datetime.now()}\n")
         for name, value in kwargs.items():
