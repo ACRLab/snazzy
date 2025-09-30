@@ -12,7 +12,7 @@ import numpy as np
 from snazzy_processing import utils
 
 
-def get_metadata(img_path):
+def get_metadata(img_path: Path):
     """Returns image metadata, used to open it as a memory map."""
     with TiffFile(img_path) as tif:
         series = tif.series[0]
@@ -23,8 +23,17 @@ def get_metadata(img_path):
     return offset, dtype, shape
 
 
-def save_as_tiff(file, dest_path):
-    """Converts an nd2 image to tiff."""
+def save_as_tiff(file: Path, dest_path: Path):
+    """Converts an nd2 image to tiff.
+
+    Does not overwrite the file if `dest_path` exists.
+
+    Parameters:
+        file (Path):
+            Path to nd2 file.
+        dest_path (Path):
+            Path to save tiff file.
+    """
     dest = Path(dest_path)
     if dest.exists():
         print(f"File '{dest.name}' already exists.")
@@ -33,8 +42,19 @@ def save_as_tiff(file, dest_path):
         f.write_tiff(dest_path, progress=True)
 
 
-def save_first_frames_as_tiff(file, dest_path, n):
-    """Converts the first n slices of an nd2 image to tiff."""
+def save_first_frames_as_tiff(file: Path, dest_path: Path, n: int):
+    """Save the first frames of an nd2 file as tif.
+
+    Does not overwrite the file if `dest_path` exists.
+
+    Parameters:
+        file (Path):
+            Path to nd2 file.
+        dest_path (Path):
+            Path to save tiff file.
+        n (int):
+            Number of frames to save.
+    """
     dest = Path(dest_path)
     if dest.exists():
         print(f"File '{dest.name}' already exists.")
@@ -45,19 +65,37 @@ def save_first_frames_as_tiff(file, dest_path, n):
         imwrite(dest_path, initial_frames)
 
 
-def get_threshold(img, thres_adjust=0):
-    """Returns image threshold using the triangle method."""
+def get_threshold(img: np.ndarray, thres_adjust=0) -> float:
+    """Returns image threshold using the triangle method.
+
+    Parameters:
+        img (np.ndarray):
+            2D np array.
+        thres_adjust (int):
+            Increment the calculated threshold by this amount.
+            Makes it easy to manually adjust the threshold.
+            Defaults to 0.
+    """
     return threshold_triangle(img) + thres_adjust
 
 
-def within_boundaries(r, c, rows, cols):
+def within_boundaries(r: int, c: int, rows: int, cols: int) -> bool:
     """Checks if `r` and `c` are valid coords in a `rows`x`cols` matrix."""
     return r >= 0 and r < rows and c >= 0 and c < cols
 
 
-def mark_neighbors(img, row, col, s):
-    """Expands from the search box and marks points connected to any point
-    within the search box.
+def mark_neighbors(img: np.ndarray, row: int, col: int, s: int):
+    """Mark all points connected to (row, col) within the search box.
+
+    Parameters:
+        img (np.ndarray):
+            2D np array.
+        row (int):
+            Row coordinate.
+        col (int):
+            Columns coordinate.
+        s (int):
+            Search box size.
 
     Returns:
         counter: amount of pixels marked as visited
@@ -90,8 +128,33 @@ def mark_neighbors(img, row, col, s):
     return dq.counter, dq.extremes
 
 
-def get_bbox_boundaries(img, s=25, n_cols=3):
-    """Gets bbox boundaries (max and min values for both coordinates)."""
+def get_bbox_boundaries(
+    img: np.ndarray, s=25, n_cols=3, min_pixel_count=6000
+) -> dict[int, list[int]]:
+    """Calculate bounding boxes.
+
+    BBoxes are only calculated for connected components with more than
+    `min_pixel_count` points.
+
+    Each bounding box is represented as the max and min values for both coordinates.
+
+    Parameters:
+        img (np.ndarray):
+            2D np array
+        s (int):
+            Iteration step when searching for connected components.
+            Defaults to 25.
+        n_cols (int):
+            Number of columns in the grid of embryos.
+            Used to numerate the embryos.
+        min_pixel_count (int):
+            Minimum number of items in a connected region to consider it an embryo.
+            Defaults to 6000.
+
+    Returns:
+        extremes (dict[int, list[int]]):
+            List of bbox coordinates, sorted in F-order.
+    """
     extremes = []
     rows, cols = img.shape
     # iterate over slices of size sxs
@@ -104,19 +167,28 @@ def get_bbox_boundaries(img, s=25, n_cols=3):
             if 1 in slc:
                 counter, extreme = mark_neighbors(img, r, c, s)
                 # minimum amount of pixels to be considered a VNC
-                if counter > 6000:
+                if counter > min_pixel_count:
                     extremes.append(extreme)
     extremes = sort_by_grid_pos(extremes, n_cols)
     return extremes
 
 
-def increase_bbox(coords, w, h, shape):
+def increase_bbox(coords: dict[int, list[int]], w: int, h: int, shape: tuple):
     """Increases the bbox boundaries by w and h.
 
-    Args:
-        coords: Extremes (output from `slice_img.calculate_slice_coordinates`)
-        w: int Number of pixels to increment in the bbox width (half each side)
-        h: int Number of pixels to increment in the bbox height (half each side)
+    Parameters:
+        coords (dict[int, list[int]]):
+            Extremes (output from `slice_img.calculate_slice_coordinates`).
+        w (int):
+            Number of pixels to increment in the bbox width (half each side).
+        h (int):
+            Number of pixels to increment in the bbox height (half each side).
+        shape (tuple):
+            Shape of the original image where the bboxes were calculated.
+
+    Returns:
+        new_coords (dict[int, list[int]]):
+            New dict with expanded bboxes
     """
     new_coords = {}
     for emb_id, coord in coords.items():
@@ -130,10 +202,21 @@ def increase_bbox(coords, w, h, shape):
     return new_coords
 
 
-def sort_by_grid_pos(extremes, n_cols):
+def sort_by_grid_pos(extremes: list[list[int]], n_cols: int):
     """Sorts each boundary points list based on their position in the grid.
 
-    Sorts by F-order (column-wise)."""
+    Sorts by F-order (column-wise).
+
+    Parameters:
+        extremes (list[list[int]]):
+            List of bbox coordinates
+        n_cols (int):
+            Number of columns to use to order embryos.
+
+    Returns:
+        sorted_bboxes (dict[int, list[int]]):
+            Dict of bbox order to bbox coordinates.
+    """
     centroids = [
         ((r0 + r1) // 2, (c0 + c1) // 2, i)
         for i, (r0, r1, c0, c1) in enumerate(extremes)
@@ -160,12 +243,26 @@ def sort_by_grid_pos(extremes, n_cols):
     return {k + 1: extremes[i] for k, i in enumerate(indices)}
 
 
-def filter_by_embryos(extremes, selected_embryos):
-    """Filter the extremes dict, by only keeping the selected_embryos."""
+def filter_by_embryos(
+    extremes: dict[int, list[int]], selected_embryos: list[int]
+) -> dict[int, list[int]]:
+    """Filter the extremes dict, by only keeping the selected_embryos.
+
+    Parameters:
+        extremes (dict[int, list[int]]):
+            List of bbox coordinates
+        selected_embryos (int):
+            List with embryos to keep, that match `extremes` keys.
+
+    Returns:
+        filtered_bboxes (dict[int, list[int]]):
+            Dict of bbox order to bbox coordinates.
+    """
     return {k: extremes[k] for k in selected_embryos if k in extremes}
 
 
-def read_mmap(mmap_path, num_frames=None):
+def read_mmap(mmap_path: Path, num_frames=None):
+    """Read mmaped-file contents."""
     offset, dtype, shape = get_metadata(mmap_path)
     if num_frames:
         shape = (num_frames, *shape[1:])
@@ -173,6 +270,24 @@ def read_mmap(mmap_path, num_frames=None):
 
 
 def create_tasks(extremes, channels, active_ch, dest, overwrite):
+    """Wraps args to be submitted with `save_movie` calls to ThreadPoolExecutor.
+
+    Parameters:
+        extremes (dict[int, list[int]]):
+            Dict that maps emb ids to bbox coordinates.
+        channels (list[int]):
+            List of channel numbers.
+        active_ch (int):
+            What channel number represents the active channel.
+        dest (Path):
+            Output path.
+        overwrite (bool):
+            If saved movies should overwrite existing ones or not.
+
+    Returns:
+        tasks:
+            List of arguments used by `save_movie`.
+    """
     tasks = []
     for id, extreme in extremes.items():
         x0, x1, y0, y1 = extreme
@@ -188,7 +303,8 @@ def create_tasks(extremes, channels, active_ch, dest, overwrite):
     return tasks
 
 
-def submit_tasks(img, tasks):
+def submit_tasks(img: np.ndarray, tasks: list):
+    """Run `save_movie` for all bbox coordinates args represented by tasks."""
     num_threads = os.cpu_count()
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(save_movie, img, *task) for task in tasks]
@@ -208,15 +324,23 @@ def cut_movies(
     """Extracts movies from ch1 and ch2, based on the boundaries passed for
     each item of `extremes`.
 
-    Args:
-        extremes: dict for `emb_number: [min_r, max_r, min_c, max_c]`.
-        img_path: path to the raw image that will be cut.
-        dest: directory where the movies will be saved.
-        embryos: list of embryo numbers. Used to select a subgroup of embryos.
-        active_ch: indicates the image active channel. Defaults to 1 and it
-        is expected to be equal to 1 or 2.
-        channels: (defaults to 2) number of channels imaged.
-        overwrite: boolean to determine if movies should be overwritten."""
+    Parameters:
+        extremes dict[int, list[int]]:
+            `emb_number: [min_r, max_r, min_c, max_c]`.
+        img_path (int):
+            path to the raw image that will be cut.
+        dest (Path):
+            Directory where the movies will be saved.
+        embryos (list[int]):
+            List of embryo numbers. Used to select a subgroup of embryos.
+        active_ch (1 | 2):
+            Indicates the image active channel.
+            Defaults to 1.
+        channels (1 | 2):
+            Number of channels imaged.
+            Defaults to 2.
+        overwrite (bool):
+            Determine if movies should be overwritten."""
     if embryos:
         extremes = filter_by_embryos(extremes, embryos)
     if active_ch not in [1, 2]:
@@ -235,44 +359,64 @@ def cut_movies(
     submit_tasks(img, tasks)
 
 
-def output_file_name(id, ch, active_ch):
+def output_file_name(id: int, ch: int, active_ch: int) -> str:
+    """File name based on embryo id and ch number.
+
+    Parameters:
+        id (int):
+            Embryo id.
+        ch (int):
+            Channel number
+        active_ch (1 | 2):
+            Specifies which is the active channel.
+    """
     if active_ch != 1 and active_ch != 2:
         raise ValueError(f"Active channel should be 1 or 2, got {active_ch}.")
     ch_number = ch + 1 if active_ch == 1 else active_ch - ch
     return f"emb{id}-ch{ch_number}.tif"
 
 
-def save_movie(img, ch, x0, x1, y0, y1, output):
+def save_movie(
+    img: np.ndarray, ch: int, x0: int, x1: int, y0: int, y1: int, output: Path
+):
+    """Write a slice of the movie based on the provided coordinates."""
     movie = img[:, ch, x0:x1, y0:y1]
     imwrite(output, movie)
 
 
-def boundary_to_rect_coords(boundary):
+def boundary_to_rect_coords(boundary: list[int]) -> list[int]:
     """Converts from `(x0, x1, y0, y1)` to `(x, y, w, h)`."""
     [x0, x1, y0, y1] = boundary
     return [x0, y0, y1 - y0, x1 - x0]
 
 
-def calculate_slice_coordinates(img_path, n_cols=3, thres_adjust=0):
+def calculate_slice_coordinates(
+    img_path: Path, n_cols=3, thres_adjust=0
+) -> dict[int, list[int]]:
     """Returns boundary points for all images in `img_path`.
 
-    Args:
-        img_path: absolute path to the raw data
-        n_cols: number of columns in the FOV grid, used to enforce the naming
-        convention of the extracted embryos.
+    Parameters:
+        img_path (Path):
+            Absolute path to the raw data
+        n_cols (int):
+            Number of columns in the FOV grid, used to enforce the naming
+            convention of the extracted embryos.
+        thres_adjust (int):
+            Increment the calculated threshold by this amount.
+            Makes it easy to manually adjust the threshold.
+            Defaults to 0.
     """
     binary_img = get_initial_binary_image(img_path, thres_adjust=thres_adjust)
 
-    extremes = get_bbox_boundaries(binary_img, s=25, n_cols=n_cols)
-    return extremes
+    return get_bbox_boundaries(binary_img, s=25, n_cols=n_cols)
 
 
-def get_initial_frames_from_mmap(img_path, n=10):
+def get_initial_frames_from_mmap(img_path: Path, n=10):
     """Returns the first n frames from the file at `img_path`."""
     return read_mmap(img_path, num_frames=n)
 
 
-def get_first_image_from_mmap(img_path):
+def get_first_image_from_mmap(img_path: Path):
     """Returns the first image from a mmap file, for plotting.
 
     The image is the average of the first 10 slices for channel 2.
@@ -283,7 +427,7 @@ def get_first_image_from_mmap(img_path):
     return equalize_hist(first_frame)
 
 
-def get_initial_binary_image(img_path, n=10, thres_adjust=0):
+def get_initial_binary_image(img_path: Path, n=10, thres_adjust=0):
     """Binarizes the first `n` slices of the img, which is read as a mmap."""
     img = get_initial_frames_from_mmap(img_path, n=n)
 

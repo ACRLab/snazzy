@@ -1,5 +1,6 @@
 import warnings
 
+from matplotlib.axes import Axes
 import numpy as np
 from scipy import ndimage as ndi
 from skimage.draw import line
@@ -8,10 +9,23 @@ from skimage.filters import threshold_otsu, threshold_multiotsu
 from skimage.measure import label
 from skimage.morphology import binary_opening, disk, remove_small_holes
 from sklearn import linear_model
+from sklearn.linear_model import RANSACRegressor
 
 
-def binarize(image, threshold_method="multiotsu"):
-    """Create a binary image from the largest region after thresholding."""
+def binarize(image: np.ndarray, threshold_method="multiotsu"):
+    """Create a binary image from the largest region after thresholding.
+
+    Parameters:
+        image (np.ndarray):
+            A 2 dimensional np array.
+        threshold_method ('multiotsu' | 'otsu'):
+            Threshold method used to binary the image.
+            For a higher threshold value, use 'otsu'.
+
+    Returns:
+        binary_image (np.ndarray):
+            binary image with same dimensions as `image`.
+    """
     if image.ndim != 2:
         raise ValueError("Image can only have 2 dimensions.")
 
@@ -24,6 +38,7 @@ def binarize(image, threshold_method="multiotsu"):
     else:
         raise ValueError(f"Unsupported threshold method: {threshold_method}.")
 
+    # morphological operations to make the ROI better fit the VNC:
     remove_small_holes(bin_img, 200, out=bin_img)
     binary_opening(bin_img, footprint=disk(5), out=bin_img)
 
@@ -33,8 +48,21 @@ def binarize(image, threshold_method="multiotsu"):
     return largest_label
 
 
-def get_DT_maxima(image, thres_rel=0.6, min_dist=5):
-    """Calculates a distance transform and returns local maxima points."""
+def get_DT_maxima(image: np.ndarray, thres_rel=0.6, min_dist=5) -> np.ndarray:
+    """Points of local maxima from a distance transform image.
+
+    Parameters:
+        image (np.ndarray):
+            A 2 dimensional np array.
+        thres_rel (float):
+            Minimum intensity of local maxima points relative to the maximum.
+        min_dist (int):
+            Minimum distance separating local maxima points.
+
+    Returns:
+        np.ndarray:
+            Array of coordinate pairs.
+    """
     distance_transform = ndi.distance_transform_cdt(image, metric="chessboard")
     return peak_local_max(
         distance_transform,
@@ -44,13 +72,18 @@ def get_DT_maxima(image, thres_rel=0.6, min_dist=5):
     )
 
 
-def get_DT_image(binary_image, metric="chessboard"):
+def get_DT_image(binary_image: np.ndarray, metric="chessboard") -> np.ndarray:
     """Returns the distance transform image for visualization."""
     return ndi.distance_transform_cdt(binary_image, metric=metric)
 
 
-def apply_ransac(coords):
-    """Returns the centerline estimated by applying a RANSAC linear model."""
+def apply_ransac(coords: np.ndarray):
+    """Returns the centerline estimated by applying a RANSAC linear model.
+
+    Parameters:
+        coords (np.ndarray):
+            Array of coordinate points (y, x)
+    """
     y = coords.T[0]
     x = coords.T[1].reshape(-1, 1)
 
@@ -70,7 +103,19 @@ def apply_ransac(coords):
     return regressor
 
 
-def centerline_mask(img_shape, predictor):
+def centerline_mask(img_shape: tuple, predictor: RANSACRegressor.predict) -> np.ndarray:
+    """Create a mask from RANSAC predicted values.
+
+    Parameters:
+        img_shape (tuple):
+            Shape of a 2D image, used to create an output mask of same shape.
+        predictor (RANSACRegressor.predict):
+            Fitted RANSACRegressor predictor.
+
+    Returns:
+        mask (np.ndarray):
+            Centerline values as a mask with same shape as `img_shape`.
+    """
     if len(img_shape) != 2:
         raise ValueError("Image can only have 2 dimensions.")
 
@@ -90,7 +135,17 @@ def centerline_mask(img_shape, predictor):
     return mask
 
 
-def measure_length(masked_image, pixel_width):
+def measure_length(masked_image: np.ndarray, pixel_width: float) -> float:
+    """Length of the masked image.
+
+    Calculated as the distance between ends of the image masked with the centerline.
+
+    Parameters:
+        masked_image (np.ndarray):
+            2D image where the centerline masked was applied
+        pixel_width (float):
+            Physical size of a pixel in the image.
+    """
     if masked_image.ndim != 2:
         raise ValueError("Image can only have 2 dimensions.")
 
@@ -104,7 +159,9 @@ def measure_length(masked_image, pixel_width):
     return distance * pixel_width
 
 
-def centerline_dist(bin_image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
+def centerline_dist(
+    bin_image: np.ndarray, pixel_width=1.62, thres_rel=0.6, min_dist=5
+) -> float:
     """Returns the centerline length estimation based on EDT maxima points."""
     if bin_image.ndim != 2:
         raise ValueError("Centerline distance can only be calculated on a 2D image.")
@@ -124,13 +181,11 @@ def centerline_dist(bin_image, pixel_width=1.62, thres_rel=0.6, min_dist=5):
     mask = centerline_mask(bin_image.shape, estimator.predict)
     bin_image[~mask] = 0
 
-    distance = measure_length(bin_image, pixel_width)
-
-    return distance
+    return measure_length(bin_image, pixel_width)
 
 
-def view_centerline_dist(binary_image, ax, thres_rel=0.6, min_dist=5):
-    """Returns the centerline length estimation based on EDT maxima points."""
+def view_centerline_dist(binary_image: np.ndarray, ax: Axes, thres_rel=0.6, min_dist=5):
+    """Plot the centerline length estimation based on EDT maxima points."""
     coords = get_DT_maxima(binary_image, thres_rel, min_dist)
 
     if coords.shape[0] <= 2:

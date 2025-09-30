@@ -45,7 +45,7 @@ def emb_name(number: int, ch: int, ext: str | None = None) -> str:
     return f"emb{number}-ch{ch}"
 
 
-def format_seconds(seconds):
+def format_seconds(seconds: int) -> str:
     """Returns HH:mm:ss, given an amount of seconds."""
     hours, remainder = divmod(seconds, 3600)
     minutes, seconds = divmod(remainder, 60)

@@ -58,7 +58,7 @@ class MainWindow(QMainWindow):
         self.filtered_dff = None
         self.display_filtered_dff = False
 
-        self.setWindowTitle("Pasna Analysis")
+        self.setWindowTitle("SNAzzy")
         self.setGeometry(100, 100, 1200, 600)
 
         self.paint_menu()
@@ -69,7 +69,7 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(self.layout)
 
         self.placeholder = QLabel(
-            "To get started, open a directory with pasnascope output."
+            "To get started, open a directory with snazzy_processing output."
         )
         self.placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.placeholder)
@@ -108,15 +108,15 @@ class MainWindow(QMainWindow):
 
         self.exp_params_dialog.open()
 
-    # TODO: it should be easier to update Config from the GUI
     def _update_config(self, config: Config, dialog_values):
         exp_params = config.get_exp_params()
         new_exp_params = {k: v for k, v in dialog_values.items() if k in exp_params}
-        pd_params = {"dff_strategy": dialog_values["dff_strategy"]}
-        new_config = {"exp_params": new_exp_params, "pd_params": pd_params}
+        dff_strategy = dialog_values["dff_strategy"]
+        new_config = {
+            "exp_params": new_exp_params,
+            "pd_params": {"dff_strategy": dff_strategy},
+        }
         config.update_params(new_config)
-
-        config.save_params()
 
     def _start_experiment_worker(self, config: Config, group_name: str):
         worker = Worker(
@@ -166,7 +166,7 @@ class MainWindow(QMainWindow):
     def handle_open_err(self, err: Exception):
         try:
             self.placeholder.setText(
-                "To get started, open a directory with pasnascope output."
+                "To get started, open a directory with snazzy_processing output."
             )
         except RuntimeError:
             pass
