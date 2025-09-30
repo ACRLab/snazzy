@@ -124,7 +124,6 @@ def test_can_render_FOV(qtbot):
 
 def test_can_render_json_config(qtbot, exp):
     config_data = exp.config.data
-    config_data["exp_params"]["to_remove"] = ["emb1", "emb2"]
 
     json_viewer = JsonViewer(config_data)
     qtbot.addWidget(json_viewer)

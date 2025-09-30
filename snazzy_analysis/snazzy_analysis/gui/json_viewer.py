@@ -1,3 +1,5 @@
+import copy
+
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHeaderView,
@@ -12,8 +14,8 @@ KEY_TYPES = {
     "exp_path": str,
     "exp_params": dict,
     "first_peak_threshold": int,
-    "to_exclude": list,
-    "to_remove": list,
+    "to_exclude": set,
+    "to_remove": set,
     "has_transients": bool,
     "has_dsna": bool,
     "acquisition_period": int,
@@ -60,7 +62,15 @@ class JsonViewer(QWidget):
             1, QHeaderView.ResizeMode.ResizeToContents
         )
 
-        self.populate_tree(self.tree, json_data)
+        config_data = copy.deepcopy(json_data)
+        exp_params = config_data.get("exp_params", {})
+        to_remove = list(exp_params.get("to_remove", set()))
+        to_exclude = list(exp_params.get("to_exclude", set()))
+        if exp_params:
+            config_data["exp_params"]["to_remove"] = to_remove
+            config_data["exp_params"]["to_exclude"] = to_exclude
+
+        self.populate_tree(self.tree, config_data)
 
         self.save_btn = QPushButton("Save changes")
         self.save_btn.clicked.connect(self.collect_data)
@@ -87,7 +97,7 @@ class JsonViewer(QWidget):
                     child.setFlags(child.flags() | Qt.ItemFlag.ItemIsEditable)
                 parent.addChild(child)
                 self.add_children(child, v, editable)
-        elif isinstance(value, list):
+        elif isinstance(value, list) or isinstance(value, set):
             for i, elem in enumerate(value):
                 child = QTreeWidgetItem(
                     [f"[{i}]", str(elem) if not isinstance(elem, (dict, list)) else ""]
@@ -105,6 +115,10 @@ class JsonViewer(QWidget):
             top_item = self.tree.topLevelItem(i)
             key = top_item.text(0)
             collected[key] = self.read_item(top_item)
+        collected["exp_params"]["to_exclude"] = set(
+            collected["exp_params"]["to_exclude"]
+        )
+        collected["exp_params"]["to_remove"] = set(collected["exp_params"]["to_remove"])
         self.update_config_signal.emit(collected)
 
     def read_item(self, item):
