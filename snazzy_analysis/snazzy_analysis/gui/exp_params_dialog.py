@@ -17,7 +17,9 @@ def convert_value(value: str, field_name: str):
     if field_name == "first_peak_threshold" or field_name == "acquisition_period":
         return int(value)
     elif field_name == "to_exclude" or field_name == "to_remove":
-        return [f"emb{x.strip()}" for x in value.strip("[]").split(",") if x.strip()]
+        return set(
+            [f"emb{x.strip()}" for x in value.strip("[]").split(",") if x.strip()]
+        )
     else:
         return value
 
@@ -85,16 +87,18 @@ class ExperimentParamsDialog(QDialog):
         for key in ("to_remove", "to_exclude"):
             if key in properties:
                 if properties[key]:
+                    emb_names = list(properties[key])
                     # keeping this check for compatibility:
                     # previous versions of pd_params used to save ids instead of emb_names
-                    if properties[key][0].isdigit():
-                        properties[key] = sorted(
-                            [int(emb_id) for emb_id in properties[key]]
-                        )
+                    if emb_names[0].isdigit():
+                        emb_names = sorted([int(emb_id) for emb_id in emb_names])
                     else:
-                        properties[key] = sorted(
-                            [utils.emb_id(emb_name) for emb_name in properties[key]]
+                        emb_names = sorted(
+                            [utils.emb_id(emb_name) for emb_name in emb_names]
                         )
+                    properties[key] = emb_names
+                else:
+                    properties[key] = []
 
     def showEvent(self, event):
         super().showEvent(event)

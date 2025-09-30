@@ -444,9 +444,6 @@ class Trace:
             local_peaks, peak_data = spsig.find_peaks(window, height=(None, None))
             local_peak_heights = peak_data["peak_heights"]
             if not any(local_peak_heights):
-                print(
-                    f"WARN: [{self.name}] could not port peaks at idx {idx}. Skipping this peak.."
-                )
                 continue
             max_peak = np.max(local_peak_heights)
 

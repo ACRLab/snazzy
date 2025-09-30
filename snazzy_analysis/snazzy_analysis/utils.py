@@ -2,7 +2,8 @@ import numpy as np
 from pathlib import Path
 
 
-def split_in_bins(arr, bins):
+def split_in_bins(arr: np.ndarray, bins: int):
+    """Return an array of bin indices for each arr element."""
     return np.digitize(arr, bins)
 
 
