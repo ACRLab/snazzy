@@ -2,8 +2,8 @@ from tifffile import imread
 import numpy as np
 
 
-def find_hatching_point(img_path):
-    """First draft on how to calculate hatching points.
+def find_hatching_point(img_path, fraction_threshold=0.95):
+    """Estimate hatching point by changes in the structural channel signal.
 
     Returns:
         hp (int): last slice before hatching.
@@ -14,6 +14,6 @@ def find_hatching_point(img_path):
     # Assume that hatching occurs when the total pixel sum decreases by 5%
     # between 2 frames.
     for i, r in enumerate(ratios):
-        if r < 0.95:
+        if r < fraction_threshold:
             return i * 2 - 100
     return i * 2 - 100

@@ -13,6 +13,17 @@ class PdParamsEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+SET_KEYS = {"to_remove", "to_exclude"}
+
+
+def set_decoder(obj):
+    """Convert specific list-valued keys back to sets."""
+    for key in SET_KEYS:
+        if key in obj and isinstance(obj[key], list):
+            obj[key] = set(obj[key])
+    return obj
+
+
 class ExpParams(BaseModel):
     """
     Exp params.
@@ -37,28 +48,30 @@ class ExpParams(BaseModel):
     """
 
     first_peak_threshold: int = 30
-    to_exclude: list[str] = Field(default_factory=list)
-    to_remove: list[str] = Field(default_factory=list)
+    to_exclude: set[str] = Field(default_factory=set)
+    to_remove: set[str] = Field(default_factory=set)
     has_transients: bool = True
     has_dsna: bool = False
     acquisition_period: int = 6
 
 
 class PDParams(BaseModel):
+    """Parameters used in peak detection."""
+
     peak_width: float = 0.98
     freq: float = 0.0025
     dff_strategy: str = "local_minima"
     baseline_window_size: int = 81
     trim_zscore: float = 0.35
-    ISI_factor: float = 4
+    ISI_factor: float = 4.0
     low_amp_threshold: float = 0.1
     fft_height: float = 0.04
     fft_prominence: float = 0.03
     local_thres_window_size: int = 300
-    local_thres_value: float = 75
+    local_thres_value: float = 75.0
     local_thres_method: str = "percentile"
     port_peaks_window_size: int = 30
-    port_peaks_thres: float = 70
+    port_peaks_thres: float = 70.0
 
 
 class EmbryoParams(BaseModel):
@@ -130,7 +143,7 @@ class Config:
         data it will be ignored and the default values will be used.
         """
         with open(self.config_path, "r") as f:
-            data = json.load(f)
+            data = json.load(f, object_hook=set_decoder)
             try:
                 return ConfigObj(**data).dict()
             except ValidationError as e:
@@ -142,7 +155,7 @@ class Config:
 
     def initialize_config_file(self):
         with open(self.config_path, "w") as f:
-            json.dump(self.default_params, f, indent=4)
+            json.dump(self.default_params, f, cls=PdParamsEncoder, indent=4)
 
     def get_pd_params(self):
         return self.data.get("pd_params", self.default_params["pd_params"])

@@ -29,10 +29,10 @@ class ExperimentModel:
         return self.experiment.get_all_embryos()
 
     def get_removed_embryos(self):
-        manual_remove = self.experiment.exp_params.get("to_remove", [])
+        manual_remove = self.experiment.exp_params.get("to_remove", set())
         if self.experiment.filtered_out is not None:
-            manual_remove.extend(self.experiment.filtered_out)
-        return set(manual_remove)
+            removed_embryos = manual_remove.union(self.experiment.filtered_out)
+        return removed_embryos
 
     def mark_as_accepted(self, emb_name):
         self.to_remove.remove(emb_name)
@@ -70,7 +70,7 @@ class Model:
     def __str__(self):
         group_names = [g.name for g in self.groups]
         to_remove_count = {
-            exp: len(exp.to_remove)
+            exp.name: len(exp.to_remove)
             for g in self.groups
             for exp in g.experiments.values()
         }
@@ -110,6 +110,7 @@ class Model:
                 f"Could not find any embryos with first peak after {first_peak_threshold} minutes."
             )
 
+        config.save_params()
         return self.add_experiment(ExperimentModel(exp), group_name)
 
     def add_experiment(self, experiment: ExperimentModel, group_name: str):
