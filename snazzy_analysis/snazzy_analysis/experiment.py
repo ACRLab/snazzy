@@ -124,4 +124,7 @@ class Experiment:
                 self.filtered_out.add(emb.name)
             embryos[emb.name] = emb
 
+        if self.filtered_out:
+            self.config.update_params({"exp_params": {"to_remove": self.filtered_out}})
+
         return embryos
