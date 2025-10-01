@@ -33,8 +33,8 @@ This step is necessary because the low-passed filter will result shift peak posi
 The bursts of activity have a sharp rise and are followed closely by shorter oscillations.
 To properly mark bursts, we use the leftmost peak in each burst as the peak index.
 
-The window size used to search for the leaftmost peak is given by ``port_peaks_window_size``.
-Since the leaftmost peak can have an amplitude very different than the local maximum peak, we specify the percentage from the local maximum we accept using the parameter ``port_peaks_thres``.
+The window size used to search for the leftmost peak is given by ``port_peaks_window_size``.
+Since the leftmost peak can have an amplitude very different than the local maximum peak, we specify the percentage from the local maximum we accept using the parameter ``port_peaks_thres``.
 
 3. Filter peaks by local threshold
 ----------------------------------
@@ -58,7 +58,7 @@ In such cases, the ``remove_transients`` function can be applied.
 It detects and removes initial bursts if their interval is significantly longer than the average of subsequent bursts.
 
 Another post-processing step removes low-amplitude peaks that are likely false positives.
-Peaks below a specified percentage of the maximum peak amplitude are discarted.
+Peaks below a specified percentage of the maximum peak amplitude are discarded.
 
 Finally, in the GUI, you can manually add or remove peaks.
 These manual edits are used to update the set of calculated peaks.

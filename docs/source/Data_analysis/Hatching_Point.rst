@@ -1,4 +1,4 @@
-Hathching point calculation
+Hatching point calculation
 ===========================
 
 Hatching happens when the fruit-fly embryo leaves its egg.
@@ -13,14 +13,14 @@ As a default threshold we use ``Z = 0.35``.
 The hatching point is then marked as the first point that reaches the Z score.
 
 Notice that all data after the hatching point should be ignored.
-Often times another larva that ecloded earlier will enter an empty field of view, creating a sudden peak in signal activity that does not represent anything biologically.
+Often times another larva that eclosed earlier will enter an empty field of view, creating a sudden peak in signal activity that does not represent anything biologically.
 It can also happen that an embryo is still inside the egg and a larva that already hatched crawls close to it.
-It's very rare that this screnario affects the ROI calculation, because we only consider the largest connected area for calculating the ROI, which is usually the VNC.
+It's very rare that this scenario affects the ROI calculation, because we only consider the largest connected area for calculating the ROI, which is usually the VNC.
 If it does, then the only option is to remove that embryo.
 
 When loading an experiment for the first time, it's worth it to visualize the structural channel signal of each embryo.
-On a few occasions, mostly due to very abrupt motion, the ROI is understimated and the hatching point is determined earlier.
-In these cases, you can drag the line that indicates the hatching to a more accurate positon or remove that embryo.
+On a few occasions, mostly due to very abrupt motion, the ROI is underestimated and the hatching point is determined earlier.
+In these cases, you can drag the line that indicates the hatching to a more accurate position or remove that embryo.
 
 If the default Z-score of 0.35 does not work in your case, you can adjust it to another value.
 Inside the GUI, open the Config file ``Menu... View pd_params`` and change the value of the Z-score variable.

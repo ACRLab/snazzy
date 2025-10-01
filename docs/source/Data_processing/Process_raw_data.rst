@@ -22,7 +22,7 @@ Once we have the binary image, we traverse it to identify each embryo.
 Whenever a foreground pixel is found, we mark all connecting foreground pixels, and also keep track of the amount of pixels marked and the extreme points (minimum and maximum coordinates in both dimensions).
 The pixel count is used to determine if the marked area really corresponds to an embryo, or just a smaller artifact that was erroneously considered a foreground.
 The minimum pixel count might change depending on the type of sample being processed, and can be adjusted in ``slice_img.get_bbox_boundaries``.
-Regions with high singal intensity, for example corresponding to fly embryo's eyes or gut are examples of smaller artifacts that sometimes are included in the binary image, but can easily be removed due to its size.
+Regions with high signal intensity, for example corresponding to fly embryo's eyes or gut are examples of smaller artifacts that sometimes are included in the binary image, but can easily be removed due to its size.
 The extreme points are then used to generate the bounding boxes, which will determine the positions where the image will be cropped.
 
 The raw image is opened as a memory map using ``numpy``, and the individual embryos are cropped and saved as tif files.

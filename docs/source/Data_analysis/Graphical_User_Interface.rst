@@ -7,7 +7,7 @@ The GUI's main functionalities are:
 
 1. Visualize and adjust peak data.
 2. Combine multiple experiments as a group.
-3. Compare multipe groups.
+3. Compare multiple groups.
 4. Inspect TIF movies in sync with the DFF signal.
 5. Inspect all parameters used in the analysis.
 
@@ -89,7 +89,7 @@ The parameters that are most frequently changed are presented in the GUI when an
 From this window it's possible to set:
 
 * Group name: name of the group that contains this experiment dataset
-* First peak threshold: minimum time in minutes that has to pass before any peak happens. Used to make sure that the first peak caught at the imaging session is really the activiy onset.
+* First peak threshold: minimum time in minutes that has to pass before any peak happens. Used to make sure that the first peak caught at the imaging session is really the activity onset.
 * To_exclude: embryo numbers that will be excluded from the analysis. These embryos will be excluded from the analysis.
 * To_remove: embryo numbers that will be analyzed, but will show up in the 'Removed' group.
 * Embryos that have it's first peak before the first peak threshold or that were marked by the user as removed will also be at the to_remove category.
