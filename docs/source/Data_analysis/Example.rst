@@ -34,7 +34,7 @@ For more details about these parameters, refer to the GUI guide, section `Config
 Visualizing data
 ----------------
 
-Once the data is loaded the GUI presents a sidebar with accepted and removed embryos, and the currenlty selected embryo.
+Once the data is loaded the GUI presents a sidebar with accepted and removed embryos, and the currently selected embryo.
 The signal from each channel can be inspected by clicking the button to the right of the trace plot.
 The sidebar can be used to select other embryos.
 Only the selected embryos are considered in any of the plots generated in the GUI. 
@@ -48,7 +48,7 @@ A recommended workflow is to change the frequency slider and see how the selecte
 Then click 'Apply Changes' and change the presentation mode to see All Embryos.
 Inspect the new peaks for every embryo and stop once peaks are precise enough.
 Because of the inherent biological variability of the data, there will be cases where a given frequency value is good for most of traces, but not all of them.
-To solve this problem, it is also possible to manually add new peaks or remove exisiting peaks.
+To solve this problem, it is also possible to manually add new peaks or remove existing peaks.
 
 The peak width can be controlled with the peak width slider.
 The value of 0.98 works well for the majority of samples.
@@ -56,7 +56,7 @@ To better understand this parameter, refer to the `scipy.signal.find_peaks docum
 To inspect the peak widths, click the 'View Widths' button.
 Increasing the value in the slider will increase the peak width, while decreasing the slider makes the peaks narrower.
 
-.. NOTE:: Changes in the slider values must be applied to all samples by clicking "Apply Changes", otherwise they will be discarted.
+.. NOTE:: Changes in the slider values must be applied to all samples by clicking "Apply Changes", otherwise they will be discarded.
 
 Once all peak data looks good, we can open other directories as another Group, to compare trace properties between them.
 
