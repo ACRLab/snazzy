@@ -43,15 +43,15 @@ def save_as_tiff(file: Path, dest_path: Path):
 
 
 def save_first_frames_as_tiff(file: Path, dest_path: Path, n: int):
-    """Save the first frames of an nd2 file as tif.
+    """Save the first frames as tif.
 
     Does not overwrite the file if `dest_path` exists.
 
     Parameters:
         file (Path):
-            Path to nd2 file.
+            Path to tif or nd2 file.
         dest_path (Path):
-            Path to save tiff file.
+            Path to save tif file.
         n (int):
             Number of frames to save.
     """
@@ -59,10 +59,14 @@ def save_first_frames_as_tiff(file: Path, dest_path: Path, n: int):
     if dest.exists():
         print(f"File '{dest.name}' already exists.")
         return
-    with ND2File(file) as f:
-        darray = f.to_dask()
-        initial_frames = darray[:n].compute()
+    if file.suffix == ".tif" or file.suffix == ".tiff":
+        initial_frames = imread(file, key=slice(0, n))
         imwrite(dest_path, initial_frames)
+    else:
+        with ND2File(file) as f:
+            darray = f.to_dask()
+            initial_frames = darray[:n].compute()
+            imwrite(dest_path, initial_frames)
 
 
 def get_threshold(img: np.ndarray, thres_adjust=0) -> float:
@@ -333,6 +337,7 @@ def cut_movies(
             Directory where the movies will be saved.
         embryos (list[int]):
             List of embryo numbers. Used to select a subgroup of embryos.
+            If not provided, all embryos will be processed.
         active_ch (1 | 2):
             Indicates the image active channel.
             Defaults to 1.
