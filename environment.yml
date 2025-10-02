@@ -1,4 +1,4 @@
-name: snazzy-env
+name: snazzy-test-env
 channels:
   - conda-forge
   - defaults
@@ -17,18 +17,15 @@ dependencies:
   - pydantic[version='<2']
   - scikit-learn=1.6.1
   - scikit-image=0.25.0
+  - coverage==7.10.2
+  - ipympl==0.9.4
+  - pyqt==6.9.1
+  - pyqtgraph==0.13.7   
+  - pytest==8.3.5
+  - pytest-qt==4.5.0
+  - statannotations==0.7.1
+  - sphinx-book-theme==1.1.2
+  - sphinx==7.3.7
   - pip:
-    - coverage==7.10.2
-    - ipympl==0.9.4
-    - ipython-genutils==0.2.0
-    - pyqt6==6.8.0
-    - pyqt6-qt6==6.8.1
-    - pyqt6-sip==13.9.1
-    - pyqtgraph==0.13.7   
-    - pytest==8.3.5
-    - pytest-qt==4.5.0
-    - statannotations==0.7.1
-    - sphinx-book-theme==1.1.2
-    - sphinx==7.3.7
     - -e ./snazzy_analysis
     - -e ./snazzy_processing

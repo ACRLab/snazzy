@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 )
 import pyqtgraph as pg
 
-from snazzy_analysis import Embryo
+from snazzy_analysis import Embryo, utils
 
 
 class ImageWindow(QWidget):
@@ -78,7 +78,10 @@ class ImageSequenceViewer(QWidget):
         self.selector_label = QLabel("Select a file:")
         self.combo_box = QComboBox()
         embs_path = self.directory.joinpath("embs")
-        file_names = [str(f) for f in embs_path.iterdir() if "ch1.tif" in f.name]
+        file_names = sorted(
+            [str(f) for f in embs_path.iterdir() if "ch1.tif" in f.name],
+            key=utils.emb_id_from_filename,
+        )
         self.combo_box.addItems(file_names)
         self.open_button = QPushButton("Open Viewer")
 

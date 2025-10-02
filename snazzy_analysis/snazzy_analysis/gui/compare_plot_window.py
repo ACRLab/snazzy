@@ -187,7 +187,7 @@ class ComparePlotWindow(QWidget):
             self._save_plot(save_dir, "sna_duration.png")
 
     def plot_AUC(self, save=False, save_dir=None):
-        """Binned area under the curve."""
+        """Area under the curve binned by developmental time."""
         self.clear_axes()
         data = {"group": [], "auc": [], "bin": []}
 
@@ -208,13 +208,15 @@ class ComparePlotWindow(QWidget):
                 if not isinstance(bin_idxs, np.ndarray):
                     continue
 
-                data["group"].append(group.name)
+                data["group"].extend([group.name] * len(bin_idxs))
                 data["auc"].extend(trace.peak_aucs)
                 data["bin"].extend(bin_idxs)
 
         bins.append(first_bin + bin_width * n_bins)
         x_labels = [f"{s:.1f}~{e:.1f}" for (s, e) in zip(bins[:-1], bins[1:])]
-        ax = sns.pointplot(data=data, x="bin", y="auc", linestyle="None", ax=self.ax)
+        ax = sns.pointplot(
+            data=data, x="bin", y="auc", hue="group", linestyle="None", ax=self.ax
+        )
         ax.set_xticks(ticks=list(range(n_bins)), labels=x_labels)
         ax.set_title(f"Binned AUC")
         ax.set_ylabel("AUC [activity*t]")

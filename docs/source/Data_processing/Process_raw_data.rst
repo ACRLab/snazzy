@@ -7,6 +7,7 @@ There is a considerable amount of background pixels that can be ignored in the r
 This already saves considerable ROM memory but most importantly, it means we can easily load individual movies in the RAM of a regular computer (8~16 GB RAM), without needing to use memory mapped files.
 
 The algorithm to process the raw image can be resumed as:
+
 1. Get the maximum projection of each pixel for the first 10 frames
 2. Automatic threshold (Triangle method)
 3. Binarize the image 
