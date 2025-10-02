@@ -6,6 +6,7 @@ By default, a single ROI is calculated for groups of 10 frames to speed up the p
 This is a good approximation and the speed up justifies the eventual errors in readings caused by movement (see `activity.ipynb` for details about the error in activity caused by downsampling).
 
 The ROI algorithm can be resumed as:
+
 1. Average the group of frames into a single 2D matrix
 2. Automatic threshold (Otsu's method)
 3. Binarize the image 
@@ -15,3 +16,17 @@ The ROI algorithm can be resumed as:
 
 To calculate the signal intensity, we apply the mask to the embryo and calculate the mean pixel value.
 The active and structural channel measurements are exported as a `.csv` file and further processed using the code from ``snazzy_analysis``.
+
+Visualizing calculated ROIs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ROIs can be inspected visually by running the ``plot_countours.py`` script.
+The script displays a matplotlib animation with an overlayed ROI contour.
+To display it, ``cd`` into the ``snazzy_processing`` directory, and run the file:
+
+.. code:: bash
+
+    python3 scripts/plot_contours.py
+
+It will look for any experiment directories you have inside the ``./data`` directory and present the available options in the terminal.
+Animations can be paused by pressing any key.
