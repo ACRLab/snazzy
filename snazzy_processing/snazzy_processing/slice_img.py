@@ -6,7 +6,7 @@ from nd2 import ND2File
 from skimage.filters import threshold_triangle
 from skimage.morphology import binary_closing, octagon
 from skimage.exposure import equalize_hist
-from tifffile import imwrite, TiffFile
+from tifffile import imread, imwrite, TiffFile
 import numpy as np
 
 from snazzy_processing import utils
@@ -416,13 +416,11 @@ def get_initial_frames_from_mmap(img_path: Path, n=10):
     return read_mmap(img_path, num_frames=n)
 
 
-def get_first_image_from_mmap(img_path: Path):
-    """Returns the first image from a mmap file, for plotting.
+def get_first_image(img_path: Path):
+    """Returns the first image from for plotting.
 
-    The image is the average of the first 10 slices for channel 2.
-    It is also equalized, since this method is supposed to be used for
-    displaying the image."""
-    img = get_initial_frames_from_mmap(img_path, n=10)
+    The channel 2 frames are averaged and equalized, for better visualization."""
+    img = imread(img_path)
     first_frame = np.average(img[:, 1, :, :], axis=0)
     return equalize_hist(first_frame)
 
