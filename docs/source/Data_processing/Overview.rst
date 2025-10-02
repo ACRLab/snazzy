@@ -11,8 +11,10 @@ The package is an image processing pipeline, that can be divided intro three mai
 Use the jupyter notebook ``snazzy-processing-pipeline.ipynb`` to run the pipeline.
 
 The data processing requires a ``.tif`` file.
-There is built in support for formatting ``.nd2`` files to ``.tif``.
-If your raw data is in another format, you must first convert if to ``.tif``.
+There is built in support for converting ``.nd2`` files to ``.tif``.
+This means that you can feed either ``.tif`` or ``.nd2`` files into the pipeline.
+If your raw data is in another format, you must first convert it to ``.tif``.
+ImageJ for example provides several plugins to convert files to tif, including the excellent `BioFormats extension <https://imagej.net/formats/bio-formats>`__.
 
 Before actually running the pipeline, which is the last cell of the jupyter notebook, we must determine from where to crop each movie in the raw data.
 
