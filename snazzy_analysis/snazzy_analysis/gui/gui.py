@@ -99,6 +99,8 @@ class MainWindow(QMainWindow):
             **exp_params,
             "dff_strategy": dff_strategy,
         }
+        del dialog_params["acquisition_period"]
+
         self.exp_params_dialog = ExperimentParamsDialog(dialog_params, parent=self)
 
         self.exp_params_dialog.accepted.connect(
