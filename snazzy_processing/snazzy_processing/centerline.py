@@ -128,6 +128,7 @@ def centerline_mask(img_shape: tuple, predictor: RANSACRegressor.predict) -> np.
     # the RANSAC estimations might fall out of the image range
     # make sure that the estimate is within the image dimensions
     rr = np.clip(rr, 0, rows - 1)
+    cc = np.clip(cc, 0, cols - 1)
 
     mask = np.zeros(img_shape, dtype=np.bool_)
     mask[rr, cc] = True
@@ -209,10 +210,11 @@ def view_centerline_dist(binary_image: np.ndarray, ax: Axes, thres_rel=0.6, min_
 
     rr, cc = line(y_start, x_start, y_end, x_end)
 
+    rr = np.clip(rr, 0, rows - 1)
+    cc = np.clip(cc, 0, cols - 1)
     mask = binary_image[rr, cc] == 1
 
     rr_m, cc_m = rr[mask], cc[mask]
-    rr = np.clip(rr, 0, rows - 1)
 
     inliers = estimator.inlier_mask_
     outliers = np.logical_not(inliers)
