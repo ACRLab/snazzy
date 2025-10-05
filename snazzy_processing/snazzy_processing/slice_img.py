@@ -60,7 +60,11 @@ def save_first_frames_as_tiff(file: Path, dest_path: Path, n: int):
         print(f"File '{dest.name}' already exists.")
         return
     if file.suffix == ".tif" or file.suffix == ".tiff":
-        initial_frames = imread(file, key=slice(0, n))
+        # tiffile will slice over pages, so we need to reshape
+        initial_frames = imread(file, key=slice(0, 2 * n))
+        _, y, x = initial_frames.shape
+        initial_frames = np.reshape(initial_frames, (n, 2, y, x))
+
         imwrite(dest_path, initial_frames)
     else:
         with ND2File(file) as f:
@@ -426,6 +430,7 @@ def get_first_image(img_path: Path):
 
     The channel 2 frames are averaged and equalized, for better visualization."""
     img = imread(img_path)
+    print(img.shape)
     first_frame = np.average(img[:, 1, :, :], axis=0)
     return equalize_hist(first_frame)
 
