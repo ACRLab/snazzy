@@ -63,7 +63,7 @@ class PDParams(BaseModel):
     dff_strategy: str = "local_minima"
     baseline_window_size: int = 81
     trim_zscore: float = 0.35
-    ISI_factor: float = 4.0
+    ISI_factor: float = 3.0
     low_amp_threshold: float = 0.1
     fft_height: float = 0.04
     fft_prominence: float = 0.03
