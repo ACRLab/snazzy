@@ -12,7 +12,7 @@ Make a copy of the repo (e.g. with `git clone`), then `cd` into the root folder 
 Recreate the conda environment with the dependencies listed in `environment.yml` in the repo's root:
  
 ```
-    conda env create -f=environment.yml
+    conda env create -f environment.yml
 ``` 
 Activate the environment:
  
@@ -23,17 +23,17 @@ Activate the environment:
 
 Thank you for being interested in `snazzy`!
 
-If you are interested in contributing, we accept contributions of all sorts: improving documentation, submitting bug reports, adding feature requests or writing code.
+We accept contributions of all sorts: improving documentation, submitting bug reports, adding feature requests or writing code.
 Feel free to create an issue or a pull request!
 
 If you are new to open source and need help creating a pull request, we recommend taking a look at these tutorials:
-Here are a couple of friendly tutorials you can include: http://makeapullrequest.com/ and http://www.firsttimersonly.com/
+http://makeapullrequest.com/ and http://www.firsttimersonly.com/
 
 ### How to report a bug
 
-Please open an issue for any bugs or request for help analyzing your data.
+Please open an issue for any bugs or requests for help analyzing your data.
 
-When filing an issue, please add the following informatation:
+When filing an issue, please add the following information:
 
 1. What operating system are you using?
 2. What did you expect to see?
