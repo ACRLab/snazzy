@@ -1,0 +1,171 @@
+---
+title: "SNAzzy: an image processing pipeline for investigating global Synchronous Network Activity"
+tags:
+  - Calcium imaging
+  - Widefield microscopy
+  - Image analysis
+  - Drosophila
+  - Spontaneous Neural Activity
+  - Neurodevelopment
+  - Circuit Wiring
+authors:
+  - name: Carlos D. Paiva
+    orcid: 0009-0006-1836-7210
+    affiliation: "1, 2"
+  - name: Alana J. Evora
+    orcid: 0009-0002-3174-7839
+    affiliation: "1, 2"
+  - name: Shirui Zheng
+    orcid: 0009-0006-1836-7208
+    affiliation: "1, 2"
+  - name: Arnaldo Carreira-Rosario
+    orcid: 0000-0003-0202-3858
+    corresponding: true
+    affiliation: "1, 2"
+affiliations:
+  - name: Department of Biology, Duke Unviersity, Durham, NC 27708
+    index: 1
+  - name: Department of Neurobiology, Duke Unviersity, Durham, NC 27708
+    index: 2
+date: 6 October 2025
+bibliography: paper.bib
+---
+
+# Summary
+
+Genetically encoded fluorescent indicators are powerful tools for monitoring biological processes in live samples using light microscopy {@lin:2016, @nakai:2001}.
+When combined with a large field of view, a single time-lapse recording has the potential to capture many specimens, facilitating high-throughput data collection.
+However, the simultaneous recording of many biological samples across time points produces large, multidimensional datasets that are challenging to process and analyze.
+We present `SNAzzy`, a Python package for studying synchronous network activity (SNA) in Drosophila embryos via high-throughput microscopy.
+SNA is a hallmark of developing nervous systems (Wu, Kourdougli, and Portera-Cailliau 2024; Blankenship and Feller 2009; Akin and Zipursky 2020), often studied using genetically encoded calcium indicators to monitor neural activity in vivo.
+`SNAzzy` processes and analyzes time-lapse datasets taken from live samples using fluorescent widefield microscopy.
+Each dataset contains dozens of individual specimens in the same field of view and thousands of time points.
+The software offers individual specimen cropping for optimization of storage and processing, adaptive regions of interest for quantification of fluorescence and changes in morphology over time, a custom peak detection algorithm, and a graphical user interface for data visualization, curation, and dataset comparison.
+This tool can be readily applied to analyze fluorescent intensities in time-lapse microscopy experiments that involve simultaneous imaging of multiple samples, particularly small-sized specimens (Donoughe Kim, and Extavour 2018; Avasthi et al. 2023). 
+
+# Statement of need
+
+During synchronous network activity (SNA), many neurons fire synchronously, generating waves of activity that span across large portions of the nervous system (Blankenship and Feller 2009; Wu, Kourdougli, and Portera-Cailliau 2024; Akin and Zipursky 2020).
+In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation (Crisp et al 2008; Carreira-Rosario et al. 2021).
+To gain an understanding of SNA, it is essential to quantify waves of activity in the nervous system while also tracking morphology as a proxy of neurodevelopment.
+For these reasons, we combine a commonly used genetically encoded calcium indicator (GECI) that reflects neural activity with a structural fluorophore (Carreira-Rosario et al.
+2021).
+The structural fluorophore signal remains stable, independent of neural activity, making it suitable for continuous tracking morphology of the nerve cord.
+To record many embryos during SNA, we use a wide-field fluorescence microscopy system that captures the GECI and structural fluorophore signal of dozens of developing embryos for over 5 hours.
+
+We were unable to find a tool designed for widefield microscopy that rapidly processes multiple specimens, quantifies levels of fluorophore activity, and incorporates a peak-finding algorithm suitable for global calcium traces.
+`SNAzzy` is designed to investigate global levels of neural activity across multiple developing embryos simultaneously.
+
+## Tracking of multiple “adaptive  ROIs”  
+
+To the best of our knowledge, there are no other packages that provide functionality for automated parsing of raw images of many live specimens into activity and morphological quantifications.
+Other studies have employed manual selection of regions of interest (ROIs) and used static ROIs (Menzies et al. 2024; Ardiel et al. 2022; Carreira-Rosario et al. 2021).
+Manual selection often generates imprecise ROIs, which can lead to inaccurate quantifications, and is also cumbersome and prone to human error.
+Static ROIs are not reliable for detecting the fluorescent signal of live specimens that change in morphology and move while imaging.
+`SNAzzy` fills these gaps as an accessible pipeline for the automated analysis of multiple live samples in parallel.
+The pipeline generates an “adaptive ROI” that changes frame-by-frame for each specimen.
+This enables the accurate tracking of fluorescence intensity as well as changes in tissue morphology or size.
+`SNAzzy`’s design provides an automated, modular, and fully auditable workflow, and ultimately contributes to more reproducible and comparable results across experiments.
+
+## Capturing global Calcium dynamics
+
+To the best of our knowledge, there are no open-source packages that provide tools for performing automated data analysis and quantification of global calcium dynamics.
+Most open-source tools available for analyzing neuronal activity using GECI focus on segmenting individual neurons within a single specimen.
+CaImAn (Giovannucci et al. 2019) and Suite2p (Pachitariu et al. 2016) are among the most widely used.
+These packages detect calcium dynamics and use individual neuron statistics to perform spike inference, but do not offer direct peak detection on the calcium signal.
+Furthermore, they are optimized for two-photon microscopy as opposed to wide-field microscopy.
+`SNAzzy` provides a series of automated analyses and quantifications to analyze global calcium levels in time-series acquired with widefield microscopes.
+
+![Schematic of the SNAzzy pipeline.
+Time-lapse taken from fluorescent widefield microscopes (raw data) enters the processing stage (green).
+The processing stage outputs two types of CSV files: time series of signal intensities from each recorded channel and ROI length.
+CSV files enter the analysis stage (blue) to generate normalized fluorescent traces and detect peaks along with other signal processing metrics.
+These initial traces can be visualized to curate the data.
+Curation generates a configuration file that works as metadata across platforms and users.
+Curated data can be reanalyzed and used to visualize final data and compare across groups (yellow).
+Analysis and output stages are performed in the GUI (red dashed box), along with other metrics.
+Dashed arrows indicate optional steps.](figures/snazzy-fig1.png)
+
+# Pipeline Description
+
+The initial input for `SNAzzy` (Figure 1) is raw time-lapse imaging data containing multiple embryos.
+Each embryo expresses a GECI (dynamic fluorophore) and a structural fluorophore.
+Fluorophores are imaged in different optical channels.
+
+The first pipeline step converts the raw data to TIF format, thereby avoiding compatibility issues that may arise when parsing different proprietary formats (Figure 1).
+All embryos are then segmented using histogram equalization followed by intensity threshold binarization (Otsu 1979).
+Boxes surrounding the segments are cropped into individual time-lapses for each embryo.
+Cropping results in a substantial memory reduction, as most background pixels are removed, with cropped images typically accounting for around 40% of the original size.
+
+The next step is to process each individual specimen.
+First, the ROI, which in our case is the entire central nervous system (CNS), is defined by binarizing the structural channel and selecting the largest connected component.
+This process is repeated at every time point to generate an “adaptive ROI”.
+From these adaptive ROI, the average signal intensity for both channels is extracted.
+The results are saved as CSV files and are the basis for downstream analysis.
+
+![ROI length measurement algorithm and validation.
+A) Steps to calculate the ROI length.
+The ROI length is calculated by estimating the centerline (red line) using points of maximum (dots) in the distance transform, followed by RANSAC to ignore outliers (orange dots).
+B) Validation of the method as relative error (measured - annotated) / annotated.
+Each whisker bar summarizes the relative error for frames taken at intervals of 50 timepoints.
+C) Comparison of absolute values over a time series for three representative embryos.](figures/snazzy-fig2.png)
+
+The ROI is also used to measure the length of the CNS (Figure 2).
+Drosophila embryo CNS length serves as an internal proxy for neurodevelopmental stages, enabling more accurate comparisons across embryos (Carreira-Rosario et al. 2021).
+The CNS length is calculated by centerline estimation.
+First, a distance transform is applied to the binarized image, and local maxima points are detected.
+Depending on the embryo's orientation, some points may be part of the brain lobes and must be filtered out to accurately measure the CNS length.
+To obtain a robust centerline estimate that can ignore outliers, we use RANSAC (Fischler and Bolles 1981) over the local maxima points and measure the overlap between the fitted line and the binary image.
+CNS length is also detected frame by frame and exported as a CSV file (Figure 1).
+
+![Figure 3: Peak detection algorithm.
+A low-pass filter (orange line) is applied to the ∆F/F signal (black line) to remove fast transients.
+The peak in the filtered signal (orange dot) is then ported back to the ∆F/F (blue dot) signal by selecting the leftmost peak within a search window (blue lines).](figures/snazzy-fig3.png)
+
+The package utilizes average signal intensity measurements to calculate ∆F/F traces and peaks.
+For ∆F/F, we first calculate the ratiometric signal (dynamic signal / structural signal) and then its baseline, which is defined as the average of the N lowest values within a sliding window.
+The generated ∆F/F traces contain long-duration bouts of activity with superimposed fast transients (Figure 3).
+The former represents the bursts of activity and is the most relevant for the initial analysis.
+To mark only these more prolonged bouts, we apply a low-pass frequency filter to omit transients.
+Peaks in the filtered trace are detected using SciPy (Virtanen et al. 2020).
+Finally, the detected peaks are ported to the original ∆F/F signal.
+
+Results can be visualized and curated in a graphical user interface (GUI) implemented in `PyQt6` (Figure 4).
+During curation, researchers can modify data analysis parameters, which are persisted in a JSON configuration file and utilized by the core analysis code across different machines and users.
+Finally, a large number of different metrics derived from ∆F/F, CNS length, and peaks can be visualized and plotted using the GUI.
+
+![Figure 4: GUI for data validation, curation, visualization and plotting.
+Initial GUI screen.
+A ∆F/F trace (white) and the corresponding peaks (magenta dots) are shown.
+The low-passed signal (green line) is used as a reference to determine peaks.
+The GUI enables the modification of analysis parameters, visualization of data, and comparison of metrics across groups of experiments, as well as manual adjustment of peak data.](figures/snazzy-fig4.png)
+
+In conclusion, genetically encoded fluorescent indicators and microscopy systems are evolving rapidly, increasing the data acquisition throughput.
+Custom open-source tools are needed to handle such large data files.
+`SNAzzy` addresses this by offering an automated, scalable, and user-friendly platform for analyzing synchronous network activity in developing embryos.
+As an open and versatile solution, `SNAzzy` offers tools for a broader range of applications in time-lapse fluorescence imaging across diverse biological systems.
+
+# Acknowledgments
+
+We acknowledge Newt PenkoffLidbeck and Berfin Azizoglu for feedback on the manuscript.
+his work was partially supported by R00…. 
+
+# References
+
+Akin, Orkun, and S. Lawrence Zipursky. 2020. “Activity Regulates Brain Development in the Fly.” Current Opinion in Genetics & Development 65 (December):8–13.
+Ardiel, Evan L., Andrew Lauziere, Stephen Xu, Brandon J. Harvey, Ryan Patrick Christensen, Stephen Nurrish, Joshua M. Kaplan, and Hari Shroff. 2022. “Stereotyped Behavioral Maturation and Rhythmic Quiescence in C. Elegans Embryos.” eLife 11 (August). https://doi.org/10.7554/eLife.76836.
+Avasthi, Prachee, Tara Essock-Burns, Galo Garcia III, Jase Gehring, David Q. Matus, David G. Mets, and Ryan York. 2023. “Gotta Catch ‘em All: Agar Microchambers for High-Throughput Single-Cell Live Imaging,” April. https://doi.org/10.57844/ARCADIA-V1BG-6B60.
+Blankenship, Aaron G., and Marla B. Feller. 2009. “Mechanisms Underlying Spontaneous Patterned Activity in Developing Neural Circuits.” Nature Reviews. Neuroscience 11 (1): 18–29.
+Carreira-Rosario, Arnaldo, Ryan A. York, Minseung Choi, Chris Q. Doe, and Thomas R. Clandinin. 2021. “Mechanosensory Input during Circuit Formation Shapes Drosophila Motor Behavior through Patterned Spontaneous Network Activity.” Current Biology: CB 31 (23): 5341–49.e4.
+Crisp, Sarah, Jan Felix Evers, André Fiala, and Michael Bate. 2008. “The Development of Motor Coordination in Drosophila Embryos” 3717:3707–17.
+Donoughe, Seth, Chiyoung Kim, and Cassandra G. Extavour. 2018. “High-Throughput Live-Imaging of Embryos in Microwell Arrays Using a Modular Specimen Mounting System.” Biology Open 7 (7): bio031260.
+Fischler, Martin A., and Robert C. Bolles. 1981. “Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography.” Communications of the ACM 24 (6): 381–95.
+Giovannucci, Andrea, Johannes Friedrich, Pat Gunn, Jérémie Kalfon, Brandon L. Brown, Sue Ann Koay, Jiannis Taxidis, et al. 2019. “CaImAn an Open Source Tool for Scalable Calcium Imaging Data Analysis.” eLife 8 (January). https://doi.org/10.7554/eLife.38173.
+Lin, Michael Z., and Mark J. Schnitzer. 2016. “Genetically Encoded Indicators of Neuronal Activity.” Nature Neuroscience 19 (9): 1142–53.
+Menzies, Jonathan A. C., Andre M. Chagas, Tom Baden, and Claudio R. Alonso. 2024. “A microRNA That Controls the Emergence of Embryonic Movement.” eLife. https://doi.org/10.7554/elife.95209.2.
+Nakai, J., M. Ohkura, and K. Imoto. 2001. “A High Signal-to-Noise Ca(2+) Probe Composed of a Single Green Fluorescent Protein.” Nature Biotechnology 19 (2): 137–41.
+Otsu, Nobuyuki. 1979. “A Threshold Selection Method from Gray-Level Histograms.” IEEE Transactions on Systems, Man, and Cybernetics 9 (1): 62–66.
+Pachitariu, Marius, Carsen Stringer, Mario Dipoppa, Sylvia Schröder, L. Federico Rossi, Henry Dalgleish, Matteo Carandini, and Kenneth D. Harris. 2016. “Suite2p: Beyond 10,000 Neurons with Standard Two-Photon Microscopy.” bioRxiv. bioRxiv. https://doi.org/10.1101/061507.
+Virtanen, Pauli, Ralf Gommers, Travis E. Oliphant, Matt Haberland, Tyler Reddy, David Cournapeau, Evgeni Burovski, et al. 2020. “SciPy 1.0: Fundamental Algorithms for Scientific Computing in Python.” Nature Methods 17 (3): 261–72.
+Wu, Michelle W., Nazim Kourdougli, and Carlos Portera-Cailliau. 2024. “Network State Transitions during Cortical Development.” Nature Reviews. Neuroscience, May. https://doi.org/10.1038/s41583-024-00824-y.
+
