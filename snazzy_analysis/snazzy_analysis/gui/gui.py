@@ -906,7 +906,7 @@ class MainWindow(QMainWindow):
             prev_value = dev_time[trace.trim_idx]
         else:
             x = self.model.get_index_from_time(il_obj.getXPos())
-            prev_value = trace.time[trace.trim_idx]
+            prev_value = trace.time[trace.trim_idx] // 60
 
         # cannot allow trim_idx to be set after last timepoint, since it's
         # used to index trace points and would cause IndexError
