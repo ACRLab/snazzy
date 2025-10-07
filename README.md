@@ -26,8 +26,7 @@ Thank you for being interested in `snazzy`!
 We accept contributions of all sorts: improving documentation, submitting bug reports, adding feature requests or writing code.
 Feel free to create an issue or a pull request!
 
-If you are new to open source and need help creating a pull request, we recommend taking a look at these tutorials:
-http://makeapullrequest.com/ and http://www.firsttimersonly.com/
+If you are new to open source and need help creating a pull request, we recommend taking a look at the [first-contributions repository](https://github.com/firstcontributions/first-contributions#first-contributions).
 
 ### How to report a bug
 

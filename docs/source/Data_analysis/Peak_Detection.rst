@@ -14,7 +14,7 @@ To understand how the different parameters influence the peak detection, it's im
 -----------------------------------------------
 
 The ΔF/F (DFF) trace is filtered in the frequency domain using a ``freq_cutoff`` parameter: all frequencies above this value are removed, and the remaining low-frequency components are used to reconstruct the filtered trace.
-This acts as a smoothing step, which almost completely removes oscillations and short-duration peaks that do not correspond to actual activity bursts.
+This acts as a smoothing step, which almost completely removes transients that do not correspond to the main activity bursts.
 
 The ``freq_cutoff`` can be adjusted in the GUI using a slider, and the reconstructed signal is updated in real time.
 The default value of ``0.0025 Hz`` works well for many traces, but traces with high-frequency noise may require a lower cutoff.
@@ -30,7 +30,7 @@ These are easy to identify, as they usually do not correspond to peaks in the or
 
 After detecting peaks in the filtered signal, the peak indices are mapped back to the original ΔF/F trace.
 This step is necessary because the low-passed filter will result shift peak positions.
-The bursts of activity have a sharp rise and are followed closely by shorter oscillations.
+The bursts of activity have a sharp rise and are followed closely by shorter transients.
 To properly mark bursts, we use the leftmost peak in each burst as the peak index.
 
 The window size used to search for the leftmost peak is given by ``port_peaks_window_size``.
@@ -52,7 +52,7 @@ The minimum value for accepting a peak is given by ``local_thres_value``.
 
 Some post-processing operations can further improve peak detection for specific types of traces.
 
-Certain traces may exhibit a large burst at the beginning of the imaging session.
+Certain traces may exhibit abnormal transients at the beginning of the imaging session.
 This is an artifact that should be removed.
 In such cases, the ``remove_transients`` function can be applied.
 It detects and removes initial bursts if their interval is significantly longer than the average of subsequent bursts.
