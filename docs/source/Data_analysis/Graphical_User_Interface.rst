@@ -6,10 +6,13 @@ The graphical user interface is written using ``PyQt6`` and ``pyqtgraph``.
 The GUI's main functionalities are:
 
 1. Visualize and adjust peak data.
-2. Combine multiple experiments as a group.
+2. Combine multiple datasets as a group.
 3. Compare multiple groups.
 4. Inspect TIF movies in sync with the DFF signal.
 5. Inspect all parameters used in the analysis.
+
+.. image:: /_static/gui-screenshot.png
+   :alt: GUI Screeshot with loaded data
 
 Loading the GUI
 ---------------
@@ -21,7 +24,7 @@ Refer to the `Getting Started <../Getting_Started.html>`__ session if you haven'
 
     conda activate snazzy-env
 
-Then, from the snazzy_analysis directory, run the GUI:
+Then, ``cd`` into the ``snazzy_analysis`` directory and run the GUI:
 
 .. code:: bash
 
@@ -32,23 +35,24 @@ Using the GUI
 
 There are two primary modes to use the GUI:
 
-1. Open a single experiment:
+1. Open a single dataset:
 
 Allows you to visualize peak detection results and adjust parameters if needed.
 
-2. Compare experiments:
+2. Compare datasets:
 
-You can load more than one experiment to a Group, or have multiple Groups to visualize comparisons.
-When more than one experiment is loaded, you cannot change the analysis parameters anymore.
+You can load more than one dataset to a Group, or have multiple Groups to visualize comparisons.
+When more than one dataset is loaded, you cannot change the analysis parameters anymore.
 In this mode, the analysis results are read-only.
-Therefore the general workflow is to first open each experiment separately and make sure all parameters are correct for peak detection.
+The same parameters should be used to comparing different datasets.
+To make sure that the chosen parameters work with each dataset, load each one separately and verify the peak detection first.
 The comparison plots in the Plot menu will show results by Group.
 In the upper left corner of the GUI, a dropdown menu can be used to change the Group that is currently being visualized.
 
-Loading an Experiment
+Loading a Dataset
 ---------------------
 
-To load an Experiment select a directory that has ``snazzy_processing`` output.
+To load a Dataset select a directory that has ``snazzy_processing`` output.
 The directory structure should look like:
 
 .. code:: bash
@@ -77,7 +81,7 @@ The ``emb_numbers.png`` file represents a snapshot of the microscope's field of 
 Config parameters
 -----------------
 
-When loading an experiment the code will look for a config file named ``peak_detection_params.json`` inside the experiment directory and will use its data for the analysis.
+When loading a dataset the code will look for a config file named ``peak_detection_params.json`` inside th dataset directory and will use its data for the analysis.
 If not found, a file with default parameters is created.
 The default parameters can be found inside ``config.py``. 
 If you change any of the parameters, they will be recorded in this file.
@@ -85,10 +89,10 @@ To restore the original settings, simply delete ``peak_detection_params.json`` f
 Sharing the config file allows someone else to reproduce your results in another machine.
 Keep in mind that each directory should have its own ``peak_detection_params.json`` file.
 
-The parameters that are most frequently changed are presented in the GUI when an Experiment is loaded.
+The parameters that are most frequently changed are presented in the GUI when a Dataset is loaded.
 From this window it's possible to set:
 
-* Group name: name of the group that contains this experiment dataset
+* Group name: name of the group that contains this dataset
 * First peak threshold: minimum time in minutes that has to pass before any peak happens. Used to make sure that the first peak caught at the imaging session is really the activity onset.
 * To_exclude: embryo numbers that will be excluded from the analysis. These embryos will be excluded from the analysis.
 * To_remove: embryo numbers that will be analyzed, but will show up in the 'Removed' group.
@@ -98,15 +102,12 @@ From this window it's possible to set:
 * Dff_strategy: Combo box with the baseline strategy methods. ``local_minima`` will pick the bottom 11 points out of the ``baseline_window_size`` and use that average as the baseline. ``baseline`` will split the DFF values into bins and use the average of the most frequent bin as the baseline.  This method assumes that the bursts of activity are sparse, so that for all windows the most frequent bin falls into the baseline values.
 
 Inside the File menu there is an option to open the ``json`` file and change any of its parameters.
-Updating the file causes the entire Experiment to be recreated with the new configuration data.
+Updating the file causes the entire Dataset to be recreated with the new configuration data.
 
 Visualizing traces
 ------------------
 
-Once the data is loaded, you should see something similar to this:
-
-.. image:: /_static/gui-screenshot.png
-   :alt: GUI Screeshot with loaded data
+The description here refers to the image on the top of the file.
 
 The top app bar has buttons to change the data presentation.
 Below the top app bar there are two sliders.
@@ -117,8 +118,8 @@ You can toggle the embryo status between these two categories.
 In the main view you will see the DFF trace of the currently selected embryo.
 The pink dots represent the peak indices.
 
-You can also visualize the signal from each channel, by clicking on the button in the right of the screen.
-This window will present the signal from each channel and also the hatching point, which can be changed manually by dragging the line. 
+You can also visualize the signal from each channel, by clicking on the button with a ``>`` in the right of the screen.
+This window will present the signal from each channel and also the hatching point, which can be changed manually by dragging the line if needed. 
 
 Manually changing peak data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,7 +145,7 @@ If you haven't removed the individual movies that were cropped from raw data, yo
 
 .. NOTE:: When running the pipeline, set the variable `clean_up_data = False` to keep the cropped movies.
 
-The embryos must be placed inside the experiment directory, in a directory named ``embs``.
+The embryos must be placed inside the dataset directory, in a directory named ``embs``.
 
 If there are no files available to show, the GUI will simply display an error message.
 

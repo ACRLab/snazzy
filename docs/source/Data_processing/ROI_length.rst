@@ -1,9 +1,10 @@
 ROI length
 ==========
 
-The ROI length is used as a way to characterize the different developmental stages of the embryo.
+The ROI length is used as a proxy to measure the embryonic neurodevelopmental progression.
 It is calculated by center line estimation.
 The idea is to measure the line that will pass through the center of the ROI.
+This will correspond to the ventral nerve cord length.
 
 To determine this line, we go over the following steps:
 
@@ -15,10 +16,10 @@ To determine this line, we go over the following steps:
 
 The ``vnc-length.ipynb`` notebook has a more complete description and illustrates how the algorithm works.
 
-Full size
----------
+Embryo Full size
+----------------
 
-The full sample size is calculated by approximating the entire sample shape as an ellipse, and measuring this ellipse's diameter.
+The full specimen size is calculated by approximating the entire sample shape as an ellipse, and measuring this ellipse's diameter.
 
 The steps to calculate the sample size are:
 1. Equalize the image histogram

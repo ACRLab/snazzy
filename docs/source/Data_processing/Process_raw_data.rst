@@ -1,10 +1,10 @@
 Process raw images
 ==================
 
-Since the imaging is done with a large Field of View microscope, usually during 6 hours or more, the raw images tend to be in the range of 50 ~ 100 GiB.
+Since the imaging is done with a large Field of View microscope, usually during 6 hours or more, the raw images tend to be in the range of 50 ~ 200 GiB.
 The simplest way to handle the raw data is to crop it in individual movies.
-There is a considerable amount of background pixels that can be ignored in the raw data, so after cropping the embryos, all individual movies combined take about 40% of the original memory space.
-This already saves considerable ROM memory but most importantly, it means we can easily load individual movies in the RAM of a regular computer (8~16 GB RAM), without needing to use memory mapped files.
+There is a considerable amount of background pixels that can be ignored in the raw data. After cropping the embryos, all individual movies combined take about 40% of the original memory space.
+This already saves considerable ROM memory but most importantly, it means we can easily load individual movies in the RAM of a regular computer (16-32 GB RAM), without needing to use memory mapped files.
 
 The algorithm to process the raw image can be resumed as:
 
