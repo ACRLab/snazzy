@@ -7,7 +7,7 @@ from typing import Callable
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt, QThreadPool
-from PyQt6.QtGui import QAction, QBrush, QColor, QKeySequence
+from PyQt6.QtGui import QAction, QBrush, QColor, QKeySequence, QPalette
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -993,8 +993,25 @@ class MainWindow(QMainWindow):
         self.show_notification("Clear manual data", "Manually added data was removed.")
 
 
+def set_dark_palette(app: QApplication):
+    dark = QPalette()
+    dark.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+    dark.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+    dark.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+    dark.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+    dark.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+    dark.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+    dark.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+    dark.setColor(QPalette.ColorRole.Highlight, QColor(142, 45, 197).lighter())
+    dark.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
+
+    app.setPalette(dark)
+    app.setStyle("Fusion")
+
+
 def main():
     app = QApplication(sys.argv)
+    set_dark_palette(app)
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec())
