@@ -259,8 +259,7 @@ class Trace:
         into n_bins amplitude bins and taking the mean of the bin with the most
         samples.
 
-        This assumes that PaSNA peaks are sparse.
-        To handle edges, both edges are reflected.
+        This assumes that bouts are sparse. To handle edges, both edges are reflected.
         """
         expanded_signal = self.reflect_edges(signal, window_size)
 

@@ -119,7 +119,7 @@ class PeakAnnotationParser:
             exp_name: str in the format: `expDate_flyLine`
 
         Returns:
-            annotations: list with all annotated data found for that experiment
+            annotations: list with all annotated data found for that dataset
         """
         if self.annotations is None:
             raise AttributeError(
@@ -133,7 +133,7 @@ class PeakAnnotationParser:
         return annotations
 
     def get_exp_names(self) -> list[str]:
-        """Returns the names of all experiments that have GT data."""
+        """Returns the names of all datasets that have GT data."""
         if self.annotations is None:
             raise AttributeError(
                 "Cannot read annotation data, first call `self.load_point_data` or `self.load_window_data`."

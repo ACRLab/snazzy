@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from snazzy_analysis import Config, Experiment
+from snazzy_analysis import Config, Dataset
 
 VALID_DIR = Path(__file__).parent.joinpath("assets", "data", "20250210")
 
@@ -13,8 +13,8 @@ def emb():
     to_exclude = ["emb3", "emb4"]
     config = Config(VALID_DIR)
     config.update_params({"exp_params": {"to_exclude": to_exclude}})
-    exp = Experiment(VALID_DIR, config)
-    return exp.get_embryo("emb1")
+    dataset = Dataset(VALID_DIR, config)
+    return dataset.get_embryo("emb1")
 
 
 @pytest.fixture

@@ -66,10 +66,10 @@ class ComparePlotWindow(QWidget):
 
     def save_all_plots(self):
         for group in self.groups:
-            for exp in group.experiments.values():
-                exp_dir = exp.directory
+            for dataset in group.datasets.values():
+                dataset_dir = dataset.directory
                 timestamp = datetime.now().strftime("%m%d%Y_%H:%M:%S")
-                save_path = exp_dir / "plots" / timestamp
+                save_path = dataset_dir / "plots" / timestamp
                 save_path.mkdir(parents=True, exist_ok=True)
 
                 for plot_fn in self.btns.values():
@@ -103,7 +103,7 @@ class ComparePlotWindow(QWidget):
         data = {"dev_fp": [], "group": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 if emb.trace.peak_times.size == 0:
                     continue
                 time_first_peak = emb.trace.peak_times[0]
@@ -136,7 +136,7 @@ class ComparePlotWindow(QWidget):
         data = {"dev_hatching": [], "group": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 trace = emb.trace
                 time_hatching = trace.time[trace.trim_idx]
                 dev_time_first_peak = emb.get_DT_from_time(time_hatching)
@@ -168,7 +168,7 @@ class ComparePlotWindow(QWidget):
         data = {"group": [], "duration": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 trace = emb.trace
                 if trace.peak_times.size == 0:
                     continue
@@ -232,7 +232,7 @@ class ComparePlotWindow(QWidget):
         data = {"group": [], "num_eps": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 trace = emb.trace
                 data["group"].append(group.name)
                 data["num_eps"].append(len(trace.peak_idxes))
@@ -253,7 +253,7 @@ class ComparePlotWindow(QWidget):
         data = {"dev_time": [], "group": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 dev_times = [emb.get_DT_from_time(t) for t in emb.trace.peak_times]
                 data["dev_time"].extend(dev_times)
                 data["group"].extend([group.name] * len(dev_times))
@@ -277,7 +277,7 @@ class ComparePlotWindow(QWidget):
         num_of_peaks = 15
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 for i, amp in zip(range(num_of_peaks), emb.trace.peak_amplitudes):
                     data["peak_amp"].append(amp)
                     data["group"].append(group.name)
@@ -311,7 +311,7 @@ class ComparePlotWindow(QWidget):
         num_of_peaks = 15
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 for i, t in zip(range(num_of_peaks), emb.trace.peak_times):
                     data["group"].append(group.name)
                     data["dev_time"].append(emb.get_DT_from_time(t))
@@ -345,7 +345,7 @@ class ComparePlotWindow(QWidget):
         num_of_peaks = 15
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 for i, interval in zip(range(num_of_peaks), emb.trace.peak_intervals):
                     data["group"].append(group.name)
                     data["interval"].append(interval / 60)
@@ -380,7 +380,7 @@ class ComparePlotWindow(QWidget):
         data = {"group": [], "decay_times": [], "idx": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 for i, decay in zip(range(15), emb.trace.peak_decay_times):
                     data["group"].append(group.name)
                     data["decay_times"].append(decay / 60)
@@ -418,9 +418,9 @@ class ComparePlotWindow(QWidget):
         for i, group in enumerate(self.groups):
             f_zero = None
             t_zero = None
-            for exp in group.experiments.values():
+            for dataset in group.datasets.values():
                 Zxxs = []
-                for emb in exp.embryos:
+                for emb in dataset.embryos:
                     stft = FrequencyAnalysis.calculate_STFT(emb.trace.aligned_dff)
                     if stft is None:
                         continue
@@ -461,7 +461,7 @@ class ComparePlotWindow(QWidget):
         data = {"group": [], "duration": [], "idx": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 for i, duration in zip(range(15), emb.trace.peak_durations):
                     data["group"].append(group.name)
                     data["duration"].append(duration / 60)
@@ -489,7 +489,7 @@ class ComparePlotWindow(QWidget):
         data = {"group": [], "duration": [], "idx": []}
 
         for group in self.groups:
-            for exp_name, emb in group.iter_all_embryos():
+            for _, emb in group.iter_all_embryos():
                 for i, duration in zip(range(15), emb.trace.peak_rise_times):
                     data["group"].append(group.name)
                     data["duration"].append(duration)

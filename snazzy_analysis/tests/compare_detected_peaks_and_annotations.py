@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from snazzy_analysis import Experiment, Trace
+from snazzy_analysis import Dataset, Trace
 from peak_annot_parser import (
     PeakAnnotationParser,
     GroundTruthPointData,
@@ -21,7 +21,7 @@ def load_data(annotated_path, exp_dir, annot_type):
         annotated_path (Path):
             Path to annotated csv file.
         exp_dir (Path):
-            Path to experiment dir.
+            Path to dataset dir.
         annot_type ('point' | 'window'):
             Type of GT data.
 
@@ -34,7 +34,7 @@ def load_data(annotated_path, exp_dir, annot_type):
     for exp_name in exp_names:
         annotations = annotated_data.get_annotation_by_exp_name(exp_name)
         emb_names = [a.emb_name for a in annotations]
-        exp = Experiment(
+        dataset = Dataset(
             Path(exp_dir + "/" + exp_name),
             to_exclude=[x for x in range(99) if f"emb{x}" not in emb_names],
             first_peak_threshold=0,
@@ -43,8 +43,8 @@ def load_data(annotated_path, exp_dir, annot_type):
 
         for annot in annotations:
             emb_name = annot.emb_name
-            trace = exp.get_embryo(emb_name).trace
-            calc_idxes = get_peak_idxes(exp, emb_name)
+            trace = dataset.get_embryo(emb_name).trace
+            calc_idxes = get_peak_idxes(dataset, emb_name)
             yield (annot, calc_idxes, exp_name, trace)
 
 
@@ -135,8 +135,8 @@ def get_comparison_results(annot_to_exp, annot_type):
     return results
 
 
-def get_peak_idxes(exp: Experiment, emb_name):
-    idxs = exp.get_embryo(emb_name).trace.peak_idxes
+def get_peak_idxes(dataset: Dataset, emb_name):
+    idxs = dataset.get_embryo(emb_name).trace.peak_idxes
     return [int(idx) for idx in idxs]
 
 

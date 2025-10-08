@@ -4,12 +4,12 @@ import numpy as np
 
 
 class DataLoader:
-    """Access data about the current experiment.
+    """Loads data from a dataset.
 
     Attributes
     ----------
     path: Path
-        The path that contains `pasnascope` output. Must follow the folder\
+        The path that contains `snazzy_processing` output. Must follow the folder\
         structure described in this project's README.
     """
 
@@ -23,7 +23,7 @@ class DataLoader:
         self.check_embs_match()
 
     def check_files(self):
-        """Asserts that folder structure matches `pasnascope` output."""
+        """Asserts that folder structure matches `snazzy_processing` output."""
         if not self.path.exists():
             raise ValueError(f"Path not found: {self.path}")
         paths = (
@@ -32,7 +32,7 @@ class DataLoader:
         )
         if not all(path.exists() for path in paths):
             raise ValueError(
-                "Could not find expected files. Is this really a directory from `pasnascope`?"
+                "Could not find expected files. Is this really a directory from `snazzy_processing`?"
             )
 
     def check_embs_match(self):
