@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 from snazzy_analysis.gui import (
     ClickableViewBox,
     ComparePlotWindow,
-    ExperimentParamsDialog,
+    DatasetParamsDialog,
     FixedSidebar,
     GraphSwitcher,
     ImageSequenceViewer,
@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
             else self.model.selected_group.name
         )
 
-    def _show_experiment_dialog(
+    def _show_dataset_dialog(
         self, config: Config, group_name: str, on_accepted: Callable[[dict], None]
     ):
         exp_params = config.get_exp_params()
@@ -101,14 +101,14 @@ class MainWindow(QMainWindow):
         }
         del dialog_params["acquisition_period"]
 
-        self.exp_params_dialog = ExperimentParamsDialog(dialog_params, parent=self)
+        self.dataset_params_dialog = DatasetParamsDialog(dialog_params, parent=self)
 
-        self.exp_params_dialog.accepted.connect(
-            lambda: on_accepted(self.exp_params_dialog.get_values())
+        self.dataset_params_dialog.accepted.connect(
+            lambda: on_accepted(self.dataset_params_dialog.get_values())
         )
-        self.exp_params_dialog.rejected.connect(lambda: None)
+        self.dataset_params_dialog.rejected.connect(lambda: None)
 
-        self.exp_params_dialog.open()
+        self.dataset_params_dialog.open()
 
     def _update_config(self, config: Config, dialog_values):
         exp_params = config.get_exp_params()
@@ -120,9 +120,9 @@ class MainWindow(QMainWindow):
         }
         config.update_params(new_config)
 
-    def _start_experiment_worker(self, config: Config, group_name: str):
+    def _start_dataset_worker(self, config: Config, group_name: str):
         worker = Worker(
-            self.model.create_experiment,
+            self.model.create_dataset,
             config=config,
             group_name=group_name,
         )
@@ -155,9 +155,9 @@ class MainWindow(QMainWindow):
 
                 self._present_loading()
 
-                self._start_experiment_worker(config, group_name)
+                self._start_dataset_worker(config, group_name)
 
-            self._show_experiment_dialog(
+            self._show_dataset_dialog(
                 config, group_name, on_accepted=on_dialog_accepted
             )
 
@@ -176,8 +176,8 @@ class MainWindow(QMainWindow):
 
     def update_UI(self):
         self.clear_layout()
-        self.add_experiment_action.setEnabled(True)
-        self.compare_experiment_action.setEnabled(True)
+        self.add_dataset_action.setEnabled(True)
+        self.compare_dataset_action.setEnabled(True)
         self.view_pd_action.setEnabled(True)
         self.paint_main_view()
         self.render_trace()
@@ -186,10 +186,10 @@ class MainWindow(QMainWindow):
     def open_directory(self):
         self._open_directory(is_new_group=True, should_reset_model=True)
 
-    def compare_experiments(self):
+    def compare_datasets(self):
         self._open_directory(is_new_group=True)
 
-    def add_experiment(self):
+    def add_dataset(self):
         self._open_directory(is_new_group=False)
 
     def change_group(self, i):
@@ -207,8 +207,8 @@ class MainWindow(QMainWindow):
         self.cpw.show()
 
     def display_phase_boundaries(self):
-        exp = self.model.selected_experiment
-        traces = [e.trace for e in exp.embryos]
+        dataset = self.model.selected_dataset
+        traces = [e.trace for e in dataset.embryos]
 
         current_trace = self.model.selected_trace
         current_trace_idx = 0
@@ -230,20 +230,20 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def display_embryo_movie(self):
-        exp = self.model.selected_experiment
-        embryos = exp.all_embryos()
+        dataset = self.model.selected_dataset
+        embryos = dataset.all_embryos()
         try:
-            self.viewer = ImageSequenceViewer(exp.directory, embryos)
+            self.viewer = ImageSequenceViewer(dataset.directory, embryos)
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
         self.viewer.show()
 
     def display_field_of_view(self):
-        exp = self.model.selected_experiment
-        img_path = exp.directory / "emb_numbers.png"
+        dataset = self.model.selected_dataset
+        img_path = dataset.directory / "emb_numbers.png"
         try:
-            self.image_window = ImageWindow(exp.name, str(img_path))
+            self.image_window = ImageWindow(dataset.name, str(img_path))
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
@@ -300,7 +300,7 @@ class MainWindow(QMainWindow):
         self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
         self.top_app_bar.addWidget(self.toggle_graph_btn)
 
-        if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
+        if len(self.model.groups) == 1 and not self.model.has_combined_datasets():
             self.toggle_view_width_btn = QPushButton("View widths")
             self.toggle_view_width_btn.setCheckable(True)
             self.toggle_view_width_btn.clicked.connect(self.toggle_view_width)
@@ -363,8 +363,8 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def paint_controls(self):
-        # Sliders are only avaialable if a single experiment is open
-        if len(self.model.groups) > 1 or self.model.has_combined_experiments():
+        # Sliders are only avaialable if a single dataset is open
+        if len(self.model.groups) > 1 or self.model.has_combined_datasets():
             return
 
         self.freq_slider = LabeledSlider(
@@ -404,19 +404,19 @@ class MainWindow(QMainWindow):
         self.single_graph_frame.setLayout(single_graph_layout)
 
         # Sidebar start
-        exp = self.model.selected_experiment
-        if not self.model.has_combined_experiments():
-            accepted_embs = set([e.name for e in exp.embryos])
-            removed_embs = set(exp.to_remove)
+        dataset = self.model.selected_dataset
+        if not self.model.has_combined_datasets():
+            accepted_embs = set([e.name for e in dataset.embryos])
+            removed_embs = set(dataset.to_remove)
             self.sidebar = RemovableSidebar(
-                self.select_embryo, accepted_embs, removed_embs, exp.name
+                self.select_embryo, accepted_embs, removed_embs, dataset.name
             )
             self.sidebar.emb_visibility_toggled.connect(self.toggle_emb_visibility)
         else:
             exp_to_embs = {}
             group = self.model.selected_group
-            for exp_name, exp in group.experiments.items():
-                exp_to_embs[exp_name] = [e.name for e in exp.embryos]
+            for exp_name, dataset in group.datasets.items():
+                exp_to_embs[exp_name] = [e.name for e in dataset.embryos]
             self.sidebar = FixedSidebar(exp_to_embs, self.select_embryo)
 
         scroll_area = QScrollArea()
@@ -459,15 +459,15 @@ class MainWindow(QMainWindow):
         open_action.triggered.connect(self.open_directory)
         file_menu.addAction(open_action)
 
-        self.add_experiment_action = QAction("Add Experiment", self)
-        self.add_experiment_action.triggered.connect(self.add_experiment)
-        self.add_experiment_action.setEnabled(False)
-        file_menu.addAction(self.add_experiment_action)
+        self.add_dataset_action = QAction("Add Dataset", self)
+        self.add_dataset_action.triggered.connect(self.add_dataset)
+        self.add_dataset_action.setEnabled(False)
+        file_menu.addAction(self.add_dataset_action)
 
-        self.compare_experiment_action = QAction("Compare with experiment", self)
-        self.compare_experiment_action.triggered.connect(self.compare_experiments)
-        self.compare_experiment_action.setEnabled(False)
-        file_menu.addAction(self.compare_experiment_action)
+        self.compare_dataset_action = QAction("Compare with dataset", self)
+        self.compare_dataset_action.triggered.connect(self.compare_datasets)
+        self.compare_dataset_action.setEnabled(False)
+        file_menu.addAction(self.compare_dataset_action)
 
         self.view_pd_action = QAction("View pd_params data", self)
         self.view_pd_action.triggered.connect(self.display_json_data)
@@ -518,8 +518,8 @@ class MainWindow(QMainWindow):
 
     def update_from_json_viewer(self, new_data):
         self.model.update_config(new_data)
-        # reset the current experiment to use the new config data
-        self.model.reset_current_experiment()
+        # reset the current dataset to use the new config data
+        self.model.reset_current_dataset()
         self.update_UI()
 
     def paint_main_view(self):
@@ -611,7 +611,7 @@ class MainWindow(QMainWindow):
         self.plot_all_traces()
 
     def collect_slider_params(self):
-        # on 'combined exp' mode, the top_layout that hold the slider will be removed
+        # on 'combined dataset' mode, the top_layout that hold the slider will be removed
         if not self.top_layout:
             return None
 
@@ -646,7 +646,7 @@ class MainWindow(QMainWindow):
 
             plot_widget.plot(time, dff)
 
-            if self.model.has_combined_experiments():
+            if self.model.has_combined_datasets():
                 plot_widget.setTitle(f"{exp_name} - {emb.name}")
             else:
                 plot_widget.setTitle(emb.name)
@@ -678,8 +678,8 @@ class MainWindow(QMainWindow):
     def calibrate_sliders(self):
         """Adjusts the sliders based on pd_params.json.
 
-        The sliders should not be available when more than one experiment is loaded."""
-        if self.model.has_combined_experiments():
+        The sliders should not be available when more than one dataset is loaded."""
+        if self.model.has_combined_datasets():
             return
 
         pd_params = self.model.get_pd_params()
@@ -715,9 +715,9 @@ class MainWindow(QMainWindow):
         self.select_embryo(emb_name, exp_name)
 
     def select_embryo(self, emb_name, exp_name):
-        exp = self.model.selected_group.experiments[exp_name]
-        emb = exp.get_embryo(emb_name)
-        self.model.select_experiment(exp)
+        dataset = self.model.selected_group.datasets[exp_name]
+        emb = dataset.get_embryo(emb_name)
+        self.model.select_dataset(dataset)
         self.model.select_embryo(emb)
         self.render_trace()
 
@@ -729,7 +729,7 @@ class MainWindow(QMainWindow):
         """Render data about the currently selected embryo."""
         trace, time, trimmed_time, dff = self.model.get_trace_context(self.use_dev_time)
         emb_name = self.model.selected_embryo.name
-        exp_name = self.model.selected_experiment.name
+        exp_name = self.model.selected_dataset.name
 
         self._clear_current_plot()
         self._plot_raw_trace(trimmed_time, dff)
@@ -814,7 +814,7 @@ class MainWindow(QMainWindow):
         self.plot_widget.addItem(dsna_line)
 
     def _setup_trim_line(self, time, trace):
-        is_single_exp = not self.model.has_combined_experiments()
+        is_single_exp = not self.model.has_combined_datasets()
 
         trim_line = pg.InfiniteLine(
             time[trace.trim_idx],
@@ -850,8 +850,8 @@ class MainWindow(QMainWindow):
             self.plot_widget.addItem(line)
 
     def _set_plot_titles(self, emb_name, exp_name):
-        if self.model.has_combined_experiments():
-            exp_name = exp_name or self.model.selected_experiment
+        if self.model.has_combined_datasets():
+            exp_name = exp_name or self.model.selected_dataset
             title = f"{exp_name} - {emb_name}"
         else:
             title = emb_name

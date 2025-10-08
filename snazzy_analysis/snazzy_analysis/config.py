@@ -39,9 +39,9 @@ class ExpParams(BaseModel):
     dff_strategy: "baseline" | "local_minima"
         How to compute the dff baseline.
     has_transients: boolean
-        If an experiment has transients, early peaks will be skipped.
+        If a dataset has transients, early peaks will be skipped.
     has_dsna: boolean
-        If an experiment has embryos with dSNA, automatically calculates dSNA start and ignores peaks
+        If a dataset has embryos with dSNA, automatically calculates dSNA start and ignores peaks
         that happen after that point.
     acquisition_period: int
         The time (in seconds) interval between acquiring two successive frames.
@@ -92,20 +92,20 @@ class ConfigObj(BaseModel):
 
 class Config:
     """
-    Configuration data from Experiment class.
+    Configuration data from Dataset class.
 
     Falls back to default values if any values are missing. The default values
     are specified in the BaseModel subclasses above.
 
     Attributes:
-        exp_path (Path):
+        dataset_path (Path):
             Path to the `peak_detection_params.json` file.
             If not found, will hold the default params in memory.
     """
 
-    def __init__(self, exp_path: Path):
-        self.exp_path = exp_path
-        self.config_path = exp_path / "peak_detection_params.json"
+    def __init__(self, dataset_path: Path):
+        self.dataset_path = dataset_path
+        self.config_path = dataset_path / "peak_detection_params.json"
 
         self.default_params = ConfigObj().dict()
 

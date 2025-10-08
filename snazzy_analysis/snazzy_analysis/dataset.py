@@ -3,36 +3,36 @@ from pathlib import Path
 from snazzy_analysis import Config, DataLoader, Embryo, utils
 
 
-class Experiment:
-    """Encapsulates data about all embryos for a given experiment.
+class Dataset:
+    """Encapsulates data about all embryos for a given dataset.
 
     Attributes
     ----------
-    exp_path: Path
-        Path with `pasnascope` output.
+    dataset_path: Path
+        Path with `snazzy_processing` output.
     config: Config | None
         Config obj. If not provided will look for config data saved as json in
-        the exp_path. If not found, a file with default params will be created.
+        the dataset_path. If not found, a file with default params will be created.
     kwargs:
         See `self._parse_kwargs` for list of valid keys passed as kwargs.
     """
 
     def __init__(
         self,
-        exp_path: str | Path,
+        dataset_path: str | Path,
         config: Config | None = None,
         **kwargs,
     ):
-        exp_path = Path(exp_path)
-        self.directory = exp_path
-        self.config = config if config is not None else Config(exp_path)
+        dataset_path = Path(dataset_path)
+        self.directory = dataset_path
+        self.config = config if config is not None else Config(dataset_path)
 
         if kwargs:
             self._parse_kwargs(kwargs)
 
         self.exp_params = self.config.get_exp_params()
 
-        self.data_loader = DataLoader(exp_path)
+        self.data_loader = DataLoader(dataset_path)
         # persist config to file if it only exists in memory
         if not self.config.config_path.exists():
             self.config.initialize_config_file()
@@ -80,7 +80,7 @@ class Experiment:
         ignored_params = [kw for kw in kwargs if kw not in valid_params]
         if ignored_params:
             print(
-                f"WARN: Some kwargs were ignored when creating a new Experiment: {ignored_params}."
+                f"WARN: Some kwargs were ignored when creating a new Dataset: {ignored_params}."
             )
         exp_params_keys = self.config.default_params["exp_params"].keys()
         update_exp_params = {k: v for k, v in kwargs.items() if k in exp_params_keys}

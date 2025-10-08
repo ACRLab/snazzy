@@ -25,7 +25,7 @@ class ImageWindow(QWidget):
         self.setGeometry(200, 200, 600, 400)
 
         title = QLabel(self)
-        title.setText(f"Experiment: {exp_name}")
+        title.setText(f"Dataset: {exp_name}")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         label = QLabel(self)

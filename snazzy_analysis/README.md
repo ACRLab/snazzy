@@ -4,12 +4,12 @@ Data analysis for `snazzy_processing`'s pipeline output.
  
 ### Organization
  
-* `pasna_analysis`: contains the core code used in all analyses
-* `pasna_analysis/gui`: GUI code
+* `snazzy_analysis`: contains the core code used in all analyses
+* `snazzy_analysis/gui`: GUI code
 * `tests`: contains tests for the code
 * `data`: contains the data for the analysis. This folder is not tracked, and should be populated in your local copy
 * `results`: contains the results of the analyses. It is not tracked either and will be populated by performing the analyses
-* `notebooks`: contains examples and the front-end for using the `pasna_analysis` main module
+* `notebooks`: contains examples and the front-end for using the `snazzy_analysis` main module
  
 ### Analyses
  
@@ -19,7 +19,7 @@ There are also jupyter notebooks available, which can be used alternatively and 
  
 ### Adding data
  
-Each experiment should have one corresponding folder inside `./data/`.
+Each dataset should have one corresponding folder inside `./data/`.
 The file structure inside the `data` folder should look like:
 The `embs` directory is used if you want to inspect movies inside the GUI.
 The files are generated with `snazzy_processing`, as long as the flag `clean_up_data` in there (inside snazzy_processing_pipeline.ipynb) is set to `False`. 

@@ -24,17 +24,17 @@ def convert_value(value: str, field_name: str):
         return value
 
 
-class ExperimentParamsDialog(QDialog):
-    """Present Experiment params that can be changed before creating an Experiment.
+class DatasetParamsDialog(QDialog):
+    """Present Dataset params that can be changed before creating an Dataset.
 
     Embryos are presented as embryo ids, to make the input easier to change.
-    Internally, pasna_analysis uses embryo names, so when data is coming in / going
+    Internally, snazzy_analysis uses embryo names, so when data is coming in / going
     out it has to be converted.
     """
 
     def __init__(self, properties, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Experiment parameters")
+        self.setWindowTitle("Dataset parameters")
         self.setFixedWidth(540)
 
         self.combo_keys = {"dff_strategy": ["baseline", "local_minima"]}

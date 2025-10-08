@@ -20,9 +20,9 @@ The other notebooks are used to understand in details the pipeline stages.
 
 ### Adding data
  
-Each experiment will have one corresponding folder inside `./data/`.
-By running the code in `snazzy_processing_pipeline.ipynb`, the raw data will be parsed and saved inside `./data/{experiment_name}/embs`.
-To compare the calculated VNC length against manual measurements, add an `annotated` folder inside the experiment directory.
+Each dataset will have one corresponding folder inside `./data/`.
+By running the code in `snazzy_processing_pipeline.ipynb`, the raw data will be parsed and saved inside `./data/{dataset_name}/embs`.
+To compare the calculated VNC length against manual measurements, add an `annotated` folder inside the dataset directory.
 The measurements should be saved as a csv file.
 
 Given the description above, the file structure inside the `data` folder should look like:

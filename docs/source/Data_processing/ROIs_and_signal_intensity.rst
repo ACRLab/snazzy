@@ -36,5 +36,5 @@ To display it, ``cd`` into the ``snazzy_processing`` directory, and run the file
 
     python3 scripts/plot_contours.py
 
-It will look for any experiment directories you have inside the ``./data`` directory and present the available options in the terminal.
+It will look for any dataset directories you have inside the ``./data`` directory and present the available options in the terminal.
 Animations can be paused by pressing any key.

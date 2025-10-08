@@ -34,13 +34,15 @@ class FixedSidebar(QWidget):
         self.setLayout(main_layout)
 
     def populate_buttons(self, exp_to_embs: dict[str, Iterable[str]], layout):
-        for exp in exp_to_embs:
-            for emb in sorted(exp_to_embs[exp], key=sort_by_emb_number):
+        for dataset in exp_to_embs:
+            for emb in sorted(exp_to_embs[dataset], key=sort_by_emb_number):
                 row_layout = QHBoxLayout()
                 row_layout.setSpacing(0)
-                btn = QPushButton(f"{exp} - {emb}")
+                btn = QPushButton(f"{dataset} - {emb}")
                 btn.clicked.connect(
-                    lambda checked, name=emb, exp=exp: self.callback(name, exp)
+                    lambda checked, name=emb, dataset=dataset: self.callback(
+                        name, dataset
+                    )
                 )
                 row_layout.addWidget(btn)
                 layout.addLayout(row_layout)
