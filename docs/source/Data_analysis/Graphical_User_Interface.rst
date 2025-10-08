@@ -45,7 +45,7 @@ You can load more than one dataset to a Group, or have multiple Groups to visual
 When more than one dataset is loaded, you cannot change the analysis parameters anymore.
 In this mode, the analysis results are read-only.
 The same parameters should be used to comparing different datasets.
-To make sure that the chosen parameters work with each dataset, load each one separately and verify the peak detection first.
+To make sure that the chosen parameters are appropriate for each dataset, load each one separately and verify the peak detection first.
 The comparison plots in the Plot menu will show results by Group.
 In the upper left corner of the GUI, a dropdown menu can be used to change the Group that is currently being visualized.
 
@@ -81,7 +81,7 @@ The ``emb_numbers.png`` file represents a snapshot of the microscope's field of 
 Config parameters
 -----------------
 
-When loading a dataset the code will look for a config file named ``peak_detection_params.json`` inside th dataset directory and will use its data for the analysis.
+When loading a dataset the code will look for a config file named ``peak_detection_params.json`` inside the dataset directory and will use its data for the analysis.
 If not found, a file with default parameters is created.
 The default parameters can be found inside ``config.py``. 
 If you change any of the parameters, they will be recorded in this file.
@@ -95,7 +95,7 @@ From this window it's possible to set:
 * Group name: name of the group that contains this dataset
 * First peak threshold: minimum time in minutes that has to pass before any peak happens. Used to make sure that the first peak caught at the imaging session is really the activity onset.
 * To_exclude: embryo numbers that will be excluded from the analysis. These embryos will be excluded from the analysis.
-* To_remove: embryo numbers that will be analyzed, but will show up in the 'Removed' group.
+* To_remove: embryo numbers that will be analyzed, but will appear in the 'Removed' group.
 * Embryos that have it's first peak before the first peak threshold or that were marked by the user as removed will also be at the to_remove category.
 * Has_transients: if selected the code will try to identify and skip the first peak if it's likely just a transient.
 * Has_dsna: if selected the code will try to determine dSNA and ignore all peaks that happen after dSNA start.
@@ -109,8 +109,8 @@ Visualizing traces
 
 The description here refers to the image on the top of the file.
 
-The top app bar has buttons to change the data presentation.
-Below the top app bar there are two sliders.
+The top bar has buttons to change the data presentation.
+Below the top bar there are two sliders.
 The first is for the frequency cutoff, which controls how much the signal is smoothed for the finding peaks algorithm.
 The second is the peak width parameter, used to determine the start and end times of each peak.
 The sidebar presents which embryos are currently considered for plots and analysis, and which ones should be removed.
