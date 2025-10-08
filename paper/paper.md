@@ -70,7 +70,7 @@ This enables the accurate tracking of fluorescence intensity as well as changes 
 
 To the best of our knowledge, there are no open-source packages that provide tools for performing automated data analysis and quantification of global calcium dynamics.
 Most open-source tools available for analyzing neuronal activity using GECI focus on segmenting individual neurons within a single specimen.
-CaImAn [@giovannucci:2019], and Suite2p [@pachitariu:2016] are among the most widely used.
+`CaImAn` [@giovannucci:2019], and `Suite2p` [@pachitariu:2016] are among the most widely used.
 These packages detect calcium dynamics and use individual neuron statistics to perform spike inference, but do not offer direct peak detection on the calcium signal.
 Furthermore, they are optimized for two-photon microscopy as opposed to wide-field microscopy.
 `SNAzzy` provides a series of automated analyses and quantifications to analyze global calcium levels in time-series acquired with widefield microscopes.
@@ -117,7 +117,7 @@ Depending on the embryo's orientation, some points may be part of the brain lobe
 To obtain a robust centerline estimate that can ignore outliers, we use RANSAC [@fischler:1981] over the local maxima points and measure the overlap between the fitted line and the binary image.
 CNS length is also detected frame by frame and exported as a CSV file \autoref{fig:fig1}.
 
-![Figure 3: Peak detection algorithm.
+![Peak detection algorithm.
 A low-pass filter (orange line) is applied to the ∆F/F signal (black line) to remove fast transients.
 The peak in the filtered signal (orange dot) is then ported back to the ∆F/F (blue dot) signal by selecting the leftmost peak within a search window (blue lines).\label{fig:fig3}](figures/snazzy-fig3.png)
 
@@ -133,7 +133,7 @@ Results can be visualized and curated in a graphical user interface (GUI) implem
 During curation, researchers can modify data analysis parameters, which are persisted in a JSON configuration file and utilized by the core analysis code across different machines and users.
 Finally, a large number of different metrics derived from ∆F/F, CNS length, and peaks can be visualized and plotted using the GUI.
 
-![Figure 4: GUI for data validation, curation, visualization and plotting.
+![GUI for data validation, curation, visualization and plotting.
 Initial GUI screen.
 A ∆F/F trace (white) and the corresponding peaks (magenta dots) are shown.
 The low-passed signal (green line) is used as a reference to determine peaks.
@@ -150,21 +150,3 @@ We acknowledge Newt PenkoffLidbeck and Berfin Azizoglu for feedback on the manus
 his work was partially supported by R00…. 
 
 # References
-
-Akin, Orkun, and S. Lawrence Zipursky. 2020. “Activity Regulates Brain Development in the Fly.” Current Opinion in Genetics & Development 65 (December):8–13.
-Ardiel, Evan L., Andrew Lauziere, Stephen Xu, Brandon J. Harvey, Ryan Patrick Christensen, Stephen Nurrish, Joshua M. Kaplan, and Hari Shroff. 2022. “Stereotyped Behavioral Maturation and Rhythmic Quiescence in C. Elegans Embryos.” eLife 11 (August). https://doi.org/10.7554/eLife.76836.
-Avasthi, Prachee, Tara Essock-Burns, Galo Garcia III, Jase Gehring, David Q. Matus, David G. Mets, and Ryan York. 2023. “Gotta Catch ‘em All: Agar Microchambers for High-Throughput Single-Cell Live Imaging,” April. https://doi.org/10.57844/ARCADIA-V1BG-6B60.
-Blankenship, Aaron G., and Marla B. Feller. 2009. “Mechanisms Underlying Spontaneous Patterned Activity in Developing Neural Circuits.” Nature Reviews. Neuroscience 11 (1): 18–29.
-Carreira-Rosario, Arnaldo, Ryan A. York, Minseung Choi, Chris Q. Doe, and Thomas R. Clandinin. 2021. “Mechanosensory Input during Circuit Formation Shapes Drosophila Motor Behavior through Patterned Spontaneous Network Activity.” Current Biology: CB 31 (23): 5341–49.e4.
-Crisp, Sarah, Jan Felix Evers, André Fiala, and Michael Bate. 2008. “The Development of Motor Coordination in Drosophila Embryos” 3717:3707–17.
-Donoughe, Seth, Chiyoung Kim, and Cassandra G. Extavour. 2018. “High-Throughput Live-Imaging of Embryos in Microwell Arrays Using a Modular Specimen Mounting System.” Biology Open 7 (7): bio031260.
-Fischler, Martin A., and Robert C. Bolles. 1981. “Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography.” Communications of the ACM 24 (6): 381–95.
-Giovannucci, Andrea, Johannes Friedrich, Pat Gunn, Jérémie Kalfon, Brandon L. Brown, Sue Ann Koay, Jiannis Taxidis, et al. 2019. “CaImAn an Open Source Tool for Scalable Calcium Imaging Data Analysis.” eLife 8 (January). https://doi.org/10.7554/eLife.38173.
-Lin, Michael Z., and Mark J. Schnitzer. 2016. “Genetically Encoded Indicators of Neuronal Activity.” Nature Neuroscience 19 (9): 1142–53.
-Menzies, Jonathan A. C., Andre M. Chagas, Tom Baden, and Claudio R. Alonso. 2024. “A microRNA That Controls the Emergence of Embryonic Movement.” eLife. https://doi.org/10.7554/elife.95209.2.
-Nakai, J., M. Ohkura, and K. Imoto. 2001. “A High Signal-to-Noise Ca(2+) Probe Composed of a Single Green Fluorescent Protein.” Nature Biotechnology 19 (2): 137–41.
-Otsu, Nobuyuki. 1979. “A Threshold Selection Method from Gray-Level Histograms.” IEEE Transactions on Systems, Man, and Cybernetics 9 (1): 62–66.
-Pachitariu, Marius, Carsen Stringer, Mario Dipoppa, Sylvia Schröder, L. Federico Rossi, Henry Dalgleish, Matteo Carandini, and Kenneth D. Harris. 2016. “Suite2p: Beyond 10,000 Neurons with Standard Two-Photon Microscopy.” bioRxiv. bioRxiv. https://doi.org/10.1101/061507.
-Virtanen, Pauli, Ralf Gommers, Travis E. Oliphant, Matt Haberland, Tyler Reddy, David Cournapeau, Evgeni Burovski, et al. 2020. “SciPy 1.0: Fundamental Algorithms for Scientific Computing in Python.” Nature Methods 17 (3): 261–72.
-Wu, Michelle W., Nazim Kourdougli, and Carlos Portera-Cailliau. 2024. “Network State Transitions during Cortical Development.” Nature Reviews. Neuroscience, May. https://doi.org/10.1038/s41583-024-00824-y.
-
