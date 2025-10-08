@@ -101,6 +101,11 @@ From this window it's possible to set:
 * Has_dsna: if selected the code will try to determine dSNA and ignore all peaks that happen after dSNA start.
 * Dff_strategy: Combo box with the baseline strategy methods. ``local_minima`` will pick the bottom 11 points out of the ``baseline_window_size`` and use that average as the baseline. ``baseline`` will split the DFF values into bins and use the average of the most frequent bin as the baseline.  This method assumes that the bursts of activity are sparse, so that for all windows the most frequent bin falls into the baseline values.
 
+The embryos listed in ``to_remove`` are not used for plotting and comparisons between Groups.
+There are different reasons for marking an embryo as removed.
+One example would be to remove embryos that already are in later stages of development when the imaging session starts. 
+Another would be to remove unhealthy embryos, or embryos that don't hatch, if that is a requirement for the experiment.
+
 Inside the File menu there is an option to open the ``json`` file and change any of its parameters.
 Updating the file causes the entire Dataset to be recreated with the new configuration data.
 
