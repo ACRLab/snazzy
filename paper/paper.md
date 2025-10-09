@@ -9,7 +9,7 @@ tags:
   - Neurodevelopment
   - Circuit Wiring
 authors:
-  - name: Carlos D. Paiva
+  - name: Carlos Damiani Paiva
     orcid: 0009-0007-6658-2620
     affiliation: "1, 2"
   - name: Alana J. Evora
@@ -23,9 +23,9 @@ authors:
     corresponding: true
     affiliation: "1, 2"
 affiliations:
-  - name: Department of Biology, Duke Unviersity, Durham, NC 27708
+  - name: Department of Biology, Duke University, Durham, NC 27708
     index: 1
-  - name: Department of Neurobiology, Duke Unviersity, Durham, NC 27708
+  - name: Department of Neurobiology, Duke University, Durham, NC 27708
     index: 2
 date: 8 October 2025
 bibliography: paper.bib
@@ -33,7 +33,7 @@ bibliography: paper.bib
 
 # Summary
 
-Genetically encoded fluorescent indicators are powerful tools for monitoring biological processes in live samples using light microscopy [@lin:2016; @nakai:2001].
+Genetically encoded fluorescent indicators are powerful tools for monitoring biological processes in live samples [@lin:2016; @nakai:2001].
 When combined with a large field of view, a single time-lapse recording has the potential to capture many specimens, facilitating high-throughput data collection.
 However, the simultaneous recording of many biological samples across time points produces large, multidimensional datasets that are challenging to process and analyze.
 We present `SNAzzy`, a Python package for studying synchronous network activity (SNA) in Drosophila embryos via high-throughput microscopy.
@@ -45,10 +45,10 @@ This tool can be readily applied to analyze fluorescent intensities in time-laps
 
 # Statement of need
 
-During synchronous network activity (SNA), many neurons fire synchronously, generating waves of activity that span across large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020]
-In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation [@crisp:2008; @carreira:2021]
+During synchronous network activity (SNA), many neurons fire synchronously, generating waves of activity that span across large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020].
+In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation [@crisp:2008; @carreira:2021].
 To gain an understanding of SNA, it is essential to quantify waves of activity in the nervous system while also tracking morphology as a proxy of neurodevelopment.
-For these reasons, we combine a commonly used genetically encoded calcium indicator (GECI) that reflects neural activity with a structural fluorophore [@carreira:2021].
+For these reasons, we combine a commonly used genetically encoded calcium indicator (GECI) that reports neural activity with a structural fluorophore [@carreira:2021].
 The structural fluorophore signal remains stable, independent of neural activity, making it suitable for continuous tracking morphology of the nerve cord.
 To record many embryos during SNA, we use a wide-field fluorescence microscopy system that captures the GECI and structural fluorophore signal of dozens of developing embryos for over 5 hours.
 
@@ -58,7 +58,7 @@ We were unable to find a tool designed for widefield microscopy that rapidly pro
 ## Tracking of multiple “adaptive  ROIs”  
 
 To the best of our knowledge, there are no other packages that provide functionality for automated parsing of raw images of many live specimens into activity and morphological quantifications.
-Other studies have employed manual selection of regions of interest (ROIs) and used static ROIs [@menzies:2024; @ardiel:2022; @carreira:2021].
+Other studies have employed manual selection of regions of interest (ROIs) and used static ROIs [@akin:2020; @menzies:2024; @ardiel:2022; @carreira:2021].
 Manual selection often generates imprecise ROIs, which can lead to inaccurate quantifications, and is also cumbersome and prone to human error.
 Static ROIs are not reliable for detecting the fluorescent signal of live specimens that change in morphology and move while imaging.
 `SNAzzy` fills these gaps as an accessible pipeline for the automated analysis of multiple live samples in parallel.
@@ -69,7 +69,7 @@ This enables the accurate tracking of fluorescence intensity as well as changes 
 ## Capturing global Calcium dynamics
 
 To the best of our knowledge, there are no open-source packages that provide tools for performing automated data analysis and quantification of global calcium dynamics.
-Most open-source tools available for analyzing neuronal activity using GECI focus on segmenting individual neurons within a single specimen.
+Most open-source tools available for analyzing neural activity using GECI focus on segmenting individual neurons within a single specimen.
 `CaImAn` [@giovannucci:2019], and `Suite2p` [@pachitariu:2016] are among the most widely used.
 These packages detect calcium dynamics and use individual neuron statistics to perform spike inference, but do not offer direct peak detection on the calcium signal.
 Furthermore, they are optimized for two-photon microscopy as opposed to wide-field microscopy.
@@ -92,7 +92,7 @@ Each embryo expresses a GECI (dynamic fluorophore) and a structural fluorophore.
 Fluorophores are imaged in different optical channels.
 
 The first pipeline step converts the raw data to TIF format, thereby avoiding compatibility issues that may arise when parsing different proprietary formats \autoref{fig:fig1}.
-All embryos are then segmented using histogram equalization followed by intensity threshold binarization [@otsu:1979].
+All embryos are then segmented using histogram equalization, followed by intensity threshold binarization [@otsu:1979].
 Boxes surrounding the segments are cropped into individual time-lapses for each embryo.
 Cropping results in a substantial memory reduction, as most background pixels are removed, with cropped images typically accounting for around 40% of the original size.
 
@@ -131,7 +131,8 @@ Finally, the detected peaks are ported to the original ∆F/F signal.
 
 Results can be visualized and curated in a graphical user interface (GUI) implemented in `PyQt6` \autoref{fig:fig4}.
 During curation, researchers can modify data analysis parameters, which are persisted in a JSON configuration file and utilized by the core analysis code across different machines and users.
-Finally, a large number of different metrics derived from ∆F/F, CNS length, and peaks can be visualized and plotted using the GUI.
+Finally, a large number of different metrics and representations derived from ∆F/F, CNS length, and peaks can be visualized and plotted using the GUI.
+These include SNA onset, burst duration and spectrograms, among others.
 
 ![GUI for data validation, curation, visualization and plotting.
 Initial GUI screen.
@@ -146,7 +147,7 @@ As an open and versatile solution, `SNAzzy` offers tools for a broader range of 
 
 # Acknowledgments
 
-We acknowledge Newt PenkoffLidbeck and Berfin Azizoglu for feedback on the manuscript.
-his work was partially supported by R00…. 
+We acknowledge Newt PenkoffLidbeck and D. Berfin Azizoglu for feedback on the manuscript.
+This work was partially funded by NINDS and the BRAIN initiative (R00NS119295).
 
 # References
