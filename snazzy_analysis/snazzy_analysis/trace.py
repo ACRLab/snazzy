@@ -5,7 +5,7 @@ import numpy as np
 import scipy.signal as spsig
 from scipy.stats import zscore
 
-from snazzy_analysis import Config, FrequencyAnalysis, TracePhases
+from snazzy_analysis import Config, FrequencyAnalysis
 
 
 class BaselineStrategies(Enum):
@@ -23,7 +23,6 @@ class Trace:
         name,
         activity,
         config: Config,
-        fs=1 / 6,
     ):
         self.name = name
         self.time = activity[:, 0]
@@ -36,12 +35,10 @@ class Trace:
         # list of peaks that were manually added / removed:
         self.to_add = []
         self.to_remove = []
-        self.fs = fs
 
         self._peak_idxes = None
         self._peak_bounds_indices = None
         self.filtered_dff = None
-        self.dsna_start = None
 
         self.trim_idx = self.get_trim_index()
         self.dff = self.compute_dff()
@@ -54,9 +51,6 @@ class Trace:
                 self.detect_peaks(self.pd_params["freq"])
             else:
                 self.detect_peaks()
-        if self.exp_params.get("has_dsna", False):
-            filtered_peaks = [pi for pi in self._peak_idxes if pi < self.dsna_start]
-            return np.array(filtered_peaks)
         return self._peak_idxes
 
     @peak_idxes.setter
@@ -357,36 +351,30 @@ class Trace:
                 sorted(list(set(filtered_peaks + to_add))), dtype=np.int64
             )
 
-    def update_dsna_start(self, params):
-        if not self.exp_params.get("has_dsna", False):
-            return
-        self.dsna_start = self.get_dsna_start(params["freq"])
-
     def detect_peaks(self, freq=0.0025):
         self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
         self.filtered_dff = filtered_dff
-        self.dsna_start = self.get_dsna_start(freq)
 
         stages = [
             (self.remove_transients, {}),
             (self.remove_below_threshold, {}),
             (self.reconcile_manual_peaks, {}),
-            (self.update_dsna_start, {"freq": freq}),
         ]
 
         self.process_peaks(stages)
 
-    def filter_peaks_by_local_context(
-        self, signal, peak_indices, window_size=300, value=75, method="percentile"
+    def filter_peaks_by_local_threshold(
+        self, signal, peak_indices, window_size=300, value=75
     ):
         """Filter pre-detected peaks by comparing their height to a local threshold.
+
+        Peaks that are not within a percentile of the values in the window are filtered out.
 
         Parameters:
             signal (np.ndarray): Original signal.
             peak_indices (np.ndarray): Indices of peaks (e.g., from find_peaks).
             window_size (int): Size of the window to determine local threshold.
             value (int): Factor to determine local threshold.
-            method ('mean' | 'median' | 'percentile'): How to calculate the threshold.
 
         Returns:
             filtered_peaks (np.ndarray): Indices of peaks that passed local thresholding.
@@ -394,26 +382,19 @@ class Trace:
         filtered_peaks = []
 
         for i in peak_indices:
-            if signal[i] > self.local_threshold(signal, i, window_size, value, method):
+            if signal[i] > self.local_threshold(signal, i, window_size, value):
                 filtered_peaks.append(i)
 
         return np.array(sorted(filtered_peaks))
 
-    def local_threshold(self, signal, idx, window_size, value, method):
+    def local_threshold(self, signal, idx, window_size, value):
         half_win = window_size // 2
 
         start = max(0, idx - half_win)
         end = min(len(signal), idx + half_win)
         window = signal[start:end]
 
-        if method == "mean":
-            local_thresh = value * np.mean(np.abs(window))
-        elif method == "median":
-            local_thresh = value * np.median(np.abs(window))
-        elif method == "percentile":
-            local_thresh = np.percentile(np.abs(window), value)
-        else:
-            raise ValueError("Method must be 'mean', 'median', or 'percentile'.")
+        local_thresh = np.percentile(np.abs(window), value)
 
         return local_thresh
 
@@ -473,25 +454,14 @@ class Trace:
 
         pp_ws = self.pd_params["port_peaks_window_size"]
         pp_thres = self.pd_params["port_peaks_thres"]
-        local_peak_indices = self.port_peaks(
+        dff_peak_indices = self.port_peaks(
             peak_indices,
             self.dff[: self.trim_idx],
             search_window=pp_ws,
             peak_height_thres=pp_thres,
         )
 
-        local_ws = self.pd_params["local_thres_window_size"]
-        local_value = self.pd_params["local_thres_value"]
-        local_method = self.pd_params["local_thres_method"]
-        peaks = self.filter_peaks_by_local_context(
-            self.dff,
-            local_peak_indices,
-            window_size=local_ws,
-            value=local_value,
-            method=local_method,
-        )
-
-        return np.array(peaks), filtered_dff
+        return np.array(dff_peak_indices), filtered_dff
 
     def get_trim_index(self):
         """Try to return the trim index from config, otherwise calculates it."""
@@ -600,19 +570,3 @@ class Trace:
             )
             local_peaks.append(len(peak_indices))
         return local_peaks
-
-    def get_dsna_start(self, freq):
-        if not self.exp_params.get("has_dsna", False):
-            return None
-
-        manual_dsna = self.config.get_corrected_dsna_start(self.name)
-
-        if manual_dsna is not None and manual_dsna >= 0:
-            return manual_dsna
-
-        tp = TracePhases(self)
-        dsna_start = tp.get_dsna_start(freq)
-        if dsna_start == -1:
-            return self.trim_idx
-
-        return dsna_start

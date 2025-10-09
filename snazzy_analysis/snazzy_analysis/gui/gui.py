@@ -35,7 +35,6 @@ from snazzy_analysis.gui import (
     JsonViewer,
     LabeledSlider,
     Model,
-    PhaseBoundariesWindow,
     RemovableSidebar,
     Worker,
 )
@@ -205,29 +204,6 @@ class MainWindow(QMainWindow):
         groups = self.model.groups
         self.cpw = ComparePlotWindow(groups)
         self.cpw.show()
-
-    def display_phase_boundaries(self):
-        dataset = self.model.selected_dataset
-        traces = [e.trace for e in dataset.embryos]
-
-        current_trace = self.model.selected_trace
-        current_trace_idx = 0
-        for i, trace in enumerate(traces):
-            if trace.name == current_trace:
-                current_trace_idx = i
-                break
-
-        has_dsna = self.model.has_dsna()
-        self.pbw = PhaseBoundariesWindow(traces, current_trace_idx, has_dsna)
-        self.pbw.save_bounds_signal.connect(self.save_trace_phases)
-        self.pbw.show()
-
-    def save_trace_phases(self, emb_name, new_phases):
-        if "phase1_end" in new_phases:
-            self.model.save_phase1_end_idx(emb_name, new_phases["phase1_end"])
-        if "dsna_start" in new_phases:
-            self.model.save_dsna_start(emb_name, new_phases["dsna_start"])
-        self.render_trace()
 
     def display_embryo_movie(self):
         dataset = self.model.selected_dataset
@@ -488,10 +464,6 @@ class MainWindow(QMainWindow):
         display_movie_action.triggered.connect(self.display_embryo_movie)
         plot_menu.addAction(display_movie_action)
 
-        display_phase_bounds_action = QAction("View phase boundaries", self)
-        display_phase_bounds_action.triggered.connect(self.display_phase_boundaries)
-        plot_menu.addAction(display_phase_bounds_action)
-
         display_plots_action = QAction("View plots", self)
         display_plots_action.triggered.connect(self.display_plots)
         plot_menu.addAction(display_plots_action)
@@ -738,7 +710,6 @@ class MainWindow(QMainWindow):
         self._plot_peaks(trimmed_time, trace)
         self._plot_active_and_struct_channels(time, trace)
         self._setup_trim_line(time, trace)
-        self._setup_dsna_line(trimmed_time, trace)
         self._plot_peak_widths(trimmed_time, trace)
         self._set_plot_titles(emb_name, exp_name)
 
@@ -793,26 +764,6 @@ class MainWindow(QMainWindow):
         )
         self.plot_channels.addLegend()
 
-    def _setup_dsna_line(self, time, trace):
-        if not self.model.has_dsna():
-            return
-
-        try:
-            freq = self.freq_slider.value()
-        except RuntimeError:
-            freq = trace.pd_params["freq"]
-
-        dsna_start = trace.get_dsna_start(freq)
-
-        dsna_line = pg.InfiniteLine(
-            time[dsna_start],
-            movable=True,
-            pen=pg.mkPen("chartreuse", cosmetic=True),
-        )
-        dsna_line.addMarker("<|>")
-        dsna_line.sigPositionChangeFinished.connect(self.change_dsna_start)
-        self.plot_widget.addItem(dsna_line)
-
     def _setup_trim_line(self, time, trace):
         is_single_exp = not self.model.has_combined_datasets()
 
@@ -857,43 +808,6 @@ class MainWindow(QMainWindow):
             title = emb_name
         self.plot_widget.setTitle(title)
         self.plot_channels.setTitle(title)
-
-    def change_dsna_start(self, il_obj):
-        trace = self.model.selected_trace
-        emb = self.model.selected_embryo
-
-        if self.use_dev_time:
-            dev_time = emb.lin_developmental_time
-            idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
-            x = int(idx)
-        else:
-            x = self.model.get_index_from_time(il_obj.getXPos())
-
-        res = QMessageBox.question(
-            self,
-            "Confirm Update",
-            "Update dSNA start?",
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-        )
-
-        prev_dsna_start = trace.dsna_start
-        if self.use_dev_time:
-            prev_value = dev_time[prev_dsna_start]
-        else:
-            prev_value = self.model.get_index_from_time(prev_dsna_start)
-
-        if res == QMessageBox.StandardButton.Cancel:
-            il_obj.setValue(prev_value)
-            return
-
-        self.model.save_dsna_start(emb.name, x)
-
-        pd_params = self.model.get_pd_params()
-
-        trace.detect_peaks(pd_params["freq"])
-        trace.compute_peak_bounds(pd_params["peak_width"])
-
-        self.render_trace()
 
     def change_trim_idx(self, il_obj):
         trace = self.model.selected_trace

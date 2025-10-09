@@ -174,14 +174,6 @@ class Model:
         emb_name = dataset.selected_embryo.name
         dataset.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
 
-    def save_phase1_end_idx(self, emb_name, idx):
-        dataset = self.selected_dataset
-        dataset.config.save_manual_peak_data(emb_name, manual_phase1_end=idx)
-
-    def save_dsna_start(self, emb_name, idx):
-        dataset = self.selected_dataset
-        dataset.config.save_manual_peak_data(emb_name, manual_dsna_start=idx)
-
     def update_peak_widths(self, peak_index, line_index, new_line_pos):
         emb = self.selected_dataset.selected_embryo
 
@@ -357,11 +349,6 @@ class Model:
         dff = trace.dff[: trace.trim_idx]
 
         return trace, time, time[: trace.trim_idx], dff
-
-    def has_dsna(self):
-        dataset = self.selected_dataset
-        exp_params = dataset.config.get_exp_params()
-        return exp_params.get("has_dsna", False)
 
     def has_combined_datasets(self):
         return len(self.selected_group.datasets) > 1
