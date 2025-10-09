@@ -124,7 +124,7 @@ def measure(img_path, low_non_VNC=False, start=None, end=None, interval=100) -> 
         low_non_VNC (bool):
             Flag to determine how to binarize the image.
             Pick True if the VNC has lower signal than the rest of the embryo.
-            Defaults to `True`.
+            Defaults to `False`.
         start (int | None):
             Starting image frame. Starts at first frame if None.
         end (int | None):

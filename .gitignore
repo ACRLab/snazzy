@@ -1,5 +1,13 @@
 # dir with input files
-*/data/
+snazzy_processing/data/*
+snazzy_analysis/data/*
+
+# add annotated data for ROI length evaluation
+!snazzy_processing/data/20240611/
+snazzy_processing/data/20240611/*
+!snazzy_processing/data/20240611/annotated
+!snazzy_processing/data/20240611/emb_sizes
+
 
 # dir with output files
 */results/
