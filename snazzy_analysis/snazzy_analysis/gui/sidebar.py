@@ -54,8 +54,8 @@ class RemovableSidebar(QWidget):
     def __init__(
         self,
         callback: Callable[[str, str | None], None],
-        accepted_embs: set[int],
-        removed_embs: set[int],
+        accepted_embs: set[str],
+        removed_embs: set[str],
         exp_name: str,
     ):
         super().__init__()

@@ -22,7 +22,7 @@ def measure_VNC_centerline(
         image (np.ndarray):
             3D matrix representing an image.
         pixel_width (float):
-            Physica size of a pixel.
+            Physical size of a pixel.
         thres_rel (float):
             Threshold value used to calculate centerline points.
         min_dist (float):
