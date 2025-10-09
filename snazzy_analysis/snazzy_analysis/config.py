@@ -26,25 +26,20 @@ def set_decoder(obj):
 
 class ExpParams(BaseModel):
     """
-    Exp params.
+    Params related to a Dataset.
 
     Attributes
     ----------
     first_peak_threshold: int
         Minimum time, in minutes, for the first peak. Embryos with peaks before that will be ignored.
     to_exclude: list[str] | None
-        List of embryo names to be excluded. These embryos won't even be created.
+        List of embryo ids to be excluded. These embryos won't even be created.
     to_remove: list[str] | None
-        List of embryo names to be removed. These will be created and show up in the GUI as removed.
-    dff_strategy: "baseline" | "local_minima"
-        How to compute the dff baseline.
+        List of embryo ids to be removed. These will be created and show up in the GUI as removed.
     has_transients: boolean
         If a dataset has transients, early peaks will be skipped.
-    has_dsna: boolean
-        If a dataset has embryos with dSNA, automatically calculates dSNA start and ignores peaks
-        that happen after that point.
     acquisition_period: int
-        The time (in seconds) interval between acquiring two successive frames.
+        The time (in seconds) interval between acquiring two successive frames in a given channel.
     """
 
     first_peak_threshold: int = 30
@@ -56,7 +51,64 @@ class ExpParams(BaseModel):
 
 
 class PDParams(BaseModel):
-    """Parameters used in peak detection."""
+    """Parameters used in peak detection.
+
+    While this is a long list of parameters, the default values work well for many DFF traces.
+    `freq` and `peak_width` might require some tuning and the GUI has sliders for changing them.
+    They are exposed here to avoid hiding scattered magic values in the peak detection code and
+    to make them easier to change if necessary.
+
+    Attributes
+    ----------
+    peak_width: float
+        Value between 0 and 1 (inclusive), used to calculate peak width.
+        Passed to `scipy.signal.peak_widths`, see `rel_height` in that function for detailed description.
+        Default value is 0.98.
+    freq: float
+        Frequency cutoff used to find peaks.
+        See `trace.calculate_peaks` for details.
+        Default value is 0.0025.
+    dff_strategy: str
+        Method used to calculate F0, and therefore dff, since dff = (F - F0) / F0.
+        Options are 'local_minima' (default) and 'baseline'.
+        See `trace.average_n_local_window` and `trace.compute_baseline` for method descriptions.
+    baseline_window_size: int
+        Number of points used to calculate F0.
+        Should be an odd number.
+        Defaults to 81.
+    trim_zscore: float
+        Z-value threshold used to determine hatching.
+        See `trace.trim_data` for more details.
+        Defaults to 0.35.
+    ISI_factor: float
+        The inter-spike interval (ISI) is used to ignore early ramps in signal that are misindentified as bursts.
+        If the interval between the first two peaks is greater than `average interval * ISI_factor`, that peak is ignored.
+        See `trace.remove_transients` for details.
+    low_amp_threshold: float
+        Ignores peaks that have amplitude lower than `low_amp_threshold * max_peak_amplitude`.
+        Defaults to 0.1.
+    fft_height: float
+        Minimum amplitude to detect peaks in the low-passed filtered signal.
+        Defaults to 0.04.
+    fft_prominence: float
+        Complements fft_height for detecting peaks in the freq domain.
+        See `trace.calculate_peaks` for details.
+        Defaults to 0.03.
+    local_thres_window_size: int
+        Window size used to filter peaks by local threshold.
+        See `trace.filter_peaks_by_local_threshold` for details.
+        Defaults to 300.
+    local_thres_value: float
+        Percentage of the local maximum, used to filter peaks.
+        See `trace.filter_peaks_by_local_threshold` for details.
+        Defaults to 75.
+    port_peaks_window_size: int
+        Window size to port peaks from filtered signal to dff signal.
+        Defaults to 30.
+    port_peaks_thres: float
+        Minimum value as a percentage of the maximum peak within `port_peaks_window_size` required when porting a peak to dff values.
+        Defaults to 70.
+    """
 
     peak_width: float = 0.98
     freq: float = 0.0025
@@ -75,6 +127,25 @@ class PDParams(BaseModel):
 
 
 class EmbryoParams(BaseModel):
+    """Values that can be manually changed using the GUI, for a single Embryo.
+
+    Attributes:
+    -----------
+        wlen: int
+            window length (half size)used when adding or removing peaks.
+            defaults to 2.
+        manual_peaks: list[int]
+            Indices marked as a manual peak.
+        manual_remove: list[int]
+            Indices where calculated peaks will be ignored within that index +- wlen.
+        manual_widths: dict[str, Any]
+            Maps indices to start and end coordinates of a peak.
+            The index represents a peak.
+        manual_trim_idx: int
+            Index used as the trim_idx.
+            All dff data after trim_idx is ignored.
+    """
+
     wlen: int = 2
     manual_peaks: list[int] = Field(default_factory=list)
     manual_remove: list[int] = Field(default_factory=list)

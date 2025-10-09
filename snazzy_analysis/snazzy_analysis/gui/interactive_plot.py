@@ -4,6 +4,8 @@ import pyqtgraph as pg
 
 
 class InteractivePlotWidget(pg.PlotWidget):
+    """A PlotWidget that emits custom signals for CTRL + click and SHIFT + click."""
+
     add_peak_fired = pyqtSignal(float, float)
     remove_peak_fired = pyqtSignal(float, float)
 

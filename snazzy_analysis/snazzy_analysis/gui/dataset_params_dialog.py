@@ -25,7 +25,7 @@ def convert_value(value: str, field_name: str):
 
 
 class DatasetParamsDialog(QDialog):
-    """Present Dataset params that can be changed before creating an Dataset.
+    """Present Dataset params that can be changed before creating a Dataset.
 
     Embryos are presented as embryo ids, to make the input easier to change.
     Internally, snazzy_analysis uses embryo names, so when data is coming in / going
