@@ -39,6 +39,9 @@ Since the leftmost peak can have an amplitude very different than the local maxi
 3. Filter peaks by local threshold
 ----------------------------------
 
+This step is **not enabled** by default.
+To enable it the ``dff_peak_indices`` in ``trace.calculate_peaks`` must be passed to ``trace.filter_peaks_by_local_threshold``.
+
 As the embryos develop, there is a global trend of peak amplitude to rise and then stabilize before hatching.
 We use this fact to perform an extra validation step for the calculated peaks.
 Each peak is compared against its neighboring peaks, and peaks that are too high or too low are discarted.
