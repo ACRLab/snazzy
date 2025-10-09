@@ -372,6 +372,32 @@ class ComparePlotWindow(QWidget):
         else:
             self._save_plot(save_dir, "episode_intervals.png")
 
+    def ep_durations(self, save=False, save_dir=None):
+        """Duration of each episode."""
+        self.clear_axes()
+        data = {"group": [], "duration": [], "idx": []}
+
+        for group in self.groups:
+            for _, emb in group.iter_all_embryos():
+                for i, duration in zip(range(15), emb.trace.peak_durations):
+                    data["group"].append(group.name)
+                    data["duration"].append(duration / 60)
+                    data["idx"].append(i)
+
+        dodge = len(set(data["group"])) > 1
+        ax = sns.pointplot(
+            data=data, x="idx", y="duration", hue="group", dodge=dodge, ax=self.ax
+        )
+
+        ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
+        ax.set_title("Durations by peak")
+        ax.set_ylabel("Duration (min)")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            self._save_plot(save_dir, "peak_durations.png")
+
     def decay_times(self, save=False, save_dir=None):
         """Decay times.
 
@@ -405,6 +431,35 @@ class ComparePlotWindow(QWidget):
             self.canvas.draw()
         else:
             self._save_plot(save_dir, "decay_times.png")
+
+    def rise_times(self, save=False, save_dir=None):
+        """Peak rise times.
+
+        Time between the start of the peak (left width boundary) and the peak time."""
+        self.clear_axes()
+        data = {"group": [], "duration": [], "idx": []}
+
+        for group in self.groups:
+            for _, emb in group.iter_all_embryos():
+                for i, duration in zip(range(15), emb.trace.peak_rise_times):
+                    data["group"].append(group.name)
+                    data["duration"].append(duration)
+                    data["idx"].append(i)
+
+        dodge = len(set(data["group"])) > 1
+        ax = sns.pointplot(
+            data=data, x="idx", y="duration", hue="group", dodge=dodge, ax=self.ax
+        )
+
+        ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
+        ax.set_title("Rise times")
+        ax.set_xlabel("Peak #")
+        ax.set_ylabel("Duration (s)")
+
+        if not save:
+            self.canvas.draw()
+        else:
+            self._save_plot(save_dir, "peak_durations.png")
 
     def average_spectrogram(self, save=False, save_dir=None):
         self.canvas.figure.clear()
@@ -454,58 +509,3 @@ class ComparePlotWindow(QWidget):
             self.canvas.draw()
         else:
             self._save_plot(save_dir, "average_spectrogram.png")
-
-    def ep_durations(self, save=False, save_dir=None):
-        """Duration of each episode."""
-        self.clear_axes()
-        data = {"group": [], "duration": [], "idx": []}
-
-        for group in self.groups:
-            for _, emb in group.iter_all_embryos():
-                for i, duration in zip(range(15), emb.trace.peak_durations):
-                    data["group"].append(group.name)
-                    data["duration"].append(duration / 60)
-                    data["idx"].append(i)
-
-        dodge = len(set(data["group"])) > 1
-        ax = sns.pointplot(
-            data=data, x="idx", y="duration", hue="group", dodge=dodge, ax=self.ax
-        )
-
-        ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
-        ax.set_title("Durations by peak")
-        ax.set_ylabel("Duration (min)")
-
-        if not save:
-            self.canvas.draw()
-        else:
-            self._save_plot(save_dir, "peak_durations.png")
-
-    def rise_times(self, save=False, save_dir=None):
-        """Peak rise times.
-
-        Time between the start of the peak (left width boundary) and the peak time."""
-        self.clear_axes()
-        data = {"group": [], "duration": [], "idx": []}
-
-        for group in self.groups:
-            for _, emb in group.iter_all_embryos():
-                for i, duration in zip(range(15), emb.trace.peak_rise_times):
-                    data["group"].append(group.name)
-                    data["duration"].append(duration)
-                    data["idx"].append(i)
-
-        dodge = len(set(data["group"])) > 1
-        ax = sns.pointplot(
-            data=data, x="idx", y="duration", hue="group", dodge=dodge, ax=self.ax
-        )
-
-        ax.set_xticks([0, 2, 4, 6, 8, 10, 12, 14])
-        ax.set_title("Rise times")
-        ax.set_xlabel("Peak #")
-        ax.set_ylabel("Duration (s)")
-
-        if not save:
-            self.canvas.draw()
-        else:
-            self._save_plot(save_dir, "peak_durations.png")

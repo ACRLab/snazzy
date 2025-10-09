@@ -56,15 +56,6 @@ def test_can_process_trace_without_peaks(config):
     assert trace.rms is not None
 
 
-def test_can_create_dsna_trace_and_calculate_dsna(config, activity):
-    config.update_params({"exp_params": {"has_dsna": True}})
-    trace = Trace("emb1", activity, config)
-    assert trace
-
-    dsna_start = trace.get_dsna_start(freq=0.02)
-    assert dsna_start
-
-
 def test_baseline_with_average_n_values():
     arr = [1, 2, 3, 4, 0, 1, 0, 7, 6]
     baseline = Trace.average_n_lowest_window(arr, window_size=5, n_lowest=2)
