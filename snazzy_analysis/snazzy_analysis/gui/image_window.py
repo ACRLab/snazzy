@@ -53,6 +53,8 @@ def normalize_16bit_to_8bit(img: np.ndarray, lower_p=0.25, upper_p=99.75) -> np.
 
 
 class ImageSequenceViewer(QWidget):
+    """Render an image sequnce in sync with DFF trace."""
+
     def __init__(self, directory: Path, embryos: list[Embryo]):
         super().__init__()
         self.directory = directory
