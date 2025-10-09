@@ -42,6 +42,9 @@ Running the code
 
 Refer to the Getting Started session of each package for how to run the code.
 
+Two sample datasets with a reduced number of samples (to reduce dataset size) were uploaded to zenodo.
+Please find the datasets here: https://doi.org/10.5281/zenodo.17295552.
+
 To process raw data, start with `Getting Started <Data_processing/Overview.html>`__.
 To analyze the output of the processing step, go to `Getting Started <Data_analysis/Overview.html>`__.
  

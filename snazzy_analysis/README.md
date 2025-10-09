@@ -1,6 +1,12 @@
 # Snazzy Analysis
  
 Data analysis for `snazzy_processing`'s pipeline output.
+
+### Running the code
+
+Copy the results of processing a dataset with `snazzy_processing` to the `data` directory inside this package first.
+To visualize individual sample movies, the cropped movies inside `snazzy_processing/data/{dataset_name}/embs` should be copied too.
+See the 'Adding data' session for more details.
  
 ### Organization
  
