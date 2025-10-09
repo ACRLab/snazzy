@@ -1,6 +1,12 @@
 # SNAzzy Processing
  
 Raw data processing for the SNAzzy pipeline.
+
+### Running the code
+
+To run the pipeline, use the jupyter notebook `snazzy_processing_pipeline.ipynb`.
+Sample data is available in zenodo: https://doi.org/10.5281/zenodo.17295552.
+To try the code, please download and extract the datasets first.
  
 ### Organization
  
@@ -20,7 +26,7 @@ The other notebooks are used to understand in details the pipeline stages.
 
 ### Adding data
  
-Each dataset will have one corresponding folder inside `./data/`.
+After processed, each dataset will have one corresponding folder inside `./data/`.
 By running the code in `snazzy_processing_pipeline.ipynb`, the raw data will be parsed and saved inside `./data/{dataset_name}/embs`.
 To compare the calculated VNC length against manual measurements, add an `annotated` folder inside the dataset directory.
 The measurements should be saved as a csv file.
