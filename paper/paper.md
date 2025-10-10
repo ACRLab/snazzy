@@ -75,7 +75,7 @@ These packages detect calcium dynamics and use individual neuron statistics to p
 Furthermore, they are optimized for two-photon microscopy as opposed to wide-field microscopy.
 `SNAzzy` provides a series of automated analyses and quantifications to analyze global calcium levels in time-series acquired with widefield microscopes.
 
-![Schematic of the SNAzzy pipeline.
+![**Schematic of the SNAzzy pipeline.**
 Time-lapse taken from fluorescent widefield microscopes (raw data) enters the processing stage (green).
 The processing stage outputs two types of CSV files: time series of signal intensities from each recorded channel and ROI length.
 CSV files enter the analysis stage (blue) to generate normalized fluorescent traces and detect peaks along with other signal processing metrics.
@@ -102,7 +102,7 @@ This process is repeated at every time point to generate an “adaptive ROI”.
 From these adaptive ROI, the average signal intensity for both channels is extracted.
 The results are saved as CSV files and are the basis for downstream analysis.
 
-![ROI length measurement algorithm and validation.
+![**ROI length measurement algorithm and validation.**
 A) Steps to calculate the ROI length.
 The ROI length is calculated by estimating the centerline (red line) using points of maximum (dots) in the distance transform, followed by RANSAC to ignore outliers (orange dots).
 B) Validation of the method as relative error (measured - annotated) / annotated.
@@ -117,7 +117,7 @@ Depending on the embryo's orientation, some points may be part of the brain lobe
 To obtain a robust centerline estimate that can ignore outliers, we use RANSAC [@fischler:1981] over the local maxima points and measure the overlap between the fitted line and the binary image.
 CNS length is also detected frame by frame and exported as a CSV file \autoref{fig:fig1}.
 
-![Peak detection algorithm.
+![**Peak detection algorithm.**
 A low-pass filter (orange line) is applied to the ∆F/F signal (black line) to remove fast transients.
 The peak in the filtered signal (orange dot) is then ported back to the ∆F/F (blue dot) signal by selecting the leftmost peak within a search window (blue lines).\label{fig:fig3}](figures/snazzy-fig3.png)
 
@@ -134,7 +134,7 @@ During curation, researchers can modify data analysis parameters, which are pers
 Finally, a large number of different metrics and representations derived from ∆F/F, CNS length, and peaks can be visualized and plotted using the GUI.
 These include SNA onset, burst duration and spectrograms, among others.
 
-![GUI for data validation, curation, visualization and plotting.
+![**GUI for data validation, curation, visualization and plotting.**
 Initial GUI screen.
 A ∆F/F trace (white) and the corresponding peaks (magenta dots) are shown.
 The low-passed signal (green line) is used as a reference to determine peaks.
@@ -147,7 +147,7 @@ As an open and versatile solution, `SNAzzy` offers tools for a broader range of 
 
 # Acknowledgments
 
-We acknowledge Newt PenkoffLidbeck and D. Berfin Azizoglu for feedback on the manuscript.
+We acknowledge Newton PenkoffLidbeck and D. Berfin Azizoglu for feedback on the manuscript.
 This work was partially funded by NINDS and the BRAIN initiative (R00NS119295).
 
 # References
