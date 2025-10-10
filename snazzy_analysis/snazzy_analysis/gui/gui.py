@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
 from snazzy_analysis.gui import (
     ClickableViewBox,
     ComparePlotWindow,
-    ExperimentParamsDialog,
+    DatasetParamsDialog,
     FixedSidebar,
     GraphSwitcher,
     ImageSequenceViewer,
@@ -35,7 +35,6 @@ from snazzy_analysis.gui import (
     JsonViewer,
     LabeledSlider,
     Model,
-    PhaseBoundariesWindow,
     RemovableSidebar,
     Worker,
 )
@@ -87,7 +86,7 @@ class MainWindow(QMainWindow):
             else self.model.selected_group.name
         )
 
-    def _show_experiment_dialog(
+    def _show_dataset_dialog(
         self, config: Config, group_name: str, on_accepted: Callable[[dict], None]
     ):
         exp_params = config.get_exp_params()
@@ -101,14 +100,14 @@ class MainWindow(QMainWindow):
         }
         del dialog_params["acquisition_period"]
 
-        self.exp_params_dialog = ExperimentParamsDialog(dialog_params, parent=self)
+        self.dataset_params_dialog = DatasetParamsDialog(dialog_params, parent=self)
 
-        self.exp_params_dialog.accepted.connect(
-            lambda: on_accepted(self.exp_params_dialog.get_values())
+        self.dataset_params_dialog.accepted.connect(
+            lambda: on_accepted(self.dataset_params_dialog.get_values())
         )
-        self.exp_params_dialog.rejected.connect(lambda: None)
+        self.dataset_params_dialog.rejected.connect(lambda: None)
 
-        self.exp_params_dialog.open()
+        self.dataset_params_dialog.open()
 
     def _update_config(self, config: Config, dialog_values):
         exp_params = config.get_exp_params()
@@ -120,9 +119,9 @@ class MainWindow(QMainWindow):
         }
         config.update_params(new_config)
 
-    def _start_experiment_worker(self, config: Config, group_name: str):
+    def _start_dataset_worker(self, config: Config, group_name: str):
         worker = Worker(
-            self.model.create_experiment,
+            self.model.create_dataset,
             config=config,
             group_name=group_name,
         )
@@ -155,9 +154,9 @@ class MainWindow(QMainWindow):
 
                 self._present_loading()
 
-                self._start_experiment_worker(config, group_name)
+                self._start_dataset_worker(config, group_name)
 
-            self._show_experiment_dialog(
+            self._show_dataset_dialog(
                 config, group_name, on_accepted=on_dialog_accepted
             )
 
@@ -176,8 +175,8 @@ class MainWindow(QMainWindow):
 
     def update_UI(self):
         self.clear_layout()
-        self.add_experiment_action.setEnabled(True)
-        self.compare_experiment_action.setEnabled(True)
+        self.add_dataset_action.setEnabled(True)
+        self.compare_dataset_action.setEnabled(True)
         self.view_pd_action.setEnabled(True)
         self.paint_main_view()
         self.render_trace()
@@ -186,10 +185,10 @@ class MainWindow(QMainWindow):
     def open_directory(self):
         self._open_directory(is_new_group=True, should_reset_model=True)
 
-    def compare_experiments(self):
+    def compare_datasets(self):
         self._open_directory(is_new_group=True)
 
-    def add_experiment(self):
+    def add_dataset(self):
         self._open_directory(is_new_group=False)
 
     def change_group(self, i):
@@ -206,44 +205,21 @@ class MainWindow(QMainWindow):
         self.cpw = ComparePlotWindow(groups)
         self.cpw.show()
 
-    def display_phase_boundaries(self):
-        exp = self.model.selected_experiment
-        traces = [e.trace for e in exp.embryos]
-
-        current_trace = self.model.selected_trace
-        current_trace_idx = 0
-        for i, trace in enumerate(traces):
-            if trace.name == current_trace:
-                current_trace_idx = i
-                break
-
-        has_dsna = self.model.has_dsna()
-        self.pbw = PhaseBoundariesWindow(traces, current_trace_idx, has_dsna)
-        self.pbw.save_bounds_signal.connect(self.save_trace_phases)
-        self.pbw.show()
-
-    def save_trace_phases(self, emb_name, new_phases):
-        if "phase1_end" in new_phases:
-            self.model.save_phase1_end_idx(emb_name, new_phases["phase1_end"])
-        if "dsna_start" in new_phases:
-            self.model.save_dsna_start(emb_name, new_phases["dsna_start"])
-        self.render_trace()
-
     def display_embryo_movie(self):
-        exp = self.model.selected_experiment
-        embryos = exp.all_embryos()
+        dataset = self.model.selected_dataset
+        embryos = dataset.all_embryos()
         try:
-            self.viewer = ImageSequenceViewer(exp.directory, embryos)
+            self.viewer = ImageSequenceViewer(dataset.directory, embryos)
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
         self.viewer.show()
 
     def display_field_of_view(self):
-        exp = self.model.selected_experiment
-        img_path = exp.directory / "emb_numbers.png"
+        dataset = self.model.selected_dataset
+        img_path = dataset.directory / "emb_numbers.png"
         try:
-            self.image_window = ImageWindow(exp.name, str(img_path))
+            self.image_window = ImageWindow(dataset.name, str(img_path))
         except FileNotFoundError as e:
             self.show_error_message(str(e))
             return
@@ -300,7 +276,7 @@ class MainWindow(QMainWindow):
         self.toggle_graph_btn.clicked.connect(self.toggle_graph_view)
         self.top_app_bar.addWidget(self.toggle_graph_btn)
 
-        if len(self.model.groups) == 1 and not self.model.has_combined_experiments():
+        if len(self.model.groups) == 1 and not self.model.has_combined_datasets():
             self.toggle_view_width_btn = QPushButton("View widths")
             self.toggle_view_width_btn.setCheckable(True)
             self.toggle_view_width_btn.clicked.connect(self.toggle_view_width)
@@ -363,8 +339,8 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def paint_controls(self):
-        # Sliders are only avaialable if a single experiment is open
-        if len(self.model.groups) > 1 or self.model.has_combined_experiments():
+        # Sliders are only avaialable if a single dataset is open
+        if len(self.model.groups) > 1 or self.model.has_combined_datasets():
             return
 
         self.freq_slider = LabeledSlider(
@@ -404,19 +380,19 @@ class MainWindow(QMainWindow):
         self.single_graph_frame.setLayout(single_graph_layout)
 
         # Sidebar start
-        exp = self.model.selected_experiment
-        if not self.model.has_combined_experiments():
-            accepted_embs = set([e.name for e in exp.embryos])
-            removed_embs = set(exp.to_remove)
+        dataset = self.model.selected_dataset
+        if not self.model.has_combined_datasets():
+            accepted_embs = set([e.name for e in dataset.embryos])
+            removed_embs = set(dataset.to_remove)
             self.sidebar = RemovableSidebar(
-                self.select_embryo, accepted_embs, removed_embs, exp.name
+                self.select_embryo, accepted_embs, removed_embs, dataset.name
             )
             self.sidebar.emb_visibility_toggled.connect(self.toggle_emb_visibility)
         else:
             exp_to_embs = {}
             group = self.model.selected_group
-            for exp_name, exp in group.experiments.items():
-                exp_to_embs[exp_name] = [e.name for e in exp.embryos]
+            for exp_name, dataset in group.datasets.items():
+                exp_to_embs[exp_name] = [e.name for e in dataset.embryos]
             self.sidebar = FixedSidebar(exp_to_embs, self.select_embryo)
 
         scroll_area = QScrollArea()
@@ -459,15 +435,15 @@ class MainWindow(QMainWindow):
         open_action.triggered.connect(self.open_directory)
         file_menu.addAction(open_action)
 
-        self.add_experiment_action = QAction("Add Experiment", self)
-        self.add_experiment_action.triggered.connect(self.add_experiment)
-        self.add_experiment_action.setEnabled(False)
-        file_menu.addAction(self.add_experiment_action)
+        self.add_dataset_action = QAction("Add Dataset", self)
+        self.add_dataset_action.triggered.connect(self.add_dataset)
+        self.add_dataset_action.setEnabled(False)
+        file_menu.addAction(self.add_dataset_action)
 
-        self.compare_experiment_action = QAction("Compare with experiment", self)
-        self.compare_experiment_action.triggered.connect(self.compare_experiments)
-        self.compare_experiment_action.setEnabled(False)
-        file_menu.addAction(self.compare_experiment_action)
+        self.compare_dataset_action = QAction("Compare with dataset", self)
+        self.compare_dataset_action.triggered.connect(self.compare_datasets)
+        self.compare_dataset_action.setEnabled(False)
+        file_menu.addAction(self.compare_dataset_action)
 
         self.view_pd_action = QAction("View pd_params data", self)
         self.view_pd_action.triggered.connect(self.display_json_data)
@@ -487,10 +463,6 @@ class MainWindow(QMainWindow):
         display_movie_action = QAction("View embryo movie", self)
         display_movie_action.triggered.connect(self.display_embryo_movie)
         plot_menu.addAction(display_movie_action)
-
-        display_phase_bounds_action = QAction("View phase boundaries", self)
-        display_phase_bounds_action.triggered.connect(self.display_phase_boundaries)
-        plot_menu.addAction(display_phase_bounds_action)
 
         display_plots_action = QAction("View plots", self)
         display_plots_action.triggered.connect(self.display_plots)
@@ -518,8 +490,8 @@ class MainWindow(QMainWindow):
 
     def update_from_json_viewer(self, new_data):
         self.model.update_config(new_data)
-        # reset the current experiment to use the new config data
-        self.model.reset_current_experiment()
+        # reset the current dataset to use the new config data
+        self.model.reset_current_dataset()
         self.update_UI()
 
     def paint_main_view(self):
@@ -611,7 +583,7 @@ class MainWindow(QMainWindow):
         self.plot_all_traces()
 
     def collect_slider_params(self):
-        # on 'combined exp' mode, the top_layout that hold the slider will be removed
+        # on 'combined dataset' mode, the top_layout that hold the slider will be removed
         if not self.top_layout:
             return None
 
@@ -646,7 +618,7 @@ class MainWindow(QMainWindow):
 
             plot_widget.plot(time, dff)
 
-            if self.model.has_combined_experiments():
+            if self.model.has_combined_datasets():
                 plot_widget.setTitle(f"{exp_name} - {emb.name}")
             else:
                 plot_widget.setTitle(emb.name)
@@ -678,8 +650,8 @@ class MainWindow(QMainWindow):
     def calibrate_sliders(self):
         """Adjusts the sliders based on pd_params.json.
 
-        The sliders should not be available when more than one experiment is loaded."""
-        if self.model.has_combined_experiments():
+        The sliders should not be available when more than one dataset is loaded."""
+        if self.model.has_combined_datasets():
             return
 
         pd_params = self.model.get_pd_params()
@@ -715,9 +687,9 @@ class MainWindow(QMainWindow):
         self.select_embryo(emb_name, exp_name)
 
     def select_embryo(self, emb_name, exp_name):
-        exp = self.model.selected_group.experiments[exp_name]
-        emb = exp.get_embryo(emb_name)
-        self.model.select_experiment(exp)
+        dataset = self.model.selected_group.datasets[exp_name]
+        emb = dataset.get_embryo(emb_name)
+        self.model.select_dataset(dataset)
         self.model.select_embryo(emb)
         self.render_trace()
 
@@ -729,7 +701,7 @@ class MainWindow(QMainWindow):
         """Render data about the currently selected embryo."""
         trace, time, trimmed_time, dff = self.model.get_trace_context(self.use_dev_time)
         emb_name = self.model.selected_embryo.name
-        exp_name = self.model.selected_experiment.name
+        exp_name = self.model.selected_dataset.name
 
         self._clear_current_plot()
         self._plot_raw_trace(trimmed_time, dff)
@@ -738,7 +710,6 @@ class MainWindow(QMainWindow):
         self._plot_peaks(trimmed_time, trace)
         self._plot_active_and_struct_channels(time, trace)
         self._setup_trim_line(time, trace)
-        self._setup_dsna_line(trimmed_time, trace)
         self._plot_peak_widths(trimmed_time, trace)
         self._set_plot_titles(emb_name, exp_name)
 
@@ -793,28 +764,8 @@ class MainWindow(QMainWindow):
         )
         self.plot_channels.addLegend()
 
-    def _setup_dsna_line(self, time, trace):
-        if not self.model.has_dsna():
-            return
-
-        try:
-            freq = self.freq_slider.value()
-        except RuntimeError:
-            freq = trace.pd_params["freq"]
-
-        dsna_start = trace.get_dsna_start(freq)
-
-        dsna_line = pg.InfiniteLine(
-            time[dsna_start],
-            movable=True,
-            pen=pg.mkPen("chartreuse", cosmetic=True),
-        )
-        dsna_line.addMarker("<|>")
-        dsna_line.sigPositionChangeFinished.connect(self.change_dsna_start)
-        self.plot_widget.addItem(dsna_line)
-
     def _setup_trim_line(self, time, trace):
-        is_single_exp = not self.model.has_combined_experiments()
+        is_single_exp = not self.model.has_combined_datasets()
 
         trim_line = pg.InfiniteLine(
             time[trace.trim_idx],
@@ -850,50 +801,13 @@ class MainWindow(QMainWindow):
             self.plot_widget.addItem(line)
 
     def _set_plot_titles(self, emb_name, exp_name):
-        if self.model.has_combined_experiments():
-            exp_name = exp_name or self.model.selected_experiment
+        if self.model.has_combined_datasets():
+            exp_name = exp_name or self.model.selected_dataset
             title = f"{exp_name} - {emb_name}"
         else:
             title = emb_name
         self.plot_widget.setTitle(title)
         self.plot_channels.setTitle(title)
-
-    def change_dsna_start(self, il_obj):
-        trace = self.model.selected_trace
-        emb = self.model.selected_embryo
-
-        if self.use_dev_time:
-            dev_time = emb.lin_developmental_time
-            idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
-            x = int(idx)
-        else:
-            x = self.model.get_index_from_time(il_obj.getXPos())
-
-        res = QMessageBox.question(
-            self,
-            "Confirm Update",
-            "Update dSNA start?",
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-        )
-
-        prev_dsna_start = trace.dsna_start
-        if self.use_dev_time:
-            prev_value = dev_time[prev_dsna_start]
-        else:
-            prev_value = self.model.get_index_from_time(prev_dsna_start)
-
-        if res == QMessageBox.StandardButton.Cancel:
-            il_obj.setValue(prev_value)
-            return
-
-        self.model.save_dsna_start(emb.name, x)
-
-        pd_params = self.model.get_pd_params()
-
-        trace.detect_peaks(pd_params["freq"])
-        trace.compute_peak_bounds(pd_params["peak_width"])
-
-        self.render_trace()
 
     def change_trim_idx(self, il_obj):
         trace = self.model.selected_trace
@@ -906,7 +820,7 @@ class MainWindow(QMainWindow):
             prev_value = dev_time[trace.trim_idx]
         else:
             x = self.model.get_index_from_time(il_obj.getXPos())
-            prev_value = trace.time[trace.trim_idx]
+            prev_value = trace.time[trace.trim_idx] // 60
 
         # cannot allow trim_idx to be set after last timepoint, since it's
         # used to index trace points and would cause IndexError

@@ -53,7 +53,6 @@ def test_can_save_manual_data_for_new_embryo(config):
         removed_peaks=[50],
         manual_widths={"100": [80, 125]},
         manual_trim_idx=1500,
-        manual_phase1_end=500,
     )
 
     assert emb_data["emb_name"] not in config.data["embryos"]
