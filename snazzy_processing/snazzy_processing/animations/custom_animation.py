@@ -60,11 +60,12 @@ class PauseAnimation:
 class ContourAnimation(PauseAnimation):
     """Overlays ROI contour on top of a movie."""
 
-    def __init__(self, image, contours, interval=50):
+    def __init__(self, image, contours, step_size, interval=50):
         super().__init__(image, interval)
+
         self.contours = contours
         self.paint_axes()
-        self.offset = image.shape[0] // len(contours)
+        self.step_size = step_size
 
     def paint_axes(self):
         x = self.contours[0][:, 0]
@@ -73,9 +74,10 @@ class ContourAnimation(PauseAnimation):
 
     def update(self, frame):
         self.img_plot.set_data(self.image[frame])
-        if frame % self.offset == 0:
-            i = frame // self.offset
+        if frame % self.step_size == 0:
+            i = frame // self.step_size
             x, y = self.contours[i][:, 0], self.contours[i][:, 1]
             self.contour_plot.set_data(y, x)
             self.frame_num.set_text(str(frame))
+
         return self.img_plot
