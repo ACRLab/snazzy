@@ -1,0 +1,572 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>GUI &#8212; snazzy 1.0.0. documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=dc5f967c"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'Data_analysis/Graphical_User_Interface';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Peak Detection" href="Peak_Detection.html" />
+    <link rel="prev" title="Example Analysis" href="Example.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">snazzy 1.0.0. documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../Getting_Started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../Data_processing/index.html">Data Processing</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../Data_processing/Overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../Data_processing/Process_raw_data.html">Process raw images</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../Data_processing/ROIs_and_signal_intensity.html">ROIs and signal intensity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../Data_processing/Neurodevelopmental_progression.html">Neurodevelopmental Progression</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Data Analysis</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="Overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Example.html">Example Analysis</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">GUI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Peak_Detection.html">Peak Detection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="Hatching_Point.html">Hatching point calculation</a></li>
+</ul>
+</details></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/Data_analysis/Graphical_User_Interface.rst" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.rst</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>GUI</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-the-gui">Loading the GUI</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-the-gui">Using the GUI</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-a-dataset">Loading a Dataset</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-parameters">Config parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualizing-traces">Visualizing traces</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manually-changing-peak-data">Manually changing peak data</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#view-embryo-movies">View embryo movies</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="gui">
+<h1>GUI<a class="headerlink" href="#gui" title="Link to this heading">#</a></h1>
+<p>The graphical user interface is written using <code class="docutils literal notranslate"><span class="pre">PyQt6</span></code> and <code class="docutils literal notranslate"><span class="pre">pyqtgraph</span></code>.</p>
+<p>The GUI’s main functionalities are:</p>
+<ol class="arabic simple">
+<li><p>Visualize and adjust peak data.</p></li>
+<li><p>Combine multiple datasets as a group.</p></li>
+<li><p>Compare multiple groups.</p></li>
+<li><p>Inspect TIF movies in sync with the DFF signal.</p></li>
+<li><p>Inspect all parameters used in the analysis.</p></li>
+</ol>
+<img alt="GUI Screeshot with loaded data" src="../_images/gui-screenshot.png" />
+<section id="loading-the-gui">
+<h2>Loading the GUI<a class="headerlink" href="#loading-the-gui" title="Link to this heading">#</a></h2>
+<p>First step to use the GUI is to activate the conda environment.
+Refer to the <a class="reference external" href="../Getting_Started.html">Getting Started</a> session if you haven’t created an environment yet.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>activate<span class="w"> </span>snazzy-env
+</pre></div>
+</div>
+<p>Then, <code class="docutils literal notranslate"><span class="pre">cd</span></code> into the <code class="docutils literal notranslate"><span class="pre">snazzy_analysis</span></code> directory and run the GUI:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>snazzy_analysis/gui/gui.py
+</pre></div>
+</div>
+</section>
+<section id="using-the-gui">
+<h2>Using the GUI<a class="headerlink" href="#using-the-gui" title="Link to this heading">#</a></h2>
+<p>There are two primary modes to use the GUI:</p>
+<ol class="arabic simple">
+<li><p>Open a single dataset:</p></li>
+</ol>
+<p>Allows you to visualize peak detection results and adjust parameters if needed.</p>
+<ol class="arabic simple" start="2">
+<li><p>Compare datasets:</p></li>
+</ol>
+<p>You can load more than one dataset to a Group, or have multiple Groups to visualize comparisons.
+When more than one dataset is loaded, you cannot change the analysis parameters anymore.
+In this mode, the analysis results are read-only.
+The same parameters should be used to comparing different datasets.
+To make sure that the chosen parameters are appropriate for each dataset, load each one separately and verify the peak detection first.
+The comparison plots in the Plot menu will show results by Group.
+In the upper left corner of the GUI, a dropdown menu can be used to change the Group that is currently being visualized.</p>
+</section>
+<section id="loading-a-dataset">
+<h2>Loading a Dataset<a class="headerlink" href="#loading-a-dataset" title="Link to this heading">#</a></h2>
+<p>To load a Dataset select a directory that has <code class="docutils literal notranslate"><span class="pre">snazzy_processing</span></code> output.
+The directory structure should look like:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="p">|</span>--<span class="w"> </span>project_folder
+<span class="p">|</span>--<span class="w"> </span>data
+<span class="p">|</span><span class="w">    </span>--<span class="w"> </span><span class="m">20240501</span>
+<span class="p">|</span><span class="w">        </span>--<span class="w"> </span>activity
+<span class="p">|</span><span class="w">            </span>emb1.csv
+<span class="p">|</span><span class="w">            </span>..
+<span class="p">|</span><span class="w">        </span>--<span class="w"> </span>lengths
+<span class="p">|</span><span class="w">            </span>emb1.csv
+<span class="p">|</span><span class="w">            </span>..
+<span class="p">|</span><span class="w">        </span>--<span class="w"> </span>embs
+<span class="p">|</span><span class="w">            </span>emb1-ch1.tif
+<span class="p">|</span><span class="w">            </span>emb1-ch2.tif
+<span class="p">|</span><span class="w">        </span>full-length.csv
+<span class="p">|</span><span class="w">        </span>emb_numbers.png
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">activity</span></code> and <code class="docutils literal notranslate"><span class="pre">lengths</span></code> directories, and the <code class="docutils literal notranslate"><span class="pre">full-length.csv</span></code> file are required.
+If any of these is not found, the GUI will abort loading with an error message.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">embs</span></code> directory will hold individual embryo movies in <code class="docutils literal notranslate"><span class="pre">.tif</span></code> format, and can be used to visualize embryo movies in sync with the DFF trace.
+The <code class="docutils literal notranslate"><span class="pre">emb_numbers.png</span></code> file represents a snapshot of the microscope’s field of view at the start of the imaging session, and also shows the embryo id of each embryo.</p>
+</section>
+<section id="config-parameters">
+<h2>Config parameters<a class="headerlink" href="#config-parameters" title="Link to this heading">#</a></h2>
+<p>When loading a dataset the code will look for a config file named <code class="docutils literal notranslate"><span class="pre">peak_detection_params.json</span></code> inside the dataset directory and will use its data for the analysis.
+If not found, a file with default parameters is created.
+The default parameters can be found inside <code class="docutils literal notranslate"><span class="pre">config.py</span></code>.
+If you change any of the parameters, they will be recorded in this file.
+To restore the original settings, simply delete <code class="docutils literal notranslate"><span class="pre">peak_detection_params.json</span></code> from the corresponding directory.
+Sharing the config file allows someone else to reproduce your results in another machine.
+Keep in mind that each directory should have its own <code class="docutils literal notranslate"><span class="pre">peak_detection_params.json</span></code> file.</p>
+<p>The parameters that are most frequently changed are presented in the GUI when a Dataset is loaded.
+From this window it’s possible to set:</p>
+<ul class="simple">
+<li><p>Group name: name of the group that contains this dataset</p></li>
+<li><p>First peak threshold: minimum time in minutes that has to pass before any peak happens. Used to make sure that the first peak caught at the imaging session is really the activity onset.</p></li>
+<li><p>To_exclude: embryo numbers that will be excluded from the analysis. These embryos will be excluded from the analysis.</p></li>
+<li><p>To_remove: embryo numbers that will be analyzed, but will appear in the ‘Removed’ group.</p></li>
+<li><p>Embryos that have it’s first peak before the first peak threshold or that were marked by the user as removed will also be at the to_remove category.</p></li>
+<li><p>Has_transients: if selected the code will try to identify and skip the first peak if it’s likely just a transient.</p></li>
+<li><p>Dff_strategy: Combo box with the baseline strategy methods. <code class="docutils literal notranslate"><span class="pre">local_minima</span></code> will pick the bottom 11 points out of the <code class="docutils literal notranslate"><span class="pre">baseline_window_size</span></code> and use that average as the baseline. <code class="docutils literal notranslate"><span class="pre">baseline</span></code> will split the DFF values into bins and use the average of the most frequent bin as the baseline.  This method assumes that the bursts of activity are sparse, so that for all windows the most frequent bin falls into the baseline values.</p></li>
+</ul>
+<p>The embryos listed in <code class="docutils literal notranslate"><span class="pre">to_remove</span></code> are not used for plotting and comparisons between Groups.
+There are different reasons for marking an embryo as removed.
+One example would be to remove embryos that already are in later stages of development when the imaging session starts.
+Another would be to remove unhealthy embryos, or embryos that don’t hatch, if that is a requirement for the experiment.</p>
+<p>Inside the File menu there is an option to open the <code class="docutils literal notranslate"><span class="pre">json</span></code> file and change any of its parameters.
+Updating the file causes the entire Dataset to be recreated with the new configuration data.</p>
+</section>
+<section id="visualizing-traces">
+<h2>Visualizing traces<a class="headerlink" href="#visualizing-traces" title="Link to this heading">#</a></h2>
+<p>The description here refers to the image on the top of the file.</p>
+<p>The top bar has buttons to change the data presentation.
+Below the top bar there are two sliders.
+The first is for the frequency cutoff, which controls how much the signal is smoothed for the finding peaks algorithm.
+The second is the peak width parameter, used to determine the start and end times of each peak.
+The sidebar presents which embryos are currently considered for plots and analysis, and which ones should be removed.
+You can toggle the embryo status between these two categories.
+In the main view you will see the DFF trace of the currently selected embryo.
+The pink dots represent the peak indices.</p>
+<p>You can also visualize the signal from each channel, by clicking on the button with a <code class="docutils literal notranslate"><span class="pre">&gt;</span></code> in the right of the screen.
+This window will present the signal from each channel and also the hatching point, which can be changed manually by dragging the line if needed.</p>
+<section id="manually-changing-peak-data">
+<h3>Manually changing peak data<a class="headerlink" href="#manually-changing-peak-data" title="Link to this heading">#</a></h3>
+<p>By pressing <code class="docutils literal notranslate"><span class="pre">shift</span></code> + <code class="docutils literal notranslate"><span class="pre">left</span> <span class="pre">mouse</span> <span class="pre">click</span></code> you can add a new peak to the plot.
+Because we usually have many points over the X axis, it can be hard to click exactly where we want the peak index to land.
+To help with this, the actual peak index after clicking in the local maximum value for a small window around the point that was clicked.
+By pressing <code class="docutils literal notranslate"><span class="pre">CTRL</span></code> + <code class="docutils literal notranslate"><span class="pre">left</span> <span class="pre">mouse</span> <span class="pre">click</span></code> you can remove a peak.
+It also works on a small X axis range just like when adding new peaks.</p>
+<p>The peak width can also be adjusted.
+Click the button ‘Adjust widths’ to display handles on the peak boundaries.
+To change the width, just drag the line to the desired position.</p>
+<p>The manual data is saved in <code class="docutils literal notranslate"><span class="pre">peak_detection_params.json</span></code>, in a key named <code class="docutils literal notranslate"><span class="pre">embryos</span></code>.
+Click ‘Clear manual data’ to remove the manual data for the current sample of all samples at once.</p>
+</section>
+</section>
+<section id="view-embryo-movies">
+<h2>View embryo movies<a class="headerlink" href="#view-embryo-movies" title="Link to this heading">#</a></h2>
+<p>If you haven’t removed the individual movies that were cropped from raw data, you can visualize them in the GUI.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When running the pipeline, set the variable <cite>clean_up_data = False</cite> to keep the cropped movies.</p>
+</div>
+<p>The embryos must be placed inside the dataset directory, in a directory named <code class="docutils literal notranslate"><span class="pre">embs</span></code>.</p>
+<p>If there are no files available to show, the GUI will simply display an error message.</p>
+<p>If there are files, you can select one and see the movie in sync with the DFF trace.</p>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="Example.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Example Analysis</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="Peak_Detection.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Peak Detection</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-the-gui">Loading the GUI</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#using-the-gui">Using the GUI</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#loading-a-dataset">Loading a Dataset</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#config-parameters">Config parameters</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#visualizing-traces">Visualizing traces</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manually-changing-peak-data">Manually changing peak data</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#view-embryo-movies">View embryo movies</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By acr-lab
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
