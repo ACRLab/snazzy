@@ -1,6 +1,11 @@
 # SNAzzy: an image processing pipeline for investigating global Synchronous Network Activity
 
+SNAzzy is a Python package for studying synchronous network activity (SNA) in Drosophia embryos via high-thoughput microscopy.
+The software includes processing raw data into individual `.tif` files, quantification of fluorescence and changes in morphology, a custom peak detection algorithm, and a GUI for data visualization and curation.
+
 ## Getting Started
+
+Refer to the README files inside the `snazzy_processing` or `snazzy_analysis` packages for details on running the code.
 
 ### Installation
  
@@ -19,6 +24,18 @@ Activate the environment:
 ```
     conda activate snazzy-env
 ```
+
+## Testing
+
+Tests can be run with pytest.
+
+You can run the test suite from the project’s root directory to test everything at once.
+Make sure the environment is active, and then run:
+
+```
+    pytest
+```
+
 ## Contributing
 
 Thank you for being interested in `snazzy`!
