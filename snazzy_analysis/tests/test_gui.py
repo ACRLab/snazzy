@@ -5,15 +5,15 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel
 
-from snazzy_analysis import Experiment
+from snazzy_analysis import Dataset
 from snazzy_analysis.gui.gui import (
     ComparePlotWindow,
-    ExperimentParamsDialog,
+    DatasetParamsDialog,
     ImageWindow,
     JsonViewer,
     MainWindow,
 )
-from snazzy_analysis.gui.model import GroupModel, ExperimentModel
+from snazzy_analysis.gui.model import GroupModel, DatasetModel
 
 pytestmark = pytest.mark.skipif(
     not sys.platform.startswith("linux"), reason="Running headless tests on linux only."
@@ -23,15 +23,15 @@ VALID_DIR = Path(__file__).parent.joinpath("assets", "data", "20250210")
 
 
 @pytest.fixture
-def exp():
-    return Experiment(VALID_DIR)
+def dataset():
+    return Dataset(VALID_DIR)
 
 
 @pytest.fixture
-def group_model(exp):
-    exp_model = ExperimentModel(exp)
+def group_model(dataset):
+    exp_model = DatasetModel(dataset)
     group_model = GroupModel("wt")
-    group_model.add_experiment(exp_model)
+    group_model.add_dataset(exp_model)
     return group_model
 
 
@@ -44,7 +44,7 @@ def test_can_display_initial_screen(qtbot):
     assert window.isVisible()
 
 
-def test_can_create_experiment_via_menu(qtbot, monkeypatch):
+def test_can_create_dataset_via_menu(qtbot, monkeypatch):
     monkeypatch.setattr(
         "snazzy_analysis.gui.gui.QFileDialog.getExistingDirectory",
         lambda *a, **kw: VALID_DIR,
@@ -60,11 +60,11 @@ def test_can_create_experiment_via_menu(qtbot, monkeypatch):
     open_action = file_menu.actions()[0]
     open_action.trigger()
 
-    window.exp_params_dialog.accept()
+    window.dataset_params_dialog.accept()
 
-    qtbot.waitUntil(lambda: window.add_experiment_action.isEnabled(), timeout=3000)
+    qtbot.waitUntil(lambda: window.add_dataset_action.isEnabled(), timeout=3000)
 
-    assert window.add_experiment_action.isEnabled()
+    assert window.add_dataset_action.isEnabled()
     assert window.top_app_bar is not None
     assert window.bottom_layout is not None
     # for VALID_DIR dataset, emb1 is the first embryo:
@@ -73,7 +73,7 @@ def test_can_create_experiment_via_menu(qtbot, monkeypatch):
 
 def test_exp_dialog_parses_emb_ids(qtbot):
     props = {"to_remove": ["emb1", "emb2"]}
-    exp_dialog = ExperimentParamsDialog(props)
+    exp_dialog = DatasetParamsDialog(props)
     qtbot.addWidget(exp_dialog)
 
     assert props["to_remove"] == [1, 2]
@@ -81,7 +81,7 @@ def test_exp_dialog_parses_emb_ids(qtbot):
 
 def test_exp_dialog_parses_emb_ids_when_receives_only_digits(qtbot):
     props = {"to_remove": ["1", "2"]}
-    exp_dialog = ExperimentParamsDialog(props)
+    exp_dialog = DatasetParamsDialog(props)
     qtbot.addWidget(exp_dialog)
 
     assert props["to_remove"] == [1, 2]
@@ -122,8 +122,8 @@ def test_can_render_FOV(qtbot):
     assert not pixmap.isNull()
 
 
-def test_can_render_json_config(qtbot, exp):
-    config_data = exp.config.data
+def test_can_render_json_config(qtbot, dataset):
+    config_data = dataset.config.data
 
     json_viewer = JsonViewer(config_data)
     qtbot.addWidget(json_viewer)

@@ -25,7 +25,7 @@ class ImageWindow(QWidget):
         self.setGeometry(200, 200, 600, 400)
 
         title = QLabel(self)
-        title.setText(f"Experiment: {exp_name}")
+        title.setText(f"Dataset: {exp_name}")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         label = QLabel(self)
@@ -53,6 +53,8 @@ def normalize_16bit_to_8bit(img: np.ndarray, lower_p=0.25, upper_p=99.75) -> np.
 
 
 class ImageSequenceViewer(QWidget):
+    """Render an image sequnce in sync with DFF trace."""
+
     def __init__(self, directory: Path, embryos: list[Embryo]):
         super().__init__()
         self.directory = directory

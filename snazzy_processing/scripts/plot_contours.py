@@ -6,16 +6,16 @@ from snazzy_processing.animations import custom_animation
 from snazzy_processing import roi, utils
 
 data_dir = Path("./data")
-experiments = [f.stem for f in data_dir.iterdir() if f.is_dir()]
+datasets = [f.stem for f in data_dir.iterdir() if f.is_dir()]
 
-print("Enter experiment name, based on index:")
-for i, file in enumerate(experiments):
+print("Enter dataset name, based on index:")
+for i, file in enumerate(datasets):
     print(f"[{i}] {file}")
 
 e = int(input())
-experiment = experiments[e]
+dataset = datasets[e]
 
-img_dir = data_dir.joinpath(experiment, "embs")
+img_dir = data_dir.joinpath(dataset, "embs")
 
 # All structural channel movies end with the suffix ch2
 structs = sorted(img_dir.glob("*ch2.tif"), key=utils.emb_number)
@@ -45,7 +45,6 @@ window = int(input())
 img = imread(structs[idx]) if ch == 2 else imread(active[idx])
 struct_img = img if ch == 2 else imread(structs[idx])
 contours = roi.get_contours(struct_img, window=window)
-print(f"Contours within plot_contours: {len(contours)}")
 
-ca = custom_animation.ContourAnimation(img, contours, 1)
+ca = custom_animation.ContourAnimation(img, contours, window, 1)
 ca.display()

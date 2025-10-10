@@ -18,7 +18,7 @@ It can also happen that an embryo is still inside the egg and a larva that alrea
 It's very rare that this scenario affects the ROI calculation, because we only consider the largest connected area for calculating the ROI, which is usually the VNC.
 If it does, then the only option is to remove that embryo.
 
-When loading an experiment for the first time, it's worth it to visualize the structural channel signal of each embryo.
+When loading a dataset for the first time, it's worth it to visualize the structural channel signal of each embryo.
 On a few occasions, mostly due to very abrupt motion, the ROI is underestimated and the hatching point is determined earlier.
 In these cases, you can drag the line that indicates the hatching to a more accurate position or remove that embryo.
 
