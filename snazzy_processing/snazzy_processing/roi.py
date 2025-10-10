@@ -61,9 +61,9 @@ def get_roi(img: np.ndarray, window=10) -> np.ndarray:
     rois = np.empty((rois_length, *img.shape[1:]), dtype=np.bool_)
 
     # calculates a new ROI in steps of `window`:
-    for i in range(0, num_slices - window, window):
+    for idx, i in enumerate(range(0, num_slices, window)):
         avg_slc = np.average(img[i : i + window], axis=0)
-        rois[i // window] = get_single_roi(avg_slc)
+        rois[idx] = get_single_roi(avg_slc)
 
     return rois
 

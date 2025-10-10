@@ -45,7 +45,6 @@ window = int(input())
 img = imread(structs[idx]) if ch == 2 else imread(active[idx])
 struct_img = img if ch == 2 else imread(structs[idx])
 contours = roi.get_contours(struct_img, window=window)
-print(f"Contours within plot_contours: {len(contours)}")
 
-ca = custom_animation.ContourAnimation(img, contours, 1)
+ca = custom_animation.ContourAnimation(img, contours, window, 1)
 ca.display()
