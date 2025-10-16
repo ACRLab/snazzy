@@ -1,3 +1,5 @@
+import numpy as np
+
 from snazzy_analysis import Config, Embryo, Dataset, utils
 from snazzy_analysis.gui import PeakMatcher
 
@@ -409,15 +411,53 @@ class Model:
         self.select_dataset(dataset)
         self.select_embryo(embryo)
 
-    def get_index_from_time(self, time) -> int:
-        """Calculates signal index based on time.
-
-        Relies on the fact that the acquisition rate is constant.
+    def get_index_from_X_pos(self, x, use_dev_time) -> int:
+        """Index of the value in the given x position.
 
         Parameters:
-            time (float): time in minutes.
-        """
-        dataset = self.selected_dataset
-        exp_params = dataset.config.get_exp_params()
+            x (float):
+                X position that was clicked.
+            use_dev_time (bool):
+                If the X axis is in dev_time.
+                If False, the X axis represents time.
 
-        return int(time * 60) // exp_params["acquisition_period"]
+        Returns:
+            idx (int):
+                Index of the value at `x`.
+        """
+
+        if use_dev_time:
+            embryo = self.selected_embryo
+            dev_time = embryo.lin_developmental_time
+            idx = np.searchsorted(dev_time, x)
+        else:
+            trace = self.selected_trace
+            # trace.time is in seconds, but the plot's X axis is in minutes
+            idx = np.searchsorted(trace.time, x * 60)
+
+        return int(idx)
+
+    def get_X_pos_from_index(self, index, use_dev_time) -> float | int:
+        """Value in the X axis at the index position.
+
+        Parameters:
+            index (int):
+                An index in the X values array.
+            use_dev_time (bool):
+                If False, the X axis represents time.
+
+        Returns:
+            x:
+                X value, in dev_time (unitless) or time (minutes).
+
+        """
+        if use_dev_time:
+            embryo = self.selected_embryo
+            dev_time = embryo.lin_developmental_time
+            x = dev_time[index]
+        else:
+            trace = self.selected_trace
+            # trace.time is in seconds, but the plot's X axis is in minutes
+            x = trace.time[index] // 60
+
+        return x
