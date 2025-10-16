@@ -529,13 +529,7 @@ class MainWindow(QMainWindow):
         trace = embryo.trace
         emb_name = embryo.name
 
-        if self.use_dev_time:
-            dev_time = embryo.lin_developmental_time
-            idx = np.searchsorted(dev_time, x) - 1
-            x = int(idx)
-        else:
-            x = self.model.get_index_from_time(x)
-
+        x = self.model.get_index_from_X_pos(x, self.use_dev_time)
         new_peak, new_peaks = self.model.add_peak(x, emb_name, trace)
 
         trace.to_add.append(new_peak)
@@ -548,13 +542,7 @@ class MainWindow(QMainWindow):
         trace = embryo.trace
         emb_name = embryo.name
 
-        if self.use_dev_time:
-            dev_time = embryo.lin_developmental_time
-            idx = np.searchsorted(dev_time, x) - 1
-            x = int(idx)
-        else:
-            x = self.model.get_index_from_time(x)
-
+        x = self.model.get_index_from_X_pos(x, self.use_dev_time)
         removed_peaks, new_peaks = self.model.remove_peak(x, emb_name, trace)
 
         trace.to_remove.extend(removed_peaks)
@@ -811,16 +799,9 @@ class MainWindow(QMainWindow):
 
     def change_trim_idx(self, il_obj):
         trace = self.model.selected_trace
-        emb = self.model.selected_embryo
 
-        if self.use_dev_time:
-            dev_time = emb.lin_developmental_time
-            idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
-            x = int(idx)
-            prev_value = dev_time[trace.trim_idx]
-        else:
-            x = self.model.get_index_from_time(il_obj.getXPos())
-            prev_value = trace.time[trace.trim_idx] // 60
+        prev_value = self.model.get_X_pos_from_index(trace.trim_idx, self.use_dev_time)
+        x = self.model.get_index_from_X_pos(il_obj.getXPos(), self.use_dev_time)
 
         # cannot allow trim_idx to be set after last timepoint, since it's
         # used to index trace points and would cause IndexError
@@ -851,18 +832,13 @@ class MainWindow(QMainWindow):
         self.render_trace()
 
     def change_peak_bounds(self, il_obj):
-        emb = self.model.selected_embryo
-
         # since each peak has two bounds, we can recover the peak index
         # and bound index from the line number
         peak_index, bound_index = divmod(il_obj.line_index, 2)
 
-        if self.use_dev_time:
-            dev_time = emb.lin_developmental_time
-            idx = np.searchsorted(dev_time, il_obj.getXPos()) - 1
-            new_line_pos = int(idx)
-        else:
-            new_line_pos = self.model.get_index_from_time(il_obj.getXPos())
+        new_line_pos = self.model.get_index_from_X_pos(
+            il_obj.getXPos(), self.use_dev_time
+        )
 
         self.model.update_peak_widths(peak_index, bound_index, new_line_pos)
 
