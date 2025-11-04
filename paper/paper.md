@@ -35,7 +35,7 @@ bibliography: paper.bib
 
 Genetically encoded fluorescent indicators are powerful tools for monitoring biological processes in live samples [@lin:2016; @nakai:2001].
 When combined with a large field of view, a single time-lapse recording has the potential to capture many specimens, facilitating high-throughput data collection.
-However, the simultaneous recording of many biological samples across time points produces large, multidimensional datasets that are challenging to process and analyze.
+However, this approach generates large, multidimensional datasets that are challenging to process and analyze.
 We present `SNAzzy`, a Python package for studying synchronous network activity (SNA) in Drosophila embryos via high-throughput microscopy.
 SNA is a hallmark of developing nervous systems [@wu:2024; @blankenship:2009; @akin:2020], often studied using genetically encoded calcium indicators to monitor neural activity in vivo.
 `SNAzzy` processes and analyzes time-lapse datasets taken from live samples using fluorescent widefield microscopy.
@@ -45,9 +45,9 @@ This tool can be readily applied to analyze fluorescent intensities in time-laps
 
 # Statement of need
 
-During synchronous network activity (SNA), many neurons fire synchronously, generating waves of activity that span across large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020].
+During synchronous network activity (SNA), many neurons fire simultaneously, generating waves of activity that span across large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020].
 In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation [@crisp:2008; @carreira:2021].
-To gain an understanding of SNA, it is essential to quantify waves of activity in the nervous system while also tracking morphology as a proxy of neurodevelopment.
+To gain an understanding of SNA, it is essential to quantify waves of activity in the nervous system while also tracking morphology as a proxy for neurodevelopment.
 For these reasons, we combine a commonly used genetically encoded calcium indicator (GECI) that reports neural activity with a structural fluorophore [@carreira:2021].
 The structural fluorophore signal remains stable, independent of neural activity, making it suitable for continuous tracking morphology of the nerve cord.
 To record many embryos during SNA, we use a wide-field fluorescence microscopy system that captures the GECI and structural fluorophore signal of dozens of developing embryos for over 5 hours.
@@ -139,6 +139,8 @@ Initial GUI screen.
 A ∆F/F trace (white) and the corresponding peaks (magenta dots) are shown.
 The low-passed signal (green line) is used as a reference to determine peaks.
 The GUI enables the modification of analysis parameters, visualization of data, and comparison of metrics across groups of experiments, as well as manual adjustment of peak data.\label{fig:fig4}](figures/snazzy-fig4.png)
+
+# Conclusion
 
 In conclusion, genetically encoded fluorescent indicators and microscopy systems are evolving rapidly, increasing the data acquisition throughput.
 Custom open-source tools are needed to handle such large data files.
