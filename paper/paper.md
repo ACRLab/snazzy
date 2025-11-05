@@ -9,7 +9,7 @@ tags:
   - Neurodevelopment
   - Circuit Wiring
 authors:
-  - name: Carlos Damiani Paiva
+  - name: Carlos D. Paiva
     orcid: 0009-0007-6658-2620
     affiliation: "1, 2"
   - name: Alana J. Evora
@@ -27,7 +27,7 @@ affiliations:
     index: 1
   - name: Department of Neurobiology, Duke University, Durham, NC 27708
     index: 2
-date: 8 October 2025
+date: 5 November 2025
 bibliography: paper.bib
 ---
 
@@ -46,7 +46,7 @@ This tool can be readily applied to analyze fluorescent intensities in time-laps
 # Statement of need
 
 During synchronous network activity (SNA), many neurons fire simultaneously, generating waves of activity that span across large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020].
-In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation [@crisp:2008; @carreira:2021].
+In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation [@crisp:2008; @carreira:2021; @karkali:2022].
 To gain an understanding of SNA, it is essential to quantify waves of activity in the nervous system while also tracking morphology as a proxy for neurodevelopment.
 For these reasons, we combine a commonly used genetically encoded calcium indicator (GECI) that reports neural activity with a structural fluorophore [@carreira:2021].
 The structural fluorophore signal remains stable, independent of neural activity, making it suitable for continuous tracking morphology of the nerve cord.
