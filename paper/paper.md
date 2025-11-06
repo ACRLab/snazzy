@@ -27,7 +27,7 @@ affiliations:
     index: 1
   - name: Department of Neurobiology, Duke University, Durham, NC 27708
     index: 2
-date: 5 November 2025
+date: 6 November 2025
 bibliography: paper.bib
 ---
 
