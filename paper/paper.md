@@ -41,7 +41,6 @@ SNA is a hallmark of developing nervous systems [@wu:2024; @blankenship:2009; @a
 `SNAzzy` processes and analyzes time-lapse datasets taken from live samples using fluorescent widefield microscopy.
 Each dataset contains dozens of individual specimens in the same field of view and thousands of time points.
 The software offers individual specimen cropping for optimization of storage and processing, adaptive regions of interest for quantification of fluorescence and changes in morphology over time, a custom peak detection algorithm, and a graphical user interface for data visualization, curation, and dataset comparison.
-This tool can be readily applied to analyze fluorescent intensities in time-lapse microscopy experiments that involve simultaneous imaging of multiple samples, particularly small-sized specimens [@donoughe:2018; @avasthi:2023]. 
 
 # Statement of need
 
@@ -74,6 +73,35 @@ Most open-source tools available for analyzing neural activity using GECI focus 
 These packages detect calcium dynamics and use individual neuron statistics to perform spike inference, but do not offer direct peak detection on the calcium signal.
 Furthermore, they are optimized for two-photon microscopy as opposed to wide-field microscopy.
 `SNAzzy` provides a series of automated analyses and quantifications to analyze global calcium levels in time-series acquired with widefield microscopes.
+
+# Research Impact Statement
+
+SNAzzy is a complete solution for automated analysis of calcium dynamics from high-throughput time-lapse microscopy datasets.
+SNAzzy has had a significant impact on our laboratory by speeding up the analysis and onboarding researchers with little to no prior Python experience.
+This software replaces the previous, manually intensive analysis pipeline [@carreira:2021] with a fully automated workflow.
+Compared to the manual workflow, SNAzzy offers additional tools and reduces analysis time from days to minutes.
+Several students with limited programming background have installed SNAzzy and analyzed hundreds of specimens within a week.
+Lastly, lab members have added modules to SNAzzy to address important biological questions.
+This has led to biological insights that the lab will publish in a separate article soon.
+
+Given that our lab is pioneering the study of spontaneous network activity (SNA) in Drosophila embryos, and that SNAzzy is designed as a generalizable and extensible analysis framework, we expect near-term adoption by other laboratories studying SNA and related developmental imaging paradigms.
+Lastly, beyond Drosophila embryos, the code can be used to support automated quantification of global fluorescence dynamics in other experiments that involve simultaneous imaging of multiple samples, particularly small-sized specimens [@donoughe:2018; @avasthi:2023; @yamamoto:2023].
+
+# Software Design
+
+`SNAzzy` is composed of a processing package, which is an image processing pipeline, and an analysis package, which is responsible for quantification and visualization.
+This separation of concerns promotes modularity and extensibility, making it easy for users to use the processing package output elsewhere, for example.
+
+The processing package implements an image processing pipeline composed of modular stages.
+Large image files are converted into lightweight CSV files containing fluorescence intensity traces and shape metrics, which substantially reduces storage requirements and facilitates data sharing and reuse.
+The analysis package consists of a core Python library and an interactive Graphical User Interface (GUI) implemented using `PyQt6`.
+
+The core library performs peak detection, metric extraction, and statistical analyses, while the GUI provides tools for visualization, curation, and comparison across datasets.
+Communication between the GUI and the core analysis code is mediated by a Model layer, which stores all data required for presentation and keeps the core code lean.
+All experiment-specific parameters, including peak detection and signal-processing settings, are stored in a single `json` configuration file.
+This design ensures that analyses are fully reproducible and that configurations can be easily shared across users, machines, and experimental replicates.
+
+All software design decisions are focused on supporting reproducible research practices and ease of extension of the pipeline to new imaging modalities, metrics, or biological systems.
 
 ![**Schematic of the SNAzzy pipeline.**
 Time-lapse taken from fluorescent widefield microscopes (raw data) enters the processing stage (green).
@@ -146,6 +174,12 @@ In conclusion, genetically encoded fluorescent indicators and microscopy systems
 Custom open-source tools are needed to handle such large data files.
 `SNAzzy` addresses this by offering an automated, scalable, and user-friendly platform for analyzing synchronous network activity in developing embryos.
 As an open and versatile solution, `SNAzzy` offers tools for a broader range of applications in time-lapse fluorescence imaging across diverse biological systems.
+
+# AI Usage Disclosure
+
+No generative AI tools were using for the development of the software.
+ChatGPT 4.5 was used to refine the documentation text.
+The authors have reviewed and validated all suggested changes for the documentation and bear full responsibility for the final work.
 
 # Acknowledgments
 
