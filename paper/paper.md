@@ -84,24 +84,25 @@ Several students with limited programming background have installed SNAzzy and a
 Lastly, lab members have added modules to SNAzzy to address important biological questions.
 This has led to biological insights that the lab will publish in a separate article soon.
 
-Given that our lab is pioneering the study of spontaneous network activity (SNA) in Drosophila embryos, and that SNAzzy is designed as a generalizable and extensible analysis framework, we expect near-term adoption by other laboratories studying SNA and related developmental imaging paradigms.
+Given that our lab is pioneering the study of SNA in Drosophila embryos, and that SNAzzy is designed as a generalizable and extensible analysis framework, we expect near-term adoption by other laboratories studying SNA and related developmental imaging paradigms.
 Lastly, beyond Drosophila embryos, the code can be used to support automated quantification of global fluorescence dynamics in other experiments that involve simultaneous imaging of multiple samples, particularly small-sized specimens [@donoughe:2018; @avasthi:2023; @yamamoto:2023].
 
 # Software Design
 
-`SNAzzy` is composed of a processing package, which is an image processing pipeline, and an analysis package, which is responsible for quantification and visualization.
-This separation of concerns promotes modularity and extensibility, making it easy for users to use the processing package output elsewhere, for example.
+`SNAzzy` consists of two packages: a processing and an analysis package.
+The former contains an image processing pipeline, while the latter produces quantifications and visualizations.
+This separation of concerns promotes modularity and extensibility, making it easy for users to repurpose the packages elsewhere.
 
 The processing package implements an image processing pipeline composed of modular stages.
-Large image files are converted into lightweight CSV files containing fluorescence intensity traces and shape metrics, which substantially reduces storage requirements and facilitates data sharing and reuse.
+The pipeline converts large image files into lightweight CSV files containing fluorescence intensity traces and shape metrics, thereby substantially reducing storage requirements and facilitating data sharing and reuse.
 The analysis package consists of a core Python library and an interactive Graphical User Interface (GUI) implemented using `PyQt6`.
-
 The core library performs peak detection, metric extraction, and statistical analyses, while the GUI provides tools for visualization, curation, and comparison across datasets.
 Communication between the GUI and the core analysis code is mediated by a Model layer, which stores all data required for presentation and keeps the core code lean.
-All experiment-specific parameters, including peak detection and signal-processing settings, are stored in a single `json` configuration file.
+
+Importantly, all experiment-specific parameters, including peak detection and signal-processing settings, are stored in a single `json` configuration file.
 This design ensures that analyses are fully reproducible and that configurations can be easily shared across users, machines, and experimental replicates.
 
-All software design decisions are focused on supporting reproducible research practices and ease of extension of the pipeline to new imaging modalities, metrics, or biological systems.
+Overall, our software design decisions focus on supporting reproducible research practices and making it easy to extend the pipeline to new imaging modalities, metrics, or biological systems.
 
 ![**Schematic of the SNAzzy pipeline.**
 Time-lapse taken from fluorescent widefield microscopes (raw data) enters the processing stage (green).
@@ -157,7 +158,7 @@ To mark only these more prolonged bouts, we apply a low-pass frequency filter to
 Peaks in the filtered trace are detected using SciPy [@virtanen:2020].
 Finally, the detected peaks are ported to the original ∆F/F signal.
 
-Results can be visualized and curated in a graphical user interface (GUI) implemented in `PyQt6` \autoref{fig:fig4}.
+Results can be visualized and curated in a GUI implemented in `PyQt6` \autoref{fig:fig4}.
 During curation, researchers can modify data analysis parameters, which are persisted in a JSON configuration file and utilized by the core analysis code across different machines and users.
 Finally, a large number of different metrics and representations derived from ∆F/F, CNS length, and peaks can be visualized and plotted using the GUI.
 These include SNA onset, burst duration and spectrograms, among others.
