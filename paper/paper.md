@@ -42,7 +42,7 @@ SNA is a hallmark of developing nervous systems [@wu:2024; @blankenship:2009; @a
 Each dataset contains dozens of individual specimens in the same field of view and thousands of time points.
 The software offers individual specimen cropping for optimization of storage and processing, adaptive regions of interest for quantification of fluorescence and changes in morphology over time, a custom peak detection algorithm, and a graphical user interface for data visualization, curation, and dataset comparison.
 
-# Statement of need
+# Statement of Need and State of the Field
 
 During synchronous network activity (SNA), many neurons fire simultaneously, generating waves of activity that span across large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020].
 In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation [@crisp:2008; @carreira:2021; @karkali:2022].
@@ -65,7 +65,7 @@ The pipeline generates an “adaptive ROI” that changes frame-by-frame for eac
 This enables the accurate tracking of fluorescence intensity as well as changes in tissue morphology or size.
 `SNAzzy`’s design provides an automated, modular, and fully auditable workflow, and ultimately contributes to more reproducible and comparable results across experiments.
 
-## Capturing global Calcium dynamics
+## Capturing global calcium dynamics
 
 To the best of our knowledge, there are no open-source packages that provide tools for performing automated data analysis and quantification of global calcium dynamics.
 Most open-source tools available for analyzing neural activity using GECI focus on segmenting individual neurons within a single specimen.
