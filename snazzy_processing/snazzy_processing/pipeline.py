@@ -50,6 +50,8 @@ def measure_vnc_length(
         ]
         for future in as_completed(futures):
             id, vnc_len = future.result()
+            if id == -1:
+                continue
             ids.append(id)
             lengths.append(vnc_len)
 
@@ -82,7 +84,7 @@ def calculate_length(emb: Path, downsampling: int, threshold_method="multiotsu")
             Path to emb tif file.
         downsampling (int):
             Step size to calculate ROI lengths.
-        threshold_method ('mulitotsu' | 'otsu'):
+        threshold_method ('multiotsu' | 'otsu'):
             Threshold method used to calculate the ROI.
             Refer to `centerline.binarize` for more details.
             Defaults to 'multiotsu'.
@@ -90,6 +92,10 @@ def calculate_length(emb: Path, downsampling: int, threshold_method="multiotsu")
     id = utils.emb_number(emb.stem)
     hp = find_hatching.find_hatching_point(emb)
     hp -= hp % downsampling
+
+    if hp < 0:
+        print(f"Failed to process embryo {emb.name}.")
+        return (-1, np.array([]))
 
     key = list(range(0, hp, downsampling))
     img = imread(emb, key=key)
