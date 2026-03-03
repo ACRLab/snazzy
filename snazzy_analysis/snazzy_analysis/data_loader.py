@@ -52,7 +52,9 @@ class DataLoader:
 
     def get_filenames_sorted_by_emb_number(self, dir_name: str) -> list[Path]:
         dir = self.path.joinpath(dir_name)
-        return sorted([e for e in dir.iterdir()], key=self.get_emb_id)
+        return sorted(
+            [e for e in dir.iterdir() if e.suffix == ".csv"], key=self.get_emb_id
+        )
 
     def get_emb_id(self, emb_path: Path) -> int:
         """Return an embryo id based on a filepath.
