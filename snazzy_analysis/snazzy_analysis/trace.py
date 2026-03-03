@@ -482,7 +482,7 @@ class Trace:
 
         trim_points = np.where(np.abs(zscored_tomato) > trim_zscore)[0]
         if len(trim_points) == 0:
-            trim_idx = len(self.time)
+            trim_idx = len(self.time) - 1
         else:
             trim_idx = trim_points[0]
         return trim_idx
