@@ -82,7 +82,7 @@ This software replaces the previous, manually intensive analysis pipeline [@carr
 Compared to the manual workflow, SNAzzy offers additional tools and reduces analysis time from days to minutes.
 Several students with limited programming background have installed SNAzzy and analyzed hundreds of specimens within a week.
 Lastly, lab members have added modules to SNAzzy to address important biological questions.
-This has led to biological insights that the lab will publish in a separate article soon.
+This has led to new biological insights and the development of ongoing research projects.
 
 Given that our lab is pioneering the study of SNA in Drosophila embryos, and that SNAzzy is designed as a generalizable and extensible analysis framework, we expect near-term adoption by other laboratories studying SNA and related developmental imaging paradigms.
 Lastly, beyond Drosophila embryos, the code can be used to support automated quantification of global fluorescence dynamics in other experiments that involve simultaneous imaging of multiple samples, particularly small-sized specimens [@donoughe:2018; @avasthi:2023; @yamamoto:2023].
