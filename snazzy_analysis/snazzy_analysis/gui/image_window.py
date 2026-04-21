@@ -82,7 +82,7 @@ class ImageSequenceViewer(QWidget):
         embs_path = self.directory.joinpath("embs")
         file_names = sorted(
             [str(f) for f in embs_path.iterdir() if "ch1.tif" in f.name],
-            key=utils.emb_id_from_filename,
+            key=utils.emb_id,
         )
         self.combo_box.addItems(file_names)
         self.open_button = QPushButton("Open Viewer")

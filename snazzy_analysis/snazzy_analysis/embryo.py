@@ -3,7 +3,7 @@ from numpy.polynomial import Polynomial
 from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
-from snazzy_analysis import Config, Trace
+from snazzy_analysis import Config, Trace, utils
 
 
 class Embryo:
@@ -88,12 +88,8 @@ class Embryo:
             return time.item()
         return time
 
-    def get_id(self) -> int:
-        """Returns the number that identifies an embryo."""
-        return int(self.name[3:])
-
     def get_emb_size(self, emb_size_data: np.ndarray) -> float:
         """Extracts embryo size."""
-        id = self.get_id()
+        id = utils.emb_id(self.name)
         emb = emb_size_data[emb_size_data[:, 0] == id]
         return emb[0, 1]

@@ -24,9 +24,6 @@ class DatasetModel:
                 return embryo
         raise ValueError(f"Could not find {emb_name} in dataset {self.name}.")
 
-    def get_emb_ids(self):
-        return [e.get_id() for e in self.embryos]
-
     def all_embryos(self):
         return self.dataset.get_all_embryos()
 

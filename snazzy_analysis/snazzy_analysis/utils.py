@@ -14,16 +14,3 @@ def emb_id(emb: Path | str) -> int:
     if isinstance(emb, Path):
         emb = emb.stem
     return int(emb[3:])
-
-
-def emb_id_from_filename(emb_path: str) -> int:
-    """Return the embryo id based on filename.
-
-    Assumes that files are named as embXX-chY.
-
-    Parameters:
-        emb_path (str):
-            Full path to embryo file, as a string.
-    """
-    emb_name = Path(emb_path).stem
-    return int(emb_name.split("-")[0][3:])
