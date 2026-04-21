@@ -203,7 +203,7 @@ def plot_spec(
 
 
 def plot_traces(
-    embryos, rc, title=None, color=None, xmin=0, xmax=360, ymin=-0.1, ymax=1
+    embryos, rc, title=None, color=None, xmin=0, xmax=360, ymin=-0.1, ymax=1, peaks=False
 ):
     with plt.rc_context(rc):
         if color is None:
@@ -259,6 +259,12 @@ def plot_traces(
                 rotation=90,
                 transform=label.transAxes,
             )
+            if peaks:
+                # print("ahh")
+                for p in trace.peak_times:
+                    ax.axvline((p- trace.aligned_trim)/60, color="green", alpha=0.5)
+                for b in trace.get_peak_bounds_times():
+                    ax.axvspan((b[0]- trace.aligned_trim)/60, (b[1] - trace.aligned_trim)/60, color="green", alpha=0.3)
 
     plt.show()
 

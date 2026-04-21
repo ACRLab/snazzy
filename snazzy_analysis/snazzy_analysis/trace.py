@@ -42,7 +42,7 @@ class Trace:
 
         self.trim_idx = self.get_trim_index()
         self.dff = self.compute_dff()
-        self.aligned_time, self.aligned_dff = self.preprocess_dff()
+        self.aligned_time, self.aligned_dff, self.aligned_trim = self.preprocess_dff()
 
     @property
     def peak_idxes(self):
@@ -174,6 +174,8 @@ class Trace:
             start_index = onset
         dff = dff[start_index : self.trim_idx]
 
+        front_trimmed_time = self.time[start_index]
+
         if duration > len(dff):
             pad_size = duration - len(dff)
             dff_processed = np.array(list(dff) + [0] * pad_size, dtype=object)
@@ -185,7 +187,7 @@ class Trace:
         final_timepoint = duration * acq_period / 60
         time_processed = np.arange(0, final_timepoint, acq_period / 60)
 
-        return time_processed, dff_processed
+        return time_processed, dff_processed, front_trimmed_time
 
     def compute_ratiom_gcamp(self):
         """Computes the ratiometric GCaMP signal by dividing the raw GCaMP
