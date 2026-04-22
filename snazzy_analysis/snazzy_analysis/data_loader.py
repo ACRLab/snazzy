@@ -2,6 +2,8 @@ from pathlib import Path
 
 import numpy as np
 
+from snazzy_analysis import utils
+
 
 class DataLoader:
     """Loads data from a dataset.
@@ -51,17 +53,17 @@ class DataLoader:
         )
 
     def get_filenames_sorted_by_emb_number(self, dir_name: str) -> list[Path]:
-        dir = self.path.joinpath(dir_name)
-        return sorted(
-            [e for e in dir.iterdir() if e.suffix == ".csv"], key=self.get_emb_id
-        )
+        dir_path = self.path.joinpath(dir_name)
+        ids_and_filenames = []
+        for e in dir_path.iterdir():
+            if e.suffix == ".csv":
+                try:
+                    ids_and_filenames.append((utils.emb_id(e), e))
+                except ValueError:
+                    print(f"Could not parse filename {e.name}. Skipping..")
+                    continue
 
-    def get_emb_id(self, emb_path: Path) -> int:
-        """Return an embryo id based on a filepath.
-
-        Filepaths that represent embryo data have the format embXX.csv."""
-        emb_name = emb_path.stem
-        return int(emb_name[3:])
+        return [f for _, f in sorted(ids_and_filenames)]
 
     def load_csv(self, csv_path: Path) -> np.ndarray:
         """Read csv content as a 2D nparray."""
