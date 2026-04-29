@@ -24,9 +24,6 @@ class DatasetModel:
                 return embryo
         raise ValueError(f"Could not find {emb_name} in dataset {self.name}.")
 
-    def get_emb_ids(self):
-        return [e.get_id() for e in self.embryos]
-
     def all_embryos(self):
         return self.dataset.get_all_embryos()
 
@@ -174,7 +171,28 @@ class Model:
         """Updates trim index of the current embryo."""
         dataset = self.selected_dataset
         emb_name = dataset.selected_embryo.name
-        dataset.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
+
+        corrected_peaks = dataset.config.get_corrected_peaks(emb_name)
+
+        if corrected_peaks:
+            manual_peaks = corrected_peaks.get("manual_peaks", [])
+            manual_peaks = [p for p in manual_peaks if p < idx]
+            manual_remove = corrected_peaks.get("manual_remove", [])
+            manual_remove = [p for p in manual_peaks if p < idx]
+            manual_widths = corrected_peaks.get("manual_widths", {})
+            for k in manual_widths:
+                if k >= idx:
+                    del manual_widths[k]
+
+            dataset.config.save_manual_peak_data(
+                emb_name,
+                added_peaks=manual_peaks,
+                removed_peaks=manual_remove,
+                manual_widths=manual_widths,
+                manual_trim_idx=idx,
+            )
+        else:
+            dataset.config.save_manual_peak_data(emb_name, manual_trim_idx=idx)
 
     def update_peak_widths(self, peak_index, line_index, new_line_pos):
         emb = self.selected_dataset.selected_embryo

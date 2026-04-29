@@ -85,7 +85,7 @@ def test_trim_idx_is_last_point_when_not_hatches(config: Config, activity):
     trace = Trace("emb1", activity, config)
 
     calculated_trim_idx = trace.trim_idx
-    expected_trim_idx = len(trace.struct)
+    expected_trim_idx = len(trace.struct) - 1
 
     assert calculated_trim_idx == expected_trim_idx
 

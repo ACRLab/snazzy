@@ -139,6 +139,25 @@ def test_can_save_trim_index_in_config(model_single_dataset):
     assert manual_data["manual_trim_idx"] == updated_trim_idx
 
 
+def test_ignore_manual_peaks_after_trim_index(model_single_dataset):
+    curr_emb = model_single_dataset.selected_dataset.get_embryo("emb1")
+    curr_trace = curr_emb.trace
+
+    manual_peak_idx = len(curr_trace.dff) - 1
+    model_single_dataset.add_peak(manual_peak_idx, "emb1", curr_trace)
+
+    curr_emb.trace.detect_peaks()
+
+    updated_trim_idx = len(curr_trace.dff) // 2
+    model_single_dataset.save_trim_idx(updated_trim_idx)
+
+    curr_emb.trace.detect_peaks()
+
+    assert manual_peak_idx not in curr_trace.peak_idxes
+
+    model_single_dataset.remove_peak(manual_peak_idx, "emb1", curr_trace)
+
+
 def test_can_add_peak(model_single_dataset):
     new_peak_index = 300
     curr_trace = model_single_dataset.selected_dataset.get_embryo("emb1").trace
