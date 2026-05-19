@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal as spsig
-
+import pywt
+from scipy.integrate import trapezoid
 
 class FrequencyAnalysis:
     """
@@ -116,3 +117,26 @@ class FrequencyAnalysis:
         adjusted_lopass_dff = padded_lopass_dff[delay : delay + len(signal)]
 
         return adjusted_lopass_dff
+
+    @staticmethod
+    def calculate_cwt(time, dff, wavelet='cmor1.0-1.0', num_scales=150):
+        # input time is in minutes, but we need seconds
+        # defines scales
+        widths = np.geomspace(start=1,stop=256, num=num_scales) # logarithmic scales  (num is number of scales)
+        time_sec = np.multiply(time, 60) # convert time to seconds
+        sampling_period = np.diff(time_sec).mean()
+        cwtmatr, freqs = pywt.cwt(dff, widths, wavelet, sampling_period=sampling_period)
+        cwtmatr = np.abs(cwtmatr[:-1, :-1])
+        freqs = freqs[:-1]
+        return freqs, cwtmatr
+
+    def calculate_psd(signal, fs=1/6, nperseg=256, freq_range=None, area_norm=False):
+        signal = np.asarray(signal, dtype=float)
+        f, psd = spsig.welch(signal, fs=fs, nperseg=nperseg, scaling="density",  detrend="linear")
+        if freq_range:
+            valid_freqs = (f > freq_range[0]) & (f < freq_range[1])
+            f = f[valid_freqs]
+            psd = psd[valid_freqs]
+        if area_norm:
+            psd = psd / trapezoid(psd,f)
+        return f, psd

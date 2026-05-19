@@ -2,6 +2,7 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from matplotlib.ticker import LogLocator
 
 from snazzy_analysis import FrequencyAnalysis
 
@@ -105,6 +106,7 @@ def plot_trace_with_overlay(
 
 
 def plot_trace(
+    emb,
     time,
     dff,
     rc,
@@ -115,6 +117,10 @@ def plot_trace(
     ymin=-0.1,
     ymax=1,
     yinterval=1,
+    bursts=False, 
+    minibursts=False, 
+    save=False,
+    title="None"
 ):
     with plt.rc_context(rc):
         if color is None:
@@ -123,22 +129,41 @@ def plot_trace(
         fig = plt.figure()
         plt.plot(time, dff, color=color)
 
+        # plt.axvline(20, color="gold")
+        # plt.axvline(120, color="gold")
+        # plt.axvline(220, color="gold")
+
         # x axis
         plt.xlabel("Time (mins)")
-        plt.xlim(xmin, xmax)
+        plt.xlim(xmin, xmax+30)
+        aligned_minute_ticks = np.arange(xmin + 30, xmax + 30+ xinterval, xinterval, int)
         minute_ticks = np.arange(xmin, xmax + xinterval, xinterval, int)
-        plt.xticks(minute_ticks, minute_ticks)
+        plt.xticks(aligned_minute_ticks, minute_ticks)
         fig.tight_layout()
 
         # y axis
         plt.ylabel("ΔF/F")
         plt.ylim(ymin, ymax)
         # if the ymin is close to a whole number, just round
-        if abs(ymin - round(ymin)) < 0.2:
-            ymin = round(ymin)
-        dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
-        plt.yticks(dff_ticks, dff_ticks)
+        # if abs(ymin - round(ymin)) < 0.2:
+        #     ymin = round(ymin)
+        # dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
+        # plt.yticks(dff_ticks, dff_ticks)
+        plt.yticks([0, 1], [0, 1])
+
+        trace = emb.trace
+        time = trace.time[:trace.trim_idx - trace.aligned_offset]
+        if bursts:
+            p = (trace.peak_times - time[trace.aligned_offset])/60
+            plt.plot(p, np.full(len(p), np.nanmax(dff)+0.3), "|", mew=4, markersize=14, color="black")
+        if minibursts:
+            m = (trace.localpeak_times - time[trace.aligned_offset])/60
+            plt.plot(m, np.full(len(m), np.nanmax(dff)+0.3), "|", mew=4, markersize=14, color="red")
+
         fig.tight_layout()
+
+        if save:
+            plt.savefig(f"{title}")
         plt.show()
 
 
@@ -202,8 +227,84 @@ def plot_spec(
     plt.show()
 
 
+def plot_scalogram(
+    f,
+    t,
+    cwtmatr,
+    mymap,
+    rc,
+    display_colorbar=True,
+    xmin=0,
+    xmax=360,
+    xinterval=60,
+    vmax=None,
+    vmin=None,
+    save=False,
+    title="None"
+):
+    with plt.rc_context(rc):
+        fig = plt.figure()
+        mag = abs(cwtmatr)
+        max_mag = np.max(mag)
+        if vmax is None:
+            vmax = max_mag
+        if vmin is None:
+            vmin = 0.01 * vmax
+        
+        scalogram = plt.pcolormesh(t, f, cwtmatr, cmap=mymap, norm=colors.LogNorm(vmin=vmin, vmax=vmax), rasterized=True)
+
+        # x axis
+        plt.xlabel("Time (mins)")
+        plt.xlim(xmin, xmax)
+        aligned_minute_ticks = np.arange(xmin + 30, xmax + 30+ xinterval, xinterval, int)
+        minute_ticks = np.arange(xmin, xmax + xinterval, xinterval, int)
+        plt.xticks(aligned_minute_ticks, minute_ticks)
+
+        # y axis
+        ax_freq = plt.gca()
+        ax_period = ax_freq.twinx()
+        ax_freq.set_yscale("log")
+        ax_freq.set_ylabel("Frequency (mHz)", labelpad=25)
+        ax_freq.set_ylim(0.001, 0.1)
+        y_ticks = [0.001, 0.01, 0.1]
+        # y_ticks = [0.001, 0.005, 0.01, 0.05, 0.1]
+        ax_freq.set_yticks(y_ticks)
+        ax_freq.set_yticklabels([f"{hz_to_mhz(t)} " for t in y_ticks])
+        for label in ax_freq.get_yticklabels():
+            label.set_verticalalignment('top')
+        ax_freq.yaxis.set_major_locator(LogLocator(base=10))
+
+        ax_period.set_ylabel("Period (min:s)", rotation=270, labelpad=35)
+        ax_period.set_ylim(0.00065, 0.1)
+        ax_period.set_yscale("log")
+        ax_period.set_yticks(y_ticks)
+        ax_period.set_yticklabels([f"  {fmt_period(t)}" for t in y_ticks])
+        for label in ax_period.get_yticklabels():
+            label.set_verticalalignment('top')
+        ax_period.yaxis.set_major_locator(LogLocator(base=10))
+
+        # colorbar
+        if display_colorbar:
+            colorbar = plt.colorbar(scalogram, extend="max", aspect=10)
+            # colorbar.ax.set_yticks([0.1, 0.01, 0.001])
+            colorbar.ax.set_title("Intensity\n($Log_{10}$)", y=-0.40)
+    if save:
+        plt.savefig(f"{title}", bbox_inches='tight')
+    plt.show()
+
+def fmt_period(f):
+    p = 1 / f
+    mins = int(p // 60)
+    secs = int(p % 60)
+    return f"{mins}:{secs:02d}"
+
+def hz_to_mhz(f):
+    return int(f*1000)
+
+
+
 def plot_traces(
-    embryos, rc, title=None, color=None, xmin=0, xmax=360, ymin=-0.1, ymax=1, peaks=False
+    embryos, rc, title=None, color=None, xmin=0, xmax=360, ymin=-0.1, ymax=1, bursts=False, minibursts=False
 ):
     with plt.rc_context(rc):
         if color is None:
@@ -233,11 +334,15 @@ def plot_traces(
             dff = trace.aligned_dff
             ax.plot(time, dff, color=color)
 
+            ax.axvline(350, color="gold")
+            ax.axvline(450, color="gold")
+
             # x axis
             ax.set_xlabel("Time (mins)")
-            ax.set_xlim(xmin, xmax)
+            ax.set_xlim(xmin, xmax+30)
+            aligned_minute_ticks = np.arange(xmin + 30, xmax + 30+ 60, 60, int)
             minute_ticks = np.arange(xmin, xmax + 60, 60, int)
-            ax.set_xticks(minute_ticks, minute_ticks)
+            ax.set_xticks(aligned_minute_ticks, minute_ticks)
             fig.tight_layout()
 
             # y axis
@@ -246,7 +351,7 @@ def plot_traces(
             increment = 0.5
             dff_ticks = np.arange(0, ymax + increment, increment)
             ax.set_yticks(dff_ticks, dff_ticks)
-
+#
             # label
             label.axis("off")
             label.text(
@@ -259,12 +364,15 @@ def plot_traces(
                 rotation=90,
                 transform=label.transAxes,
             )
-            if peaks:
-                # print("ahh")
+            if bursts:
                 for p in trace.peak_times:
-                    ax.axvline((p- trace.aligned_trim)/60, color="green", alpha=0.5)
+                    p_time = trace.time_to_aligned_time(p)
+                    ax.axvline(p_time, color="green", alpha=0.5)
                 for b in trace.get_peak_bounds_times():
-                    ax.axvspan((b[0]- trace.aligned_trim)/60, (b[1] - trace.aligned_trim)/60, color="green", alpha=0.3)
+                    ax.axvspan((b[0]- trace.time[trace.aligned_offset])/60, (b[1] - trace.time[trace.aligned_offset])/60, color="green", alpha=0.3)
+            if minibursts:
+                for lp in trace.localpeak_times:
+                    ax.axvline((lp - trace.time[trace.aligned_offset])/60, color="red", alpha=0.3)
 
     plt.show()
 
@@ -371,15 +479,23 @@ def plot_pointplot(
     category,
     linestyle=None,
     xlabels=None,
-    ymin=None,
-    ymax=None,
+    errorbar="se",
+    ymin=0,
+    ymax=1,
+    yinterval=0.1,
+    palette=None,
+    save=False,
+    title="None"
 ):
     with plt.rc_context(rc):
         fig, ax = plt.subplots()
         sns.set_theme(style="whitegrid", palette="colorblind", rc=rc)
         sns.pointplot(
-            data=dataframe, x=x, y=y, hue=category, linestyle=linestyle, ax=ax
+            data=dataframe, x=x, y=y, hue=category, linestyle=linestyle, ax=ax, errorbar=errorbar, palette=palette
         )
+        # sns.stripplot(
+        #     data=dataframe, x=x, y=y, hue=category, ax=ax
+        # )
         legend = ax.get_legend()
         if legend is not None:
             sns.move_legend(
@@ -394,7 +510,16 @@ def plot_pointplot(
         ax.set_ylabel(y)
         if xlabels is not None:
             ax.set_xticks(ticks=list(range(len(xlabels))), labels=xlabels)
-        ax.set_ylim(ymin, ymax)
+        
+        plt.ylim(ymin, ymax)
+        dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
+        precision = len(str(yinterval).split('.')[1])
+        dff_ticks = [round(tick, precision) for tick in dff_ticks]
+        plt.yticks(dff_ticks, dff_ticks)
+        
+        fig.tight_layout()
+        if save:
+            plt.savefig(f"{title}")
         plt.show()
 
 

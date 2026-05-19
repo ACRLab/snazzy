@@ -40,13 +40,16 @@ class Trace:
         self._peak_bounds_indices = None
         self.filtered_dff = None
 
+        self._localpeak_idxes = None
+
         self.trim_idx = self.get_trim_index()
         self.dff = self.compute_dff()
-        self.aligned_time, self.aligned_dff, self.aligned_trim = self.preprocess_dff()
+        self.aligned_time, self.aligned_dff, self.aligned_offset = self.preprocess_dff()
 
     @property
     def peak_idxes(self):
         if self._peak_idxes is None:
+
             if "freq" in self.pd_params:
                 self.detect_peaks(self.pd_params["freq"])
             else:
@@ -62,6 +65,22 @@ class Trace:
         if len(self.peak_idxes) == 0:
             return []
         return self.time[self.peak_idxes]
+    
+    @property
+    def localpeak_idxes(self):
+        if self._localpeak_idxes is None:
+            self.detect_localpeaks()
+        return self._localpeak_idxes
+
+    @localpeak_idxes.setter
+    def localpeak_idxes(self, localpeak_idxes):
+        self._localpeak_idxes = localpeak_idxes
+
+    @property
+    def localpeak_times(self):
+        if len(self.localpeak_idxes) == 0:
+            return []
+        return self.time[self.localpeak_idxes]
 
     @property
     def peak_intervals(self):
@@ -115,6 +134,9 @@ class Trace:
     def rms(self):
         return np.sqrt(np.mean((self.dff[: self.trim_idx]) ** 2))
 
+    def time_to_aligned_time(self, timepoint):
+        return (timepoint- self.time[self.aligned_offset])/60
+
     def get_all_peak_idxes(self):
         if self._peak_idxes is None:
             if "freq" in self.pd_params:
@@ -140,7 +162,7 @@ class Trace:
             )
         return (ratiom_signal - baseline) / baseline
 
-    def preprocess_dff(self, duration=3600, onset_pad=300):
+    def preprocess_dff(self, duration=5000, onset_pad=300):
         """Adjust dff to a given duration.
 
         If embryo hatches, only data from onset to hatching are included.
@@ -174,7 +196,7 @@ class Trace:
             start_index = onset
         dff = dff[start_index : self.trim_idx]
 
-        front_trimmed_time = self.time[start_index]
+        offset = self.time[start_index]
 
         if duration > len(dff):
             pad_size = duration - len(dff)
@@ -187,7 +209,25 @@ class Trace:
         final_timepoint = duration * acq_period / 60
         time_processed = np.arange(0, final_timepoint, acq_period / 60)
 
-        return time_processed, dff_processed, front_trimmed_time
+        return time_processed, dff_processed, start_index
+
+    def get_bursts_only(self):
+        time = self.time
+        dff = self.dff
+        burst_bounds = self.peak_bounds_times
+        burst_indices = [
+            (np.searchsorted(time, start, side="left"),
+            np.searchsorted(time, stop, side="right"))
+            for start, stop in burst_bounds
+        ]
+        dff = np.array(dff)
+
+        mask = np.zeros(len(dff), dtype=bool)
+        for start, stop in burst_indices:
+            mask[start:stop] = True
+
+        return dff[mask]
+
 
     def compute_ratiom_gcamp(self):
         """Computes the ratiometric GCaMP signal by dividing the raw GCaMP
@@ -365,6 +405,9 @@ class Trace:
 
         self.process_peaks(stages)
 
+    def detect_localpeaks(self):
+        self._localpeak_idxes = self.find_localpeaks()
+
     def filter_peaks_by_local_threshold(
         self, signal, peak_indices, window_size=300, value=75
     ):
@@ -464,6 +507,25 @@ class Trace:
         )
 
         return np.array(dff_peak_indices), filtered_dff
+
+
+    def find_localpeaks(self):
+        big_filt = spsig.medfilt(self.dff, kernel_size=31)
+        difference = self.dff - big_filt
+
+        local_peak_idxs, properties = spsig.find_peaks(
+            difference , height=0, prominence=0.15, distance=1, width=[0, 40], wlen=60, rel_height=0.5
+        )
+
+        filt_local_peak_idxs = [
+            lp for lp in local_peak_idxs if not np.any(np.abs(self._peak_idxes - lp) <= 5)
+        ]
+
+        filt_local_peak_idxs = [
+        lp for lp in filt_local_peak_idxs if self.trim_idx > lp
+        ]
+
+        return filt_local_peak_idxs
 
     def get_trim_index(self):
         """Try to return the trim index from config, otherwise calculates it."""
