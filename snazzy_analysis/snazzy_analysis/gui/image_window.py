@@ -80,9 +80,11 @@ class ImageSequenceViewer(QWidget):
         self.selector_label = QLabel("Select a file:")
         self.combo_box = QComboBox()
         embs_path = self.directory.joinpath("embs")
+        # NOTE: this expects the same naming convention for cropping the raw
+        # image as in snazzy_processing
         file_names = sorted(
-            [str(f) for f in embs_path.iterdir() if "ch1.tif" in f.name],
-            key=utils.emb_id,
+            [f for f in embs_path.iterdir() if "-ch1.tif" in f.name],
+            key=lambda f: int(f.name.split('-')[0][3:]),
         )
         self.combo_box.addItems(file_names)
         self.open_button = QPushButton("Open Viewer")
