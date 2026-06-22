@@ -3,6 +3,9 @@ from enum import Enum
 
 import numpy as np
 import scipy.signal as spsig
+from skimage.restoration import denoise_tv_chambolle
+from scipy.ndimage import percentile_filter
+from scipy.integrate import trapezoid
 from scipy.stats import zscore
 
 from snazzy_analysis import Config, FrequencyAnalysis
@@ -41,6 +44,7 @@ class Trace:
         self.filtered_dff = None
 
         self._localpeak_idxes = None
+        self._localpeak_props = None
 
         self.trim_idx = self.get_trim_index()
         self.dff = self.compute_dff()
@@ -75,6 +79,16 @@ class Trace:
     @localpeak_idxes.setter
     def localpeak_idxes(self, localpeak_idxes):
         self._localpeak_idxes = localpeak_idxes
+
+    @property
+    def localpeak_props(self):
+        if self._localpeak_props is None:
+            self.detect_localpeaks()
+        return self._localpeak_props
+
+    @localpeak_props.setter
+    def localpeak_props(self, localpeak_props):
+        self._localpeak_props = localpeak_props
 
     @property
     def localpeak_times(self):
@@ -210,6 +224,73 @@ class Trace:
         time_processed = np.arange(0, final_timepoint, acq_period / 60)
 
         return time_processed, dff_processed, start_index
+
+
+    def normalize_by_segment(self, segment_len=350, step=50, smooth=True):
+        dff = np.asarray(self.dff[:self.trim_idx], dtype=float)
+
+        # save the normalized segments
+        out = np.zeros_like(dff)
+        counts = np.zeros_like(dff)
+
+        onset = self.peak_bounds_indices[0][0]
+        pad = 10
+
+        # before episodes
+        out[:onset - pad] = dff[:onset - pad]
+        counts[:onset-pad] +=1
+
+        # episodes
+        starts = [x[0]-pad for x in self.peak_bounds_indices]
+        pairs = list(zip(starts[:-1], starts[1:]))
+        # include the last episode
+        last_start_bound = starts[-1]
+        last_end_bound = self.peak_bounds_indices[-1][1] + pad
+        pairs.append((last_start_bound, last_end_bound))
+        for episode in pairs:
+            start, end = episode
+            if end <= start:
+                print(self.name, "- warning. Issue with episode boundaries. End bound is less than start bound. Skipping.")
+                continue
+            e = dff[start:end]
+            # print(len(e))
+            e_max = np.nanmax(e)
+            e_min = np.nanmin(e)
+            e_norm = 0.5 * (e - e_min) / (e_max - e_min)
+            out[start:end] += e_norm
+            counts[start:end] += 1
+
+        # after episodes
+        presna = dff[onset-150:onset]
+        amp_threshold = np.median(presna) + 10 * np.median(np.abs(presna - np.median(presna)))
+
+        sna_end = self.peak_bounds_indices[-1][1] 
+        for start in range(sna_end, len(dff), step):
+            end = np.min([start + segment_len, len(dff)])
+            s = dff[start:end]
+            s_max = np.nanmax(s)
+            s_min = np.nanmin(s)
+        
+            if np.median(s) > amp_threshold:
+                s_norm = 0.5 * (s - s_min) / (s_max - s_min)
+            else:
+                s_norm = s
+            out[start:end] += s_norm
+            counts[start:end] += 1
+
+        # average overlapping normalized segments
+        normalized_dff = np.full_like(dff, np.nan)
+        valid = counts > 0
+        normalized_dff[valid] = out[valid] / counts[valid]
+        
+        # total variance denoising
+        if smooth:
+            # normalized_dff = denoise_tv_chambolle(normalized_dff, weight=0.025)
+            norm_not_smooth = np.copy(normalized_dff)
+            norm_smooth = percentile_filter(norm_not_smooth, percentile=70, size=3)
+            norm_smooth = denoise_tv_chambolle(norm_smooth, weight=0.05)
+            normalized_dff = norm_smooth
+        return normalized_dff
 
     def get_bursts_only(self):
         time = self.time
@@ -406,7 +487,7 @@ class Trace:
         self.process_peaks(stages)
 
     def detect_localpeaks(self):
-        self._localpeak_idxes = self.find_localpeaks()
+        self._localpeak_idxes, self._localpeak_props = self.find_localpeaks()
 
     def filter_peaks_by_local_threshold(
         self, signal, peak_indices, window_size=300, value=75
@@ -509,23 +590,67 @@ class Trace:
         return np.array(dff_peak_indices), filtered_dff
 
 
-    def find_localpeaks(self):
-        big_filt = spsig.medfilt(self.dff, kernel_size=31)
-        difference = self.dff - big_filt
 
+    def find_localpeaks(self):
+        dff_norm = self.normalize_by_segment(segment_len=150, step=50, smooth=True)
         local_peak_idxs, properties = spsig.find_peaks(
-            difference , height=0, prominence=0.15, distance=1, width=[0, 40], wlen=60, rel_height=0.5
+            dff_norm , height=0, prominence=0.05, distance=1, width=[0, None], wlen=150, rel_height=0.9
         )
 
-        filt_local_peak_idxs = [
-            lp for lp in local_peak_idxs if not np.any(np.abs(self._peak_idxes - lp) <= 5)
+        lps = [
+        (lp,{k: v[i] for k, v in properties.items()})
+        for i, lp in enumerate(local_peak_idxs)
         ]
 
         filt_local_peak_idxs = [
-        lp for lp in filt_local_peak_idxs if self.trim_idx > lp
+        (lp, prop) 
+        for lp, prop in lps 
+        if (self.trim_idx > lp # before hatching
+            and self.peak_bounds_indices[0][0] < lp # after first burst
+            and not np.any(np.abs(self.peak_idxes - lp) <= 10) # 5 samples away from burst apex
+            and ((prop["prominences"]*100 > (prop["right_ips"] - prop["left_ips"])) or (dff_norm[lp] > 0.35)) # either be taller than wide or very tall
+        )
         ]
 
-        return filt_local_peak_idxs
+        if len(filt_local_peak_idxs) <= 0:
+            return [], []
+        else:
+            local_peak_idxs, properties = zip(*filt_local_peak_idxs)
+
+            local_peak_idxs = np.array(local_peak_idxs)
+            properties = list(properties)
+
+            return local_peak_idxs, properties
+
+    # def find_localpeaks(self):
+    #     dff_norm = self.normalize_by_segment(self.dff, segment_len=350, step=50, smooth=True)
+
+    #     local_peak_idxs, properties = spsig.find_peaks(
+    #         dff_norm , height=0, prominence=0.1, distance=1, width=[0, 50], wlen=60, rel_height=0.5
+    #     )
+
+    #     lps = [
+    #     (lp,{k: v[i] for k, v in properties.items()})
+    #     for i, lp in enumerate(local_peak_idxs)
+    #     ]
+
+    #     filt_local_peak_idxs = [
+    #     (lp, prop) 
+    #     for lp, prop in lps 
+    #     if (self.trim_idx > lp
+    #         and self.peak_idxes[0] < lp
+    #         and not np.any(np.abs(self.peak_idxes - lp) <= 5)
+    #     )
+    #     ]
+
+    #     if len(filt_local_peak_idxs) <= 0:
+    #         return [], []
+    #     else:
+    #         local_peak_idxs, properties = zip(*filt_local_peak_idxs)
+
+    #         local_peak_idxs = np.array(local_peak_idxs)
+    #         properties = list(properties)
+    #         return local_peak_idxs, properties
 
     def get_trim_index(self):
         """Try to return the trim index from config, otherwise calculates it."""
@@ -634,3 +759,35 @@ class Trace:
             )
             local_peaks.append(len(peak_indices))
         return local_peaks
+
+    def calculate_activity_density_ratio(self):
+        time = self.time
+        dff = self.dff
+        burst_bounds = self.peak_bounds_indices
+
+        burst_densities = []
+        interval_densities = []
+        for i in range(len(burst_bounds)-1): # excludes last burst
+            start_bound, end_bound = burst_bounds[i][0], burst_bounds[i][1]
+            next_start_bound = burst_bounds[i+1][0]
+            
+            burst = slice(start_bound,end_bound+1)
+            interval = slice(end_bound,next_start_bound)
+
+            burst_duration = time[end_bound+1] - time[start_bound]
+            interval_duration = time[next_start_bound] - time[end_bound]
+
+            # dff x burst
+            burst_auc = trapezoid(dff[burst], time[burst])
+            burst_density = burst_auc / burst_duration
+
+            # dff x interval
+            interval_auc = trapezoid(dff[interval], time[interval])
+            interval_density = interval_auc / interval_duration
+
+            burst_densities.append(burst_density)
+            interval_densities.append(interval_density)
+        
+        burst_densities = np.array(burst_densities)
+        interval_densities = np.array(interval_densities)
+        return burst_densities, interval_densities

@@ -113,7 +113,7 @@ def plot_trace(
     color=None,
     xmin=0,
     xmax=360,
-    xinterval=60,
+    xinterval=None,
     ymin=-0.1,
     ymax=1,
     yinterval=1,
@@ -129,36 +129,40 @@ def plot_trace(
         fig = plt.figure()
         plt.plot(time, dff, color=color)
 
-        # plt.axvline(20, color="gold")
-        # plt.axvline(120, color="gold")
-        # plt.axvline(220, color="gold")
 
         # x axis
         plt.xlabel("Time (mins)")
-        plt.xlim(xmin, xmax+30)
-        aligned_minute_ticks = np.arange(xmin + 30, xmax + 30+ xinterval, xinterval, int)
-        minute_ticks = np.arange(xmin, xmax + xinterval, xinterval, int)
-        plt.xticks(aligned_minute_ticks, minute_ticks)
-        fig.tight_layout()
+        if xinterval is None:
+            plt.xlim(xmin, xmax)
+            plt.xticks([], [])
+        else:
+            plt.xlim(xmin, xmax+30)
+            aligned_minute_ticks = np.arange(xmin + 30, xmax + 30+ xinterval, xinterval, int)
+            minute_ticks = np.arange(xmin, xmax + xinterval, xinterval, int)
+            plt.xticks(aligned_minute_ticks, minute_ticks)
 
         # y axis
         plt.ylabel("ΔF/F")
         plt.ylim(ymin, ymax)
         # if the ymin is close to a whole number, just round
-        # if abs(ymin - round(ymin)) < 0.2:
-        #     ymin = round(ymin)
-        # dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
-        # plt.yticks(dff_ticks, dff_ticks)
+        if abs(ymin - round(ymin)) < 0.2:
+            ymin = round(ymin)
+        dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
+        plt.yticks(dff_ticks, dff_ticks)
         plt.yticks([0, 1], [0, 1])
 
         trace = emb.trace
+        xmin, xmax = plt.xlim()
+        mask = (time >= xmin) & (time <= xmax)
+
+        ymax = np.nanmax(dff[mask].astype(float))
         time = trace.time[:trace.trim_idx - trace.aligned_offset]
         if bursts:
             p = (trace.peak_times - time[trace.aligned_offset])/60
-            plt.plot(p, np.full(len(p), np.nanmax(dff)+0.3), "|", mew=4, markersize=14, color="black")
+            plt.plot(p, np.full(len(p), ymax+0.15), "|", mew=5, markersize=20, color="black")
         if minibursts:
-            m = (trace.localpeak_times - time[trace.aligned_offset])/60
-            plt.plot(m, np.full(len(m), np.nanmax(dff)+0.3), "|", mew=4, markersize=14, color="red")
+            lp = (trace.localpeak_times - time[trace.aligned_offset])/60
+            plt.plot(lp, np.full(len(lp), ymax+0.15), "|", mew=5, markersize=20, color="red")
 
         fig.tight_layout()
 
@@ -334,8 +338,6 @@ def plot_traces(
             dff = trace.aligned_dff
             ax.plot(time, dff, color=color)
 
-            ax.axvline(350, color="gold")
-            ax.axvline(450, color="gold")
 
             # x axis
             ax.set_xlabel("Time (mins)")
@@ -479,7 +481,7 @@ def plot_pointplot(
     category,
     linestyle=None,
     xlabels=None,
-    errorbar="se",
+    errorbar="sd",
     ymin=0,
     ymax=1,
     yinterval=0.1,
@@ -491,33 +493,32 @@ def plot_pointplot(
         fig, ax = plt.subplots()
         sns.set_theme(style="whitegrid", palette="colorblind", rc=rc)
         sns.pointplot(
-            data=dataframe, x=x, y=y, hue=category, linestyle=linestyle, ax=ax, errorbar=errorbar, palette=palette
+            data=dataframe, x=x, y=y, hue=category, linestyle=linestyle, ax=ax, errorbar=errorbar, palette=palette, legend=False, err_kws={"color": "black", "linewidth": 2}
         )
         # sns.stripplot(
         #     data=dataframe, x=x, y=y, hue=category, ax=ax
         # )
-        legend = ax.get_legend()
-        if legend is not None:
-            sns.move_legend(
-                ax,
-                "lower center",
-                bbox_to_anchor=(0.5, 1.1),
-                ncol=3,
-                title=None,
-                frameon=False,
-            )
+        # legend = ax.get_legend()
+        # if legend is not None:
+        #     sns.move_legend(
+        #         ax,
+        #         "lower center",
+        #         bbox_to_anchor=(0.5, 1.1),
+        #         ncol=3,
+        #         title=None,
+        #         frameon=False,
+        #     )
         ax.set_xlabel(x)
         ax.set_ylabel(y)
         if xlabels is not None:
             ax.set_xticks(ticks=list(range(len(xlabels))), labels=xlabels)
-        
+        plt.xticks(rotation=45)
         plt.ylim(ymin, ymax)
         dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
-        precision = len(str(yinterval).split('.')[1])
-        dff_ticks = [round(tick, precision) for tick in dff_ticks]
+        dff_ticks = [tick for tick in dff_ticks]
         plt.yticks(dff_ticks, dff_ticks)
         
-        fig.tight_layout()
+        fig.tight_layout(pad=0)
         if save:
             plt.savefig(f"{title}")
         plt.show()
