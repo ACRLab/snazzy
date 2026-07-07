@@ -189,8 +189,11 @@ class Trace:
 
     def compute_ratiom_gcamp(self):
         """Computes the ratiometric GCaMP signal by dividing the raw GCaMP
-        signal by the tdTomato signal."""
-        return self.active / self.struct
+        signal by the savgol filtered tdTomato signal."""
+        smoothed = spsig.savgol_filter(
+            self.struct[: self.trim_idx], 151, 2, deriv=0
+        )
+        return self.active[: self.trim_idx] / smoothed
 
     def reflect_edges(self, signal, window_size=160):
         """Reflects edges so we can fit windows of size window_size for the
