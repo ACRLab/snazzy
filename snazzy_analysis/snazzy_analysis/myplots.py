@@ -493,7 +493,7 @@ def plot_pointplot(
         fig, ax = plt.subplots()
         sns.set_theme(style="whitegrid", palette="colorblind", rc=rc)
         sns.pointplot(
-            data=dataframe, x=x, y=y, hue=category, linestyle=linestyle, ax=ax, errorbar=errorbar, palette=palette, legend=False, err_kws={"color": "black", "linewidth": 2}
+            data=dataframe, x=x, y=y, hue=category, linestyle=linestyle, ax=ax, errorbar=errorbar, palette=palette, legend=True, err_kws={"color": "black", "linewidth": 2}
         )
         # sns.stripplot(
         #     data=dataframe, x=x, y=y, hue=category, ax=ax
@@ -517,7 +517,7 @@ def plot_pointplot(
         dff_ticks = np.arange(ymin, ymax + yinterval, yinterval)
         dff_ticks = [tick for tick in dff_ticks]
         plt.yticks(dff_ticks, dff_ticks)
-        
+
         fig.tight_layout(pad=0)
         if save:
             plt.savefig(f"{title}")
