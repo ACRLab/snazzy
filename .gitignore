@@ -39,8 +39,10 @@ cover/
 # Sphinx docs
 docs/build
 
-# saved images
+# saved images and movies
 */notebooks/*.svg
+*/paper_prep/*.pdf
+*/scripts/*.gif
 
 # macOS
 .DS_Store
