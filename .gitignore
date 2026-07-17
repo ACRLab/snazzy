@@ -41,8 +41,8 @@ docs/build
 
 # saved images and movies
 */notebooks/*.svg
-.pdf
-.gif
+*.pdf
+*.gif
 
 # macOS
 .DS_Store
