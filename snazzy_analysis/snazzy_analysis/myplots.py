@@ -120,7 +120,7 @@ def plot_trace(
     bursts=False, 
     minibursts=False, 
     save=False,
-    title="None"
+    path="None"
 ):
     with plt.rc_context(rc):
         if color is None:
@@ -137,9 +137,8 @@ def plot_trace(
             plt.xticks([], [])
         else:
             plt.xlim(xmin, xmax+30)
-            aligned_minute_ticks = np.arange(xmin + 30, xmax + 30+ xinterval, xinterval, int)
-            minute_ticks = np.arange(xmin, xmax + xinterval, xinterval, int)
-            plt.xticks(aligned_minute_ticks, minute_ticks)
+            minute_ticks = np.arange(0, xmax + xinterval, xinterval, int)
+            plt.xticks(minute_ticks, minute_ticks)
 
         # y axis
         plt.ylabel("ΔF/F")
@@ -156,18 +155,17 @@ def plot_trace(
         mask = (time >= xmin) & (time <= xmax)
 
         ymax = np.nanmax(dff[mask].astype(float))
-        time = trace.time[:trace.trim_idx - trace.aligned_offset]
         if bursts:
-            p = (trace.peak_times - time[trace.aligned_offset])/60
+            p = time[trace.peak_idxes]
             plt.plot(p, np.full(len(p), ymax+0.15), "|", mew=5, markersize=20, color="black")
         if minibursts:
-            lp = (trace.localpeak_times - time[trace.aligned_offset])/60
+            lp = time[trace.localpeak_idxes]
             plt.plot(lp, np.full(len(lp), ymax+0.15), "|", mew=5, markersize=20, color="red")
 
         fig.tight_layout()
 
         if save:
-            plt.savefig(f"{title}")
+            plt.savefig(path)
         plt.show()
 
 
@@ -244,7 +242,7 @@ def plot_scalogram(
     vmax=None,
     vmin=None,
     save=False,
-    title="None"
+    path="None"
 ):
     with plt.rc_context(rc):
         fig = plt.figure()
@@ -259,10 +257,9 @@ def plot_scalogram(
 
         # x axis
         plt.xlabel("Time (mins)")
+        minute_ticks = np.arange(0, xmax + xinterval, xinterval, int)
+        plt.xticks(minute_ticks, minute_ticks)
         plt.xlim(xmin, xmax)
-        aligned_minute_ticks = np.arange(xmin + 30, xmax + 30+ xinterval, xinterval, int)
-        minute_ticks = np.arange(xmin, xmax + xinterval, xinterval, int)
-        plt.xticks(aligned_minute_ticks, minute_ticks)
 
         # y axis
         ax_freq = plt.gca()
@@ -293,7 +290,7 @@ def plot_scalogram(
             # colorbar.ax.set_yticks([0.1, 0.01, 0.001])
             colorbar.ax.set_title("Intensity\n($Log_{10}$)", y=-0.40)
     if save:
-        plt.savefig(f"{title}", bbox_inches='tight')
+        plt.savefig(path, bbox_inches='tight')
     plt.show()
 
 def fmt_period(f):
@@ -353,7 +350,7 @@ def plot_traces(
             increment = 0.5
             dff_ticks = np.arange(0, ymax + increment, increment)
             ax.set_yticks(dff_ticks, dff_ticks)
-#
+
             # label
             label.axis("off")
             label.text(

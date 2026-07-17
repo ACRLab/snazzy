@@ -127,8 +127,6 @@ class FrequencyAnalysis:
         sampling_period = np.diff(time_sec).mean()
         cwtmatr, freqs = pywt.cwt(dff, widths, wavelet, sampling_period=sampling_period)
         cwtmatr = np.abs(cwtmatr)
-        # cwtmatr = np.abs(cwtmatr[:-1, :-1])
-        # freqs = freqs[:-1]
         return freqs, cwtmatr
 
     def calculate_psd(signal, fs=1/6, nperseg=256, freq_range=None, area_norm=False):

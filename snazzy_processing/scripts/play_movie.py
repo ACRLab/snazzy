@@ -4,38 +4,45 @@ from tifffile import imread
 
 from snazzy_processing import utils
 from snazzy_processing.animations import custom_animation
+from snazzy_analysis import Dataset, Group, FrequencyAnalysis, myplots
 
+# group = "vacht"
+# dataset_name = "20250501vacht1-df"
 
-data_dir = Path("./data")
-datasets = [f.stem for f in data_dir.iterdir() if f.is_dir()]
+# group = "elavgal4ctl"
+# dataset_name = "20250724_attPCtl-Df-ctl elavG4 UAS G6stdTom on 3rd"
 
-print("Enter dataset name, based on index:")
-for i, file in enumerate(datasets):
-    print(f"[{i}] {file}")
+group = "vgat"
+dataset_name = "20241011_vgatdf"
 
-e = int(input())
-dataset = datasets[e]
+# group = "Hdc_JK"
+# dataset_name = "20250519HdcDf"
 
-img_dir = data_dir.joinpath(dataset, "embs")
+# group = "vgatvglut"
+# dataset_name = "20250508_VgatVglutMutant"
 
-# All structural channel movies end with the suffix ch2
-structs = sorted(img_dir.glob("*ch2.tif"), key=utils.emb_number)
+movie_idx = 1
+emb_idx = 2
+ch = 1
+
+movie_dir = Path(f"/Volumes/Extreme Pro/NT_fig2_raw/_rep_movies")
+dataset_path = dataset_path = Path(f"/Volumes/Extreme Pro/NT_fig2_raw/{group}").joinpath(dataset_name)
+
+img_dir = movie_dir.joinpath(dataset_name, "embs")
 active = sorted(img_dir.glob("*ch1.tif"), key=utils.emb_number)
 
-print("Select movie to display, based on index:")
+dataset = Dataset(dataset_path)
+embryos = list(dataset.embryos)
+emb = embryos[emb_idx]
 
-for i, file in enumerate(active):
-    print(f"[{i}] {file.stem.split('-')[0]}")
+img = imread(active[movie_idx])
 
-idx = int(input())
+start = emb.trace.aligned_offset
+stop = emb.trace.trim_idx
 
-print("Select channel: 1 for active channel, 2 for structural channel.")
+print("\n\nMOVIE PATH", active[movie_idx])
+print("EMBRYO NAME:", emb.name, "\n\n")
 
-ch = int(input())
-
-if ch != 1 and ch != 2:
-    exit(1)
-
-img = imread(structs[idx]) if ch == 2 else imread(active[idx])
-pa = custom_animation.PauseAnimation(img, interval=25)
-pa.display()
+pa = custom_animation.PauseAnimation(f"{dataset.name} {emb.name}", img, emb, start=start, stop=stop, interval=2)
+# pa.display()
+pa.save(f"ani_{dataset.name}_{emb.name}_{start}_{stop}")

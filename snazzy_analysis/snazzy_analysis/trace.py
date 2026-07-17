@@ -148,9 +148,6 @@ class Trace:
     def rms(self):
         return np.sqrt(np.mean((self.dff[: self.trim_idx]) ** 2))
 
-    def time_to_aligned_time(self, timepoint):
-        return (timepoint- self.time[self.aligned_offset])/60
-
     def get_all_peak_idxes(self):
         if self._peak_idxes is None:
             if "freq" in self.pd_params:
@@ -226,8 +223,19 @@ class Trace:
         return time_processed, dff_processed, start_index
 
 
+    def align_time_to_onset(self, time_in_sec, onset_pad=300):
+        time_in_sec = np.array(time_in_sec)
+        # find new onset
+        if self.peak_bounds_indices is not None and len(self.peak_bounds_indices) > 0:
+            onset = self.peak_bounds_indices[0][0]
+        else:
+            onset = 0
+        offset = self.time[onset]
+        return time_in_sec - offset
+
     def normalize_by_segment(self, segment_len=350, step=50, smooth=True):
         dff = np.asarray(self.dff[:self.trim_idx], dtype=float)
+        # dff = denoise_tv_chambolle(dff, weight=0.05) # smooth
 
         # save the normalized segments
         out = np.zeros_like(dff)
@@ -290,6 +298,9 @@ class Trace:
             norm_smooth = percentile_filter(norm_not_smooth, percentile=70, size=3)
             norm_smooth = denoise_tv_chambolle(norm_smooth, weight=0.05)
             normalized_dff = norm_smooth
+        
+        pad_size = len(self.dff) - len(normalized_dff)
+        normalized_dff = np.array(list(normalized_dff) + [0] * pad_size, dtype=object)
         return normalized_dff
 
     def get_bursts_only(self):
@@ -589,8 +600,7 @@ class Trace:
 
         return np.array(dff_peak_indices), filtered_dff
 
-
-
+# old version - 07/09 2 PM - going to try adding global threshold to miniburst detection to avoid denoising
     def find_localpeaks(self):
         dff_norm = self.normalize_by_segment(segment_len=150, step=50, smooth=True)
         local_peak_idxs, properties = spsig.find_peaks(
@@ -623,23 +633,25 @@ class Trace:
             return local_peak_idxs, properties
 
     # def find_localpeaks(self):
-    #     dff_norm = self.normalize_by_segment(self.dff, segment_len=350, step=50, smooth=True)
+    #     dff_norm = self.normalize_by_segment(segment_len=150, step=50, smooth=False)
 
     #     local_peak_idxs, properties = spsig.find_peaks(
-    #         dff_norm , height=0, prominence=0.1, distance=1, width=[0, 50], wlen=60, rel_height=0.5
+    #     dff_norm , height=0, prominence=0.05, distance=1, width=[0, None], wlen=150, rel_height=0.9
     #     )
-
     #     lps = [
     #     (lp,{k: v[i] for k, v in properties.items()})
     #     for i, lp in enumerate(local_peak_idxs)
     #     ]
 
+
+    #     filt_local_peak_idxs = lps
     #     filt_local_peak_idxs = [
     #     (lp, prop) 
     #     for lp, prop in lps 
-    #     if (self.trim_idx > lp
-    #         and self.peak_idxes[0] < lp
-    #         and not np.any(np.abs(self.peak_idxes - lp) <= 5)
+    #     if (self.trim_idx > lp # occur before hatching
+    #         and self.peak_idxes[0] < lp # occur after onset
+    #         and (not np.any(np.abs(self.peak_idxes - lp) <= 5)) # not overlap with burst apex
+    #         and ((prop["prominences"]*120 > (prop["right_ips"] - prop["left_ips"])) or (dff_norm[lp] > 0.35)) # either be taller than wide or very tall
     #     )
     #     ]
 
@@ -650,6 +662,7 @@ class Trace:
 
     #         local_peak_idxs = np.array(local_peak_idxs)
     #         properties = list(properties)
+
     #         return local_peak_idxs, properties
 
     def get_trim_index(self):
