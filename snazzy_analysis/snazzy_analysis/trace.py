@@ -555,7 +555,7 @@ class Trace:
     def get_peak_aucs_from_bounds(self):
         peak_time_slices = self.get_peak_slices_from_bounds()
         peak_aucs = np.asarray(
-            [np.trapezoid(pslice * 100, tslice) for pslice, tslice in peak_time_slices]
+            [np.trapezoid(pslice, tslice) for pslice, tslice in peak_time_slices]
         )
         return peak_aucs
 
