@@ -41,6 +41,7 @@ SNA is a hallmark of developing nervous systems [@wu:2024; @blankenship:2009; @a
 `SNAzzy` processes and analyzes time-lapse datasets taken from live samples using fluorescent widefield microscopy.
 Each dataset contains dozens of individual specimens in the same field of view and thousands of time points.
 The software offers individual specimen cropping for optimization of storage and processing, adaptive regions of interest for quantification of fluorescence and changes in morphology over time, a custom peak detection algorithm, and a graphical user interface for data visualization, curation, and dataset comparison.
+The code is available at [https://github.com/ACRLab/snazzy](https://github.com/ACRLab/snazzy).
 
 # Statement of Need and State of the Field
 
