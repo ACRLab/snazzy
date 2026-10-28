@@ -1,5 +1,12 @@
 ---
 title: "SNAzzy: an image processing pipeline for investigating global Synchronous Network Activity"
+
+author:
+  - 'Carlos D. Paiva \textsuperscript{1,2}'
+  - 'Alana J. Evora \textsuperscript{1,2}'
+  - 'Shirui Zheng \textsuperscript{1,2}'
+  - 'Arnaldo Carreira-Rosario \textsuperscript{1,2,*}'
+
 tags:
   - Calcium imaging
   - Widefield microscopy
@@ -8,28 +15,19 @@ tags:
   - Spontaneous Neural Activity
   - Neurodevelopment
   - Circuit Wiring
-authors:
-  - name: Carlos D. Paiva
-    orcid: 0009-0007-6658-2620
-    affiliation: "1, 2"
-  - name: Alana J. Evora
-    orcid: 0009-0002-3174-7839
-    affiliation: "1, 2"
-  - name: Shirui Zheng
-    orcid: 0009-0006-1836-7208
-    affiliation: "1, 2"
-  - name: Arnaldo Carreira-Rosario
-    orcid: 0000-0003-0202-3858
-    corresponding: true
-    affiliation: "1, 2"
-affiliations:
-  - name: Department of Biology, Duke University, Durham, NC 27708
-    index: 1
-  - name: Department of Neurobiology, Duke University, Durham, NC 27708
-    index: 2
-date: 6 November 2025
+
+date: 28 October 2026
 bibliography: paper.bib
 ---
+
+\begin{center}
+\small
+\textsuperscript{1} Department of Biology, Duke University, Durham, NC 27708\\
+\textsuperscript{2} Department of Neurobiology, Duke University, Durham, NC 27708\\
+\textsuperscript{*} Corresponding author
+\end{center}
+
+\vspace{1em}
 
 # Summary
 
