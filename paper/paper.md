@@ -16,7 +16,6 @@ tags:
   - Neurodevelopment
   - Circuit Wiring
 
-date: 28 October 2026
 bibliography: paper.bib
 ---
 
@@ -24,7 +23,7 @@ bibliography: paper.bib
 \small
 \textsuperscript{1} Department of Biology, Duke University, Durham, NC 27708\\
 \textsuperscript{2} Department of Neurobiology, Duke University, Durham, NC 27708\\
-\textsuperscript{*} Corresponding author
+\textsuperscript{*} Corresponding author: arnaldo.cr@duke.edu
 \end{center}
 
 \vspace{1em}
@@ -43,17 +42,17 @@ The code is available at [https://github.com/ACRLab/snazzy](https://github.com/A
 
 # Statement of Need and State of the Field
 
-During synchronous network activity (SNA), many neurons fire simultaneously, generating waves of activity that span  large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020].
+During synchronous network activity (SNA), many neurons fire simultaneously, generating waves of activity that span large portions of the nervous system [@blankenship:2009; @wu:2024; @akin:2020].
 In Drosophila embryos, SNA typically lasts 4 hours, during which the nervous system undergoes a stereotyped morphological change via ventral nerve cord condensation [@crisp:2008; @carreira:2021; @karkali:2022].
 To gain an understanding of SNA, it is essential to quantify waves of activity in the nervous system while also tracking morphology as a proxy for neurodevelopment.
 For these reasons, we combine a commonly used genetically encoded calcium indicator (GECI) that reports neural activity with a structural fluorophore [@carreira:2021].
 The structural fluorophore signal remains stable, independent of neural activity, making it suitable for continuously tracking morphology of the nerve cord.
-To record many embryos during SNA, we use a wide-field fluorescence microscopy system that captures the GECI and structural fluorophore signal of dozens of developing embryos for over 5 hours.
+To record many embryos during SNA, we use a widefield fluorescence microscopy system that captures the GECI and structural fluorophore signal of dozens of developing embryos for over 5 hours.
 
 We were unable to find a tool designed for widefield microscopy that rapidly processes multiple specimens, quantifies levels of fluorophore activity, and incorporates a peak-finding algorithm suitable for global calcium traces.
 `SNAzzy` is designed to investigate global levels of neural activity across multiple developing embryos simultaneously.
 
-## Tracking of multiple “adaptive  ROIs”  
+## Tracking of multiple “adaptive ROIs”  
 
 To the best of our knowledge, there are no other packages that provide functionality for automated parsing of raw images of many live specimens into activity and morphological quantifications.
 Other studies have employed manual selection of regions of interest (ROIs) and used static ROIs [@akin:2020; @menzies:2024; @ardiel:2022; @carreira:2021].
@@ -70,7 +69,7 @@ To the best of our knowledge, there are no open-source packages that provide too
 Most open-source tools available for analyzing neural activity using GECI focus on segmenting individual neurons within a single specimen.
 `CaImAn` [@giovannucci:2019] and `Suite2p` [@pachitariu:2016] are among the most widely used.
 These packages detect calcium dynamics and use individual neuron statistics to perform spike inference, but do not offer direct peak detection on the calcium signal.
-Furthermore, they are optimized for two-photon microscopy as opposed to wide-field microscopy.
+Furthermore, they are optimized for two-photon microscopy as opposed to widefield microscopy.
 `SNAzzy` provides a series of automated analyses and quantifications to analyze global calcium levels in time-series acquired with widefield microscopes.
 
 # Research Impact Statement
@@ -178,10 +177,10 @@ As an open and versatile solution, `SNAzzy` offers tools for a broader range of 
 # AI Usage Disclosure
 
 No generative AI tools were used for the development of the software.
-GPT 6 Astra was used to refine both the documentation and the manuscript.
+GPT 6 Astra was used to refine the documentation and minor grammar corrections in the manuscript.
 The authors have reviewed and validated all suggested changes and bear full responsibility for the final work.
 
 # Acknowledgments
 
 We acknowledge Newton PenkoffLidbeck and D. Berfin Azizoglu for feedback on the manuscript.
-This work was partially funded by NINDS and the BRAIN initiative (R00NS119295).
+This work was partially funded by NINDS and the BRAIN initiative (R00NS119295) and NSF-GRFP (DGE2139754) (AJE).
