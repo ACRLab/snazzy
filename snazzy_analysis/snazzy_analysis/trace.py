@@ -3,7 +3,11 @@ from enum import Enum
 
 import numpy as np
 import scipy.signal as spsig
+from skimage.restoration import denoise_tv_chambolle
+from scipy.ndimage import percentile_filter
+from scipy.integrate import trapezoid
 from scipy.stats import zscore
+from scipy.ndimage import label
 
 from snazzy_analysis import Config, FrequencyAnalysis
 
@@ -32,17 +36,36 @@ class Trace:
         self.pd_params = config.get_pd_params()
         self.exp_params = config.get_exp_params()
 
-        # list of peaks that were manually added / removed:
+        self.trim_idx = self.get_trim_index()
+        self.dff = self.compute_dff()
+
+        # list of peaks that were manually added / removed or
+        # automatically transfered to valid event
         self.to_add = []
         self.to_remove = []
+        self.to_transfer = []
 
+        self._event_idxes = None
         self._peak_idxes = None
+        self._mini_idxes = None
         self._peak_bounds_indices = None
         self.filtered_dff = None
 
-        self.trim_idx = self.get_trim_index()
-        self.dff = self.compute_dff()
-        self.aligned_time, self.aligned_dff = self.preprocess_dff()
+        
+        self._peak_proms = None
+        self._mini_proms = None
+        # these bounds are calculated with the prominences above
+        self._mini_bounds_indices = None
+
+    @property
+    def event_idxes(self):
+        if self._event_idxes is None:
+            self.detect_events()
+        return self._event_idxes
+
+    @event_idxes.setter
+    def event_idxes(self, event_idxes):
+        self._event_idxes = event_idxes
 
     @property
     def peak_idxes(self):
@@ -58,10 +81,56 @@ class Trace:
         self._peak_idxes = peak_idxes
 
     @property
+    def peak_proms(self):
+        if self._peak_proms is None:
+            self.assign_prominences(min_base=0.01)
+        return self._peak_proms
+
+    @peak_proms.setter
+    def peak_proms(self, peak_proms):
+        self._peak_proms = peak_proms
+
+    @property
     def peak_times(self):
         if len(self.peak_idxes) == 0:
             return []
         return self.time[self.peak_idxes]
+
+    @property
+    def mini_idxes(self):
+        if self._mini_idxes is None:
+            self.detect_minis()
+        return self._mini_idxes
+
+    @mini_idxes.setter
+    def mini_idxes(self, mini_idxes):
+        self._mini_idxs = mini_idxes
+
+    @property
+    def mini_proms(self):
+        if self._mini_proms is None:
+            self.assign_prominences(min_base=0.01)
+        return self._mini_proms
+
+    @mini_proms.setter
+    def mini_proms(self, mini_proms):
+        self._mini_proms = mini_proms
+
+    @property
+    def mini_bounds_indices(self):
+        if self._mini_bounds_indices is None:
+            self.set_mini_widths()
+        return self._mini_bounds_indices
+
+    @mini_bounds_indices.setter
+    def mini_bounds_indices(self, mini_bounds_indices):
+        self._mini_bounds_indices = mini_bounds_indices
+
+    @property
+    def mini_times(self):
+        if len(self.mini_idxes) == 0:
+            return []
+        return self.time[self.mini_idxes]
 
     @property
     def peak_intervals(self):
@@ -140,7 +209,7 @@ class Trace:
             )
         return (ratiom_signal - baseline) / baseline
 
-    def preprocess_dff(self, duration=3600, onset_pad=300):
+    def preprocess_dff(self, duration=5000, onset_pad=300):
         """Adjust dff to a given duration.
 
         If embryo hatches, only data from onset to hatching are included.
@@ -185,7 +254,235 @@ class Trace:
         final_timepoint = duration * acq_period / 60
         time_processed = np.arange(0, final_timepoint, acq_period / 60)
 
-        return time_processed, dff_processed
+        return time_processed, dff_processed, start_index
+
+    def align_time_to_onset(self, time_in_sec, onset_pad=300):
+        time_in_sec = np.array(time_in_sec)
+        # find new onset
+        if self.peak_bounds_indices is not None and len(self.peak_bounds_indices) > 0:
+            onset = self.peak_bounds_indices[0][0]
+        else:
+            onset = 0
+        offset = self.time[onset]
+        return time_in_sec - offset
+
+    def normalize_signal(self, signal, baseline_amplitude, step=50):
+        """Normalize signal to range 0..1, set values to zero where below baseline amplitude."""
+        out = np.zeros_like(signal, dtype=float)
+
+        for start in range(0, len(signal), step):
+            end = np.min([start + step, len(signal)])
+            s = signal[start:end]
+
+            s_max = np.max(s)
+            s_min = np.min(s)
+
+            if np.median(s) > baseline_amplitude:
+                s_norm = (s - s_min) / (s_max - s_min)
+            else:
+                s_norm = 0
+
+            out[start:end] += s_norm
+
+        return out
+
+    def estimate_baseline_amplitude(self, wlen=150):
+        """
+        Estimate the baseline amplitude from the wlen samples immediately
+        preceding the first episode.
+
+        If fewer than wlen samples are available, all samples preceding the
+        first episode are used.
+        """
+        first_episode_start = int(self.peak_bounds_indices[0][0])
+        start = max(0, first_episode_start - wlen)
+        stop = min(first_episode_start, len(self.dff))
+
+        presna = self.dff[start:stop]
+
+        return np.median(presna)
+
+    def find_localpeaks_norm_signal(self, norm_signal, parameters):
+        """
+        Find peaks in a normalized signal.
+
+        Parameters
+        ----------
+        norm_signal : array-like
+            Normalized signal.
+        parameters : dict
+            Keyword arguments passed to scipy.signal.find_peaks. For example::
+
+                {
+                    "height": 0,
+                    "prominence": 0.05,
+                    "distance": 1,
+                    "width": (0, None),
+                    "wlen": 150,
+                    "rel_height": 0.9,
+                }
+
+        Returns
+        -------
+        numpy.ndarray
+            Peak indices relative to norm_signal.
+        """
+        if parameters is None:
+            parameters = {
+                "height": 0.2,
+                "prominence": 0.2,
+                "distance": 1,
+                "width": (0, None),
+                "wlen": 40,
+                "rel_height": 0.9,
+            }
+
+        peak_indices, _ = spsig.find_peaks(norm_signal, **parameters)
+
+        return peak_indices.astype(int)
+
+    def compute_local_peaks(self, prominence_ratio, height=0.1, wlen=30):
+        """Returns local peaks that happen within an episode."""
+        starts = [x[0] for x in self.peak_bounds_indices]
+        pairs = list(zip(starts[:-1], starts[1:]))
+        # include last ep boundaries
+        pairs.append(self.peak_bounds_indices[-1])
+        local_peaks = []
+        local_peak_props = []
+
+        for pi, (s, e) in zip(self.peak_idxes, pairs):
+            if e >= self.trim_idx:
+                break
+            if pi == e:
+                continue
+            local_trace = self.dff[s:e]
+            peak_indices, props = spsig.find_peaks(
+                local_trace,
+                prominence=self.dff[pi] * prominence_ratio,
+                height=height,
+                wlen=wlen,
+            )
+            local_peaks.extend(peak_indices + s)
+            local_peak_props.extend(props)
+
+        return np.array(local_peaks), local_peak_props
+
+    def find_localpeaks(
+        self,
+        min_amplitude=0.08,
+        exclude_radius=10,
+        prominence_ratio=0.3,
+        wlen=30,
+        baseline_wlen=150,
+        post_sna_step=50,
+        normalized_peak_params=None,
+    ):
+        """Detect local peaks using peak finding params scaled to the current segment."""
+
+        dff = np.asarray(self.dff[: self.trim_idx], dtype=float).copy()
+
+        local_peak_idxs, local_peak_props = self.compute_local_peaks(
+            prominence_ratio,
+            height=min_amplitude,
+            wlen=wlen,
+        )
+
+        # Because of overlapping windows, there could be duplicates
+        local_peak_idxs = np.unique(local_peak_idxs)
+
+        keep = np.ones(len(local_peak_idxs), dtype=bool)
+
+        # Keep only peaks after the first episode/burst
+        first_onset = self.peak_bounds_indices[0][0]
+        keep &= local_peak_idxs > first_onset
+
+        close_to_ep_peak = np.any(
+            np.abs(local_peak_idxs[:, None] - self.peak_idxes[None, :])
+            <= exclude_radius,
+            axis=1,
+        )
+
+        keep &= ~close_to_ep_peak
+
+        # Optional amplitude criterion in original dF/F units
+        keep &= dff[local_peak_idxs] >= min_amplitude
+
+        # return all_local_peak_idxs[keep]
+        local_peak_idxs = local_peak_idxs[keep]
+        local_peak_props = [
+            lpp for lpp, should_keep in zip(local_peak_props, keep) if should_keep
+        ]
+
+        # add local peaks found after sna here (after peak_bounds_indices[-1][1])
+        last_peak_end = int(self.peak_bounds_indices[-1][1])
+
+        if last_peak_end < self.trim_idx:
+            baseline_amplitude = self.estimate_baseline_amplitude(wlen=baseline_wlen)
+
+            post_trace = dff[last_peak_end:]
+
+            post_trace_norm = self.normalize_signal(
+                post_trace, baseline_amplitude=baseline_amplitude, step=post_sna_step
+            )
+
+            if normalized_peak_params is None:
+                normalized_peak_parameters = {
+                    "height": 0.6,
+                    "prominence": 0.4,
+                    "distance": 1,
+                    "width": (0, None),
+                    "wlen": min(30, len(post_trace_norm)),
+                    "rel_height": 0.9,
+                }
+
+            post_peak_idxs = self.find_localpeaks_norm_signal(
+                post_trace_norm,
+                normalized_peak_parameters,
+            )
+            # Convert indices from post-SNA coordinates to dff coordinates.
+            post_peak_idxs = post_peak_idxs + last_peak_end
+            post_peak_amps = dff[post_peak_idxs]
+
+            # Ignore peak min height check if not enough peaks found
+            if len(self.peak_idxes) < 2:
+                avg_last_two_peak_amps = 0
+            else:
+                avg_last_two_peak_amps = (
+                    dff[self.peak_idxes[-2]] + dff[self.peak_idxes[-1]]
+                ) / 2
+
+            keep = post_peak_amps > 0.75 * avg_last_two_peak_amps
+            post_peak_idxs = post_peak_idxs[keep]
+        else:
+            post_peak_idxs = np.array([], dtype=int)
+
+        all_local_peak_idxs = np.concatenate(
+            (
+                np.asarray(local_peak_idxs, dtype=int),
+                np.asarray(post_peak_idxs, dtype=int),
+            )
+        )
+
+        return all_local_peak_idxs, local_peak_props
+
+    def get_bursts_only(self):
+        time = self.time
+        dff = self.dff
+        burst_bounds = self.peak_bounds_times
+        burst_indices = [
+            (
+                np.searchsorted(time, start, side="left"),
+                np.searchsorted(time, stop, side="right"),
+            )
+            for start, stop in burst_bounds
+        ]
+        dff = np.array(dff)
+
+        mask = np.zeros(len(dff), dtype=bool)
+        for start, stop in burst_indices:
+            mask[start:stop] = True
+
+        return dff[mask]
 
     def compute_ratiom_gcamp(self):
         """Computes the ratiometric GCaMP signal by dividing the raw GCaMP
@@ -348,11 +645,40 @@ class Trace:
                 if not any(abs(p - rp) < wlen for rp in to_remove)
             ]
 
-            self.to_add = to_add
-            self.to_remove = to_remove
-            self._peak_idxes = np.array(
+            filtered_peaks = np.array(
                 sorted(list(set(filtered_peaks + to_add))), dtype=np.int64
             )
+
+            valid_peaks = self.get_valid_peaks(filtered_peaks) # moves peak_idxs to valid peak in events
+            to_transfer = filtered_peaks[filtered_peaks != valid_peaks]
+
+            self.to_add = to_add
+            self.to_remove = to_remove
+            self.to_transfer = to_transfer
+            self._peak_idxes = valid_peaks
+
+    def get_valid_peaks(self, peak_idxs, max_dist=20):
+        dff = self.dff.copy()
+        dff = dff[:self.trim_idx]
+        event_idxs = self.event_idxes
+
+        valid_peaks = np.array([
+            (print("port"), event_idxs[np.argmax(np.where(np.abs(event_idxs - p) <= max_dist, dff[event_idxs], -np.inf))], p)[1] # port burst idx to closest peak
+            if np.min(np.abs(event_idxs - p)) > 0  # burst is not a valid peak
+            and np.min(np.abs(event_idxs - p)) < 20 # but burst is close to a peak
+            and  np.any(dff[max(0, p-5):p] > dff[p]) # and burst is less than 5 prev values
+            else p
+            for p in peak_idxs
+        ])
+        if len(peak_idxs) != len(valid_peaks):
+            raise ValueError("peak_idxs and valid_peaks must have the same length")
+        return valid_peaks
+
+    def detect_events(self, height=0.05, prominence=0.08):
+        dff = self.dff.copy()
+        dff = dff[:self.trim_idx]
+        event_idxs, _ = spsig.find_peaks(dff, height=height, prominence=prominence)
+        self._event_idxes = event_idxs
 
     def detect_peaks(self, freq=0.0025):
         self._peak_idxes, filtered_dff = self.calculate_peaks(freq_cutoff=freq)
@@ -365,6 +691,9 @@ class Trace:
         ]
 
         self.process_peaks(stages)
+
+    def detect_localpeaks(self):
+        self._localpeak_idxes, self._localpeak_props = self.find_localpeaks()
 
     def filter_peaks_by_local_threshold(
         self, signal, peak_indices, window_size=300, value=75
@@ -559,7 +888,7 @@ class Trace:
         )
         return peak_aucs
 
-    def compute_local_peaks(self, height=0.02, prominence=0.01):
+    def count_local_peaks(self, height=0.02, prominence=0.01):
         """Returns local peaks that happen within an episode."""
         peak_bounds = self.peak_bounds_indices
 
@@ -573,3 +902,126 @@ class Trace:
             )
             local_peaks.append(len(peak_indices))
         return local_peaks
+
+    def calculate_activity_density_ratio(self):
+        time = self.time
+        dff = self.dff
+        burst_bounds = self.peak_bounds_indices
+
+        burst_densities = []
+        interval_densities = []
+        for i in range(len(burst_bounds) - 1):  # excludes last burst
+            start_bound, end_bound = burst_bounds[i][0], burst_bounds[i][1]
+            next_start_bound = burst_bounds[i + 1][0]
+
+            burst = slice(start_bound, end_bound + 1)
+            interval = slice(end_bound, next_start_bound)
+
+            burst_duration = time[end_bound + 1] - time[start_bound]
+            interval_duration = time[next_start_bound] - time[end_bound]
+
+            # dff x burst
+            burst_auc = trapezoid(dff[burst], time[burst])
+            burst_density = burst_auc / burst_duration
+
+            # dff x interval
+            interval_auc = trapezoid(dff[interval], time[interval])
+            interval_density = interval_auc / interval_duration
+
+            burst_densities.append(burst_density)
+            interval_densities.append(interval_density)
+
+        burst_densities = np.array(burst_densities)
+        interval_densities = np.array(interval_densities)
+        return burst_densities, interval_densities
+
+    def detect_minis(self, peak_win=5):
+        """Minis are all events that are not a burst."""
+        mini_idxes = [
+        e for e in self.event_idxes
+        if (self.peak_idxes[0] < e # must be after first burst
+            and not np.any(np.abs(self.peak_idxes - e) <= peak_win)) # and peak_win samples away from burst idx
+        ]
+        self._mini_idxes = mini_idxes
+
+    def calculate_left_prominences(self, dff, events, min_base=0.01):
+        _, left_bases, right_bases = spsig.peak_prominences(dff, events)
+        left_prominences = [dff[e] - np.max([dff[lb], min_base]) for e, lb in zip(events, left_bases)]
+        return np.array(left_prominences), np.array(left_bases), np.array(right_bases)
+
+    def calculate_regular_prominences(self, dff, events, min_base=0.01):
+        _, left_bases, right_bases = spsig.peak_prominences(dff, events)
+        new_prom = dff[events] - np.maximum(
+            np.maximum(dff[left_bases], dff[right_bases]),
+            min_base
+        )
+        return np.array(new_prom), np.array(left_bases), np.array(right_bases)
+
+    def assign_prominences(self, min_base=0.01):
+        dff = self.dff.copy()
+        dff = dff[:self.trim_idx]
+        peak_idxes = self.peak_idxes
+        mini_idxes = self.mini_idxes
+
+        peak_proms, peak_left, peak_right = self.calculate_left_prominences(dff, peak_idxes, min_base=min_base)
+        mini_proms, mini_left, mini_right = self.calculate_regular_prominences(dff, mini_idxes, min_base=min_base)
+
+        peaks = np.concatenate([peak_idxes, mini_idxes])
+        prom = np.concatenate([peak_proms, mini_proms])
+        lb = np.concatenate([peak_left, mini_left])
+        rb = np.concatenate([peak_right, mini_right])
+
+        order = np.argsort(peaks)
+        peaks, prom, rb = (arr[order] for arr in (peaks, prom, rb))
+
+        new_prom = prom.copy()
+        bases = dff[peaks] - prom
+
+        for i in range(1, len(peaks)):
+            for j in range(i):
+                same_base = np.isclose(bases[i], bases[j], atol=0.001, rtol=0)
+                no_baseline = np.all(dff[peaks[j]:peaks[i]] >= min_base)
+
+                if same_base and no_baseline:
+                    if rb[i-1] < peaks[i]:
+                        new_prom[i] = dff[peaks[i]] - max(
+                            dff[rb[i-1]], dff[lb[i]], min_base
+                        )
+                    break
+
+        inverse = np.argsort(order)
+        new_prom_peak, new_prom_mini = np.split(new_prom[inverse], [len(peak_idxes)])
+
+        changed = ~np.isclose(prom, new_prom)
+        changed_prom_peaks = peaks[changed]
+        # for i in np.where(~np.isclose(prom, new_prom))[0]:
+        #     print(f"Peak {time[peaks[i]]}: {prom[i]:.3f} → {new_prom[i]:.3f}")
+
+        self._peak_proms = new_prom_peak
+        self._mini_proms = new_prom_mini
+
+    def calculate_boundless_widths(self, dff, events, prominences, rel_height=0.98, floor=0.01):
+        left_limits = [([i for i in range(e) if dff[i] <= floor] or [0])[-1] for e in events]
+        left_limits = np.array(left_limits)
+        right_limits = [([i for i in range(e+1, len(dff)) if dff[i] <= floor] or [len(dff)-1])[0] for e in events]
+        right_limits = np.array(right_limits)
+
+        _, _, left_ips, right_ips = spsig.peak_widths(
+            dff, events, rel_height=rel_height, prominence_data=(prominences, left_limits, right_limits)
+        )
+        widths = np.round(right_ips - left_ips).astype(int)
+        starts = [np.floor(li).astype(int) for li in left_ips]
+        ends = [np.ceil(si).astype(int) for si in right_ips]
+        return widths, starts, ends, left_limits, right_limits
+
+    def set_mini_widths(self):
+        dff = self.dff.copy()
+        dff = dff[:self.trim_idx]
+        print(self.peak_idxes)
+
+        _, peak_starts, peak_ends, _, _ = self.calculate_boundless_widths(dff, self.peak_idxes, self.peak_proms)
+        _, mini_starts, mini_ends, _, _  = self.calculate_boundless_widths(dff, self.mini_idxes, self.mini_proms)
+
+        # the peak starts/ends could be used to replace current bounds
+        bounds_indices = [(s, e) for s,e in zip(mini_starts, mini_ends)]
+        self._mini_bounds_indices = bounds_indices
